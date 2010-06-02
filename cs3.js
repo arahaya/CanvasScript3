@@ -4864,8 +4864,6 @@ var Sound = new Class(EventDispatcher, function()
         this.__loops = loops | 0;
         this.__loopCount = 0;
         
-        
-        
         if (this.__canPlay) {
             media.currentTime = this.__startTime;
             media.play();
@@ -5071,54 +5069,6 @@ var Video = new Class(DisplayObject, function()
             media.currentTime = this.__startTime;
             media.play();
         }
-        /*
-        cs3.utils.addEventListener(media, 'loadedmetadata', function(e)
-        {
-            var params = {
-                duration: media.duration,
-                width: media.videoWidth,
-                height: media.videoHeight
-            };
-            self.onMetaData(params);
-        });
-        cs3.utils.addEventListener(media, 'durationchange', function(e)
-        {
-            self.onDurationChange();
-        });
-        cs3.utils.addEventListener(media, 'progress', function(e)
-        {
-            trace("progress");
-        });
-        cs3.utils.addEventListener(media, 'timeupdate', function(e)
-        {
-            self.onTimeUpdate();
-        });
-        cs3.utils.addEventListener(media, 'canplay', function(e)
-        {
-            self.onCanPlay();
-        });
-        cs3.utils.addEventListener(media, 'ended', function(e)
-        {
-            self.onEnded();
-        });
-        cs3.utils.addEventListener(media, 'error', function(e)
-        {
-            self.onError();
-        });
-        */
-        
-        /*
-        var lastState = null;
-        setInterval(function(t){
-            if (media.readyState !== lastState) {
-                lastState = media.readyState;
-                trace("readyState: " + lastState);
-                if (lastState == media.HAVE_ENOUGH_DATA) {
-                    clearInterval(t);
-                }
-            }
-        }, 20);
-        */
     };
     this.pause = function()
     {
@@ -5159,14 +5109,6 @@ var Video = new Class(DisplayObject, function()
             this.__media.volume = v;
         }
     };
-    /*
-    this.onCanPlay = function(){};
-    this.onDurationChange = function(){};
-    this.onEnded = function(){};
-    this.onError = function(){};
-    this.onMetaData = function(params){};
-    this.onTimeUpdate = function(){};
-    */
 });
 Video.prototype.__defineGetter__("length", Video.prototype.getLength);
 Video.prototype.__defineGetter__("position", Video.prototype.getPosition);
@@ -5232,7 +5174,7 @@ var URLLoader = new Class(EventDispatcher, function()
                     else if (self.dataFormat == URLLoaderDataFormat.XML) {
                         self.data = this.responseXML;
                         if (self.data === null) {
-                            throw new TypeError("XML パーサエラー :文書の形式が正しくありません。");
+                            throw new TypeError("Could not parse the XML file.");
                         }
                     }
                     else if (self.dataFormat == URLLoaderDataFormat.JSON) {
@@ -5296,13 +5238,13 @@ var URLVariables = new Class(Object, function()
         {
             var s = pairs[i];
             if (s.indexOf('=') === -1) {
-                throw new Error('URLVariables.decode() に渡される文字列は、名前/値のペアを含む、URL エンコーディングされたクエリー文字列でなければなりません。');
+                throw new Error('The String passed to URLVariables.decode () must be a URL-encoded query strings.');
             }
             
             var p = s.split('=', 2);
             
             if (this.hasOwnProperty(p[0])) {
-                throw new ReferenceError('URLVariables のメソッド ' + p[0] + ' に代入できません。');
+                throw new ReferenceError('Cannot assign to a method ' + p[0] + ' on URLVariables');
             }
             
             this[p[0]] = decodeURIComponent(p[1]);
