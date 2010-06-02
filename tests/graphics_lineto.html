@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Graphics - LineTo</title>
+<link type="text/css" href="init.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        var shape;
+        
+        //draw a traiangle
+        shape = new Shape();
+        shape.x = 50;
+        shape.y = 50;
+        shape.graphics.lineStyle(0);
+        shape.graphics.beginFill(0x00FF00);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        shape.graphics.endFill();
+        this.addChild(shape);
+        
+        //draw a traiangle with strokes
+        shape = new Shape();
+        shape.x = 200;
+        shape.y = 50;
+        shape.graphics.lineStyle(10, 0x0000FF);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        this.addChild(shape);
+        
+        //draw a traiangle with stroke and fill
+        shape = new Shape();
+        shape.x = 350;
+        shape.y = 50;
+        shape.graphics.lineStyle(10, 0x0000FF);
+        shape.graphics.beginFill(0x00FF00);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        shape.graphics.endFill();
+        this.addChild(shape);
+        
+        //draw a traiangle with alpha fill
+        shape = new Shape();
+        shape.x = 500;
+        shape.y = 50;
+        shape.graphics.lineStyle(10, 0x0000FF);
+        shape.graphics.beginFill(0x00FF00, 0.5);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        shape.graphics.endFill();
+        this.addChild(shape);
+        
+        //draw a traiangle with alpha stroke
+        shape = new Shape();
+        shape.x = 650;
+        shape.y = 50;
+        shape.graphics.lineStyle(10, 0x0000FF, 0.5);
+        shape.graphics.beginFill(0x00FF00);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        shape.graphics.endFill();
+        this.addChild(shape);
+        
+        //draw a traiangle with alpha fill and stroke
+        shape = new Shape();
+        shape.x = 800;
+        shape.y = 50;
+        shape.graphics.lineStyle(10, 0x0000FF, 0.5);
+        shape.graphics.beginFill(0x00FF00, 0.5);
+        shape.graphics.moveTo(50, 0);
+        shape.graphics.lineTo(100, 100);
+        shape.graphics.lineTo(0, 100);
+        shape.graphics.lineTo(50, 0);
+        shape.graphics.endFill();
+        this.addChild(shape);
+    }
+});
+
+cs3.utils.addOnload(function()
+{
+    new Stage({canvas: 'stage'}).addChild(new Main());
+});
+
+</script>
+<style type="text/css">
+* {
+    margin:0;
+    padding:0;
+    border:0;
+}
+html, body, #stage {
+    width:100%;
+    height:100%;
+}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+</body>
+</html>
