@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>Particles</title>
-<script type="text/javascript" src="../lib/cs3.js"></script>
+<script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript">
 var MAX_PARTICLES = 500;
 var MAX_VELOCITY = 500;
@@ -88,7 +88,7 @@ var Main = new Class(Sprite, function()
             else if (fps < stage.frameRate - 5) {
                 stage.frameRate--;
             }
-            
+            trace(stage.frameRate)
             fps = 0;
         }, 1000);
     };

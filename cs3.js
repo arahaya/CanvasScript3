@@ -3719,6 +3719,8 @@ Stage.prototype.__defineGetter__("mouseX", Stage.prototype.getMouseX);
 Stage.prototype.__defineGetter__("mouseY", Stage.prototype.getMouseY);
 Stage.prototype.__defineGetter__("stageWidth", Stage.prototype.getStageWidth);
 Stage.prototype.__defineGetter__("stageHeight", Stage.prototype.getStageHeight);
+Stage.prototype.__defineGetter__("frameRate", Stage.prototype.getFrameRate);
+Stage.prototype.__defineSetter__("frameRate", Stage.prototype.setFrameRate);
 Stage.prototype.toString = function()
 {
     return '[object Stage]';
