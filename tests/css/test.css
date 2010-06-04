@@ -1,0 +1,22 @@
+html, body {
+    margin:0;
+    padding:0;
+    border:0;
+}
+html, body, #stage {
+    width:100%;
+    height:100%;
+}
+#trace-panel {
+	border:1px solid #ccc;
+	padding:6px;
+    display: block;
+    position:absolute;
+    width:280px;
+    height:auto;
+    bottom:0;
+    top:0;
+    right:0;
+	font-size:13px;
+	font-family: "Bitstream Vera Sans Mono", "Courier", monospace;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>DisplayObject - HitTestPoint</title>
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        var circle = new Shape();
+        circle.graphics.beginFill(0x0000FF);
+        circle.graphics.drawCircle(40, 40, 40);
+        circle.x = 10;
+        circle.y = 10;
+        this.addChild(circle);
+
+        var point1 = new Point(0, 10);
+        trace(circle.hitTestPoint(point1.x, point1.y, true)); // false
+        trace(circle.hitTestPoint(point1.x, point1.y, false)); // false
+        trace(circle.globalToLocal(point1)); // [x=-10, y=0]
+
+        var point2 = new Point(10, 11);
+        trace(circle.hitTestPoint(point2.x, point2.y, true)); // false
+        trace(circle.hitTestPoint(point2.x, point2.y, false)); // true
+        trace(circle.globalToLocal(point2)); // [x=0, y=1]
+
+        var point3 = new Point(30, 30);
+        trace(circle.hitTestPoint(point3.x, point3.y, true)); // true
+        trace(circle.hitTestPoint(point3.x, point3.y, false)); // true
+        trace(circle.globalToLocal(point3)); // [x=20, y=20]
+    }
+});
+
+new Stage({canvas:"stage"}).addChild(new Main());
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+</body>
+</html>

@@ -2,16 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
 <title>MouseEvent - RollOut</title>
-<link type="text/css" href="init.css" media="all" rel="Stylesheet" />
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
 <script type="text/javascript">
-
-function log(str)
-{
-    document.getElementById('log').innerHTML += str + '<br />';
-}
-
 var Main = new Class(Sprite, function()
 {
     this.__init__ = function()
@@ -27,7 +23,7 @@ var Main = new Class(Sprite, function()
         red.graphics.endFill();
         red.addEventListener(MouseEvent.ROLL_OUT, function(e)
         {
-            log('red rollout');
+            trace('red rollout');
         });
         this.addChild(red);
         
@@ -40,7 +36,7 @@ var Main = new Class(Sprite, function()
         blue.graphics.endFill();
         blue.addEventListener(MouseEvent.ROLL_OUT, function(e)
         {
-            log('blue rollout');
+            trace('blue rollout');
         });
         red.addChild(blue);
         
@@ -53,41 +49,16 @@ var Main = new Class(Sprite, function()
         green.graphics.endFill();
         green.addEventListener(MouseEvent.ROLL_OUT, function(e)
         {
-            log('green rollout');
+            trace('green rollout');
         });
         blue.addChild(green);
     }
 });
 
-cs3.utils.addOnload(function()
-{
-    new Stage({canvas: 'stage'}).addChild(new Main());
-});
-
+new Stage({canvas:"stage"}).addChild(new Main());
 </script>
-<style type="text/css">
-* {
-    margin:0;
-    padding:0;
-    border:0;
-}
-html, body, #stage {
-    width:100%;
-    height:100%;
-}
-#log {
-    width:300px;
-    position:absolute;
-    top:0;
-    right:0;
-    border:1px solid #999;
-    background:#EEE;
-    padding:8px;
-}
-</style>
 </head>
 <body>
 <canvas id="stage"></canvas>
-<div id="log"></div>
 </body>
 </html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>DisplayObject - HitTestObject</title>
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        var circle1 = new Shape();
+        circle1.graphics.beginFill(0x0000FF);
+        circle1.graphics.drawCircle(40, 40, 40);
+        this.addChild(circle1);
+
+        var circle2 = new Shape();
+        circle2.graphics.beginFill(0x00FF00);
+        circle2.graphics.drawCircle(40, 40, 40);
+        circle2.x = 50;
+        this.addChild(circle2);
+
+        var circle3 = new Shape();
+        circle3.graphics.beginFill(0xFF0000);
+        circle3.graphics.drawCircle(40, 40, 40);
+        circle3.x = 100;
+        circle3.y = 67;
+        this.addChild(circle3);
+
+        trace(circle1.hitTestObject(circle2)); // true
+        trace(circle1.hitTestObject(circle3)); // false
+        trace(circle2.hitTestObject(circle3)); // true
+    }
+});
+
+new Stage({canvas:"stage"}).addChild(new Main());
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+</body>
+</html>

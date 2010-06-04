@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Drawing</title>
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        
+        this.bitmapData = new BitmapData(800, 600, true, 0xFFFFFFFF);
+        this.bitmap = new Bitmap(this.bitmapData);
+        this.addChild(this.bitmap);
+        
+        this.canvas = new Shape();
+        this.addChild(this.canvas);
+        
+        this.linesCount = 0;
+        
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        this.addEventListener(MouseEvent.MOUSE_DOWN, this.startDraw);
+        //this.stage.showRedrawRegions = true;
+        
+        var fps = 0;
+        this.addEventListener(Event.ENTER_FRAME, function(e)
+        {
+            fps++;
+        });
+        
+        setInterval(function()
+        {
+            document.getElementById('fps').innerHTML = fps;
+            fps = 0;
+        }, 1000);
+    };
+    
+    this.startDraw = function(e)
+    {
+        this.linesCount = 0;
+        this.canvas.graphics.lineStyle(4, 0x000000);
+        this.canvas.graphics.moveTo(this.mouseX, this.mouseY);
+        this.addEventListener(MouseEvent.MOUSE_MOVE, this.updateDraw);
+        this.addEventListener(MouseEvent.MOUSE_UP, this.stopDraw);
+    };
+    
+    this.updateDraw = function(e)
+    {
+        this.linesCount++;
+        this.canvas.graphics.lineTo(this.mouseX, this.mouseY);
+    };
+    
+    this.stopDraw = function(e)
+    {
+        this.removeEventListener(MouseEvent.MOUSE_MOVE, this.updateDraw);
+        this.removeEventListener(MouseEvent.MOUSE_UP, this.stopDraw);
+        
+        if (this.linesCount == 0) {
+            //if the mouse did not move
+            //draw a dot at the mouse position
+            this.canvas.graphics.beginFill(0x000000);
+            this.canvas.graphics.drawCircle(this.mouseX, this.mouseY, 2);
+            this.canvas.graphics.endFill();
+        }
+        
+        //draw the lines to the bitmapData
+        this.bitmapData.draw(this.canvas);
+        
+        //clear the canvas
+        this.canvas.graphics.clear();
+    };
+});
+
+cs3.utils.addOnload(function()
+{
+    var params = {
+        canvas: 'stage',
+        frameRate: 60,
+        renderMode: StageRenderMode.DIRTY,
+        width: 800,
+        height: 600
+    };
+    var stage = new Stage(params);
+    stage.addChild(new Main());
+});
+</script>
+<style type="text/css">
+html, body {
+    margin:0;
+    padding:0;
+    border:0;
+    width:100%;
+    height:100%;
+}
+#stage {
+    margin:30px;
+    border:1px solid #ccc;
+    width:800px;
+    height:600px;
+}
+#fps-counter {
+    position:absolute;
+    top:10px;
+    left:10px;
+}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="fps-counter">FPS: <span id="fps"></span></div>
+</body>
+</html>
