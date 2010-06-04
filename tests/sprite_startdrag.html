@@ -18,7 +18,7 @@ var Main = new Class(Sprite, function()
         sprite.y = 100;
         sprite.graphics.lineStyle(0);
         sprite.graphics.beginFill(0xFF0000);
-        sprite.graphics.drawRect(0, 0, 100, 100);
+        sprite.graphics.drawCircle(0, 0, 50);
         sprite.graphics.endFill();
         sprite.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
         {
@@ -36,7 +36,7 @@ var Main = new Class(Sprite, function()
         sprite2.y = 100;
         sprite2.graphics.lineStyle(0);
         sprite2.graphics.beginFill(0x00FF00);
-        sprite2.graphics.drawRect(0, 0, 100, 100);
+        sprite2.graphics.drawCircle(0, 0, 50);
         sprite2.graphics.endFill();
         sprite2.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
         {
@@ -52,14 +52,14 @@ var Main = new Class(Sprite, function()
         
         var rect = new Rectangle(500, 100, 300, 300);
         this.graphics.lineStyle(1, 0x999999);
-        this.graphics.drawRect(500, 100, 300 + 100, 300 + 100);
+        this.graphics.drawRect(500, 100, 300, 300);
         
         var sprite3 = new Sprite();
         sprite3.x = 500;
         sprite3.y = 100;
         sprite3.graphics.lineStyle(0);
         sprite3.graphics.beginFill(0x0000FF);
-        sprite3.graphics.drawRect(0, 0, 100, 100);
+        sprite3.graphics.drawCircle(0, 0, 50);
         sprite3.graphics.endFill();
         sprite3.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
         {

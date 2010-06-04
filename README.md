@@ -15,5 +15,5 @@ not comming soon..
 
 ### Examples ###
 
-Please take a look in the examples directory and the tests directory.  
-More examples will be added.
+http://www.arahaya.com/canvasscript3/examples/  
+http://www.arahaya.com/canvasscript3/tests/
