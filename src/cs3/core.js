@@ -36,12 +36,11 @@ var cs3 = {
     core: {
         initialized: false,
         debug: false,
-        isOpera: false,
+        isOpera: (window.opera) ? true : false,//TODO add beter browser detection
+        isChrome: navigator.userAgent.toLowerCase().indexOf('chrome') > -1,
         stages: [],
         instanceId: 0,
         resizeTimeout: null,
-        testCanvas: null,
-        testContext: null,
         nextInstanceId: function()
         {
             ++this.instanceId;
@@ -55,24 +54,6 @@ var cs3 = {
                 alert('document not loaded');
                 return;
             }
-            
-            
-            //canvas for testing
-            this.testCanvas = document.createElement("CANVAS");
-            if (!this.testCanvas.getContext) {
-                try {
-                    G_vmlCanvasManager.initElement(this.testCanvas);
-                }
-                catch (e) {
-                    alert('no canvas support');
-                    return;
-                }
-            }
-            this.testContext = this.testCanvas.getContext('2d');
-            
-            
-            //TODO add beter browser detection
-            this.isOpera = (window.opera) ? true : false;
             
             window.onresize = this.resizeHandler;
             
@@ -316,6 +297,19 @@ var cs3 = {
         }
     }
 };
+var __clearContext = (function()
+{
+    if (cs3.core.isChrome) {
+        return function(context) {
+            context.canvas.width = context.canvas.width;
+        };
+    }
+    else {
+        return function(context) {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        };
+    }
+})();
 /**
  * Fix rectangle coords from floats to integers
  */

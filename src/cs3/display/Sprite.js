@@ -14,7 +14,7 @@ var Sprite = new Class(DisplayObjectContainer, function()
     this.__getModified = Shape.prototype.__getModified;
     this.__setModified = Shape.prototype.__setModified;
     this.__render = Shape.prototype.__render;
-    this.__renderPoint = Shape.prototype.__renderPoint;
+    this.__hitTestPoint = Shape.prototype.__hitTestPoint;
     this.startDrag = function(lockCenter, bounds)
     {
         this.__stage.startDrag(this, lockCenter, bounds);

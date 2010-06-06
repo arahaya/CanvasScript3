@@ -33,43 +33,36 @@ var Shape = new Class(DisplayObject, function()
         }
     };
     //override
-    this.__render = function(context, matrix, color)
+    this.__render = function(context, matrix, colorTransform)
     {
-        if (!this.__graphics) {
-            return;
+        if (this.__graphics) {
+            this.__graphics.__render(context, matrix, colorTransform);
         }
-        /*
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(this.__graphics.__rect);
-        
-        //hit test
-        for (var i = 0, l = rects.length; i < l; ++i)
-        {
-            if (globalBounds.intersects(rects[i])) {
-                this.__graphics.__render(context);
-                return;
-            }
-        }
-        */
-        this.__graphics.__render(context, matrix, color);
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
-        if (!this.__graphics) {
-            return;
+        if (this.__graphics) {
+            var bounds = this.__getContentBounds();
+            
+            //convert point to local coords
+            var invertedMatrix = matrix.clone();
+            invertedMatrix.invert();
+            var localPoint = invertedMatrix.transformPoint(point);
+            
+            if (bounds.containsPoint(localPoint)) {
+                this.__graphics.__render(context, matrix, null);
+                
+                var imageData = context.getImageData(point.x, point.y, 1, 1);
+                var pixel = imageData.data;
+                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
+                if (pixel[3] !== 0) {
+                    return true;
+                }
+            }
         }
-        /*
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(this.__graphics.__rect);
-        
-        if (globalBounds.containsPoint(point)) {
-            this.__graphics.__render(context);
-        }
-        */
-        this.__graphics.__render(context, matrix, null);
+        return false;
     };
-    
     /* getters and setters */
     this.getGraphics = function()
     {

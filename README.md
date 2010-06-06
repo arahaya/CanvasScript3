@@ -8,6 +8,7 @@ CanvasScript3 is a Javascript sprite library for HTML5 Canvas similar to FLASH/A
 Opera 10.51  
 Chrome 5.0.375.55  
 Firefox 3.6.3
+Safari 4.0.5
 
 ### Documentation ###
 

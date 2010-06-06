@@ -8,12 +8,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         params.canvas     = params.canvas || null;
         params.width      = params.width | 0;
         params.height     = params.height | 0;
-        params.frameRate  = params.frameRate | 30;
+        params.frameRate  = params.frameRate || 30;
         params.align      = params.align || StageAlign.TOP_LEFT;
         params.scaleMode  = params.scaleMode || StageScaleMode.NO_SCALE;
         params.renderMode = params.renderMode || StageRenderMode.AUTO;/* all, dirty, auto */
         params.debug      = (params.debug) ? true : false;
-        
         params.preventMouseWheel = (params.preventMouseWheel) ? true : false;
         params.preventTabKey     = (params.preventTabKey) ? true : false;
         
@@ -41,7 +40,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__lockFrameEvent = false;
         this.__blockedFrameEvent = false;
         this.__renderAll = true;
-        this.__dirtyRects = [];
+        this.__redrawRegions = [];
         this.__keyPressTimer = null;
         this.__isKeyDown = false;
         this.__preventMouseWheel = params.preventMouseWheel;
@@ -112,7 +111,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__initialized = true;
         this.__enterFrame();
     };
-    this.__addDirtyRect = function(rect)
+    this.__addRedrawRegion = function(rect)
     {
         rect = rect.clone();
         
@@ -129,21 +128,21 @@ var Stage = new Class(DisplayObjectContainer, function()
         //convert float's to int's
         __ceilRect(rect);
         
-        var dirtyRects = this.__dirtyRects;
-        var i = dirtyRects.length;
+        var redrawRegions = this.__redrawRegions;
+        var i = redrawRegions.length;
         while (i--)
         {
-            var dirty = dirtyRects[i];
-            if (dirty.intersects(rect)) {
-                //var intersection = dirty.intersection(rect);
+            var region = redrawRegions[i];
+            if (region.intersects(rect)) {
+                //var intersection = region.intersection(rect);
                 //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
-                    dirtyRects[i] = dirty.union(rect);
+                    redrawRegions[i] = region.union(rect);
                     return;
                 //}
             }
         }
         
-        dirtyRects.push(rect);
+        redrawRegions.push(rect);
     };
     this.__focusHandler = function(e)
     {
@@ -272,7 +271,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__mouseDownHandler = function(e)
     {
         //FIXED in opera and chrome we can't capture mousemove events while the contextmenu is open.
-        //so without the code bellow if you right click then left click the mouse position will not be updated.
+        //so without the code bellow if you right click then left click, the mouse position will not be updated.
         this.__mouseMoveHandler(e);
         
         var target = this.__objectUnderMouse || this;
@@ -375,7 +374,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         //reserve next frame
         var self = this;
         clearTimeout(this.__timer);
-        this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.frameRate);
+        this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
         //resize
         //this.__resize();
@@ -383,16 +382,16 @@ var Stage = new Class(DisplayObjectContainer, function()
         //run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
-        this.__update();
+        this.__updateStage();
         
         this.__lockFrameEvent = false;
         if (this.__blockedFrameEvent === true) {
             //if block occurred during process, run the next frame right away
             ///this.__enterFrame();
-            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1);
+            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 5);
         }
     };
-    this.__update = function()
+    this.__updateStage = function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
@@ -400,42 +399,38 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         
         //render
+        var redrawRegions;
         context.save();
         if (this.__renderMode == 'all' || this.__renderAll) {
             //force to render the entire stage
-            dirtyRects = [stageRect];
+            redrawRegions = [stageRect];
             this.__renderAll = false;
         }
         else {
-            //update modified objects and collect dirty rects
-            for (var i = 0, l = this.__children.length; i < l; ++i)
-            {
-                this.__children[i].__update(new Matrix());
-            }
-            var dirtyRects = this.__dirtyRects;
+            //update modified objects and collect redraw regions
+            this.__updateList(new Matrix());
+            redrawRegions = this.__redrawRegions;
             
-            if (this.__renderMode == 'auto' && dirtyRects.length > 50) {
-                dirtyRects = [stageRect];
+            if (this.__renderMode == 'auto' && redrawRegions.length > 50) {
+                redrawRegions = [stageRect];
             }
         }
         
-        //clear context and clip dirty rects for rendering
+        //clear context and clip redraw regions for rendering
         context.beginPath();
-        for (i = 0, l = dirtyRects.length; i < l; ++i)
+        for (i = 0, l = redrawRegions.length; i < l; ++i)
         {
-            var rect = dirtyRects[i];
+            var rect = redrawRegions[i];
             context.clearRect(rect.x, rect.y, rect.width, rect.height);
             context.rect(rect.x, rect.y, rect.width, rect.height);
         }
         context.clip();
         
-        this.__renderList(context, new Matrix(), new ColorTransform(), 1, dirtyRects);
+        this.__renderList(context, new Matrix(), new ColorTransform(), 1, redrawRegions);
         context.restore();
         
-        
         //catch mouse events
-        //this.__updateObjectUnderMouse();
-        
+        this.__updateObjectUnderMouse();
         
         //debug
         if (this.showRedrawRegions) {
@@ -443,9 +438,9 @@ var Stage = new Class(DisplayObjectContainer, function()
             context.strokeStyle = "#FF0000";
             context.lineWidth = 1;
             context.beginPath();
-            for (i = 0, l = dirtyRects.length; i < l; ++i)
+            for (i = 0, l = redrawRegions.length; i < l; ++i)
             {
-                rect = dirtyRects[i];
+                rect = redrawRegions[i];
                 context.rect(rect.x, rect.y, rect.width, rect.height);
             }
             context.stroke();
@@ -453,14 +448,14 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         //clean up
-        this.__dirtyRects = [];
+        this.__redrawRegions = [];
     };
     this.__updateObjectUnderMouse = function()
     {
         var current = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
         
         //TODO test in flash
-        //should the default target be the stage?
+        //should the stage be the default target?
         current = current || this;
         
         var last = this.__objectUnderMouse;
@@ -612,7 +607,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.setFrameRate = function(v)
     {
-        this.__frameRate = v | 1;
+        this.__frameRate = +v || 1;
     };
 });
 Stage.prototype.__defineGetter__("mouseX", Stage.prototype.getMouseX);

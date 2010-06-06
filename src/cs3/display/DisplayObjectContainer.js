@@ -52,42 +52,119 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         return DisplayObject.prototype.__getObjectUnderPoint.call(this, context, matrix, point);
     };
     //override
-    this.__renderList = function(context, matrix, color, alpha, rects)
+    /**
+     * NOTE: argument matrix and alpha is already applied to context
+     * NOTE: argument matrix already contains self local matrix
+     */
+    this.__renderList = function(context, matrix, colorTransform)
     {
-        DisplayObject.prototype.__renderList.call(this, context, matrix, color, alpha, rects);
-        
-        /*
-        if (this.__cache) {
-            //if rendered by cache, children do not need to be rendered
-            return;
+        //apply ContextFilter's
+        var filters = this.__filters;
+        for (var i = 0, l = filters.length; i < l; ++i)
+        {
+            if (filters[i] instanceof ContextFilter) {
+                filters[i].__filter(context, this);
+            }
         }
-        */
         
+        this.__render(context, matrix, colorTransform);
+        
+        var globalAlpha = context.globalAlpha;
         var children = this.__children;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
-            if (child.__visible) {
-                var childMatrix = child.__transform.__matrix.clone();
-                childMatrix.concat(matrix);
-                var childColor = child.__transform.__colorTransform.clone();
-                childColor.concat(color);
-                var childAlpha = alpha * child.__alpha;
-                child.__renderList(context, childMatrix, childColor, childAlpha, rects);
+            if (child.__visible === false) { continue; }
+            if (child.__maskee !== null) { continue; }
+            
+            var childMatrix = child.__transform.__matrix.clone();
+            childMatrix.concat(matrix);
+            var childColor = child.__transform.__colorTransform.clone();
+            childColor.concat(colorTransform);
+            
+            context.globalAlpha = globalAlpha * child.__alpha;
+            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            
+            /*
+            if (child.__cache) {
+                child.__cache.__render(context, childMatrix, childColor);
+                continue;
             }
+            */
+            
+            /*** experimental ***/
+            if (child.__mask) {
+                var childBitmapData = child.__getAsBitmapData();
+                if (!childBitmapData) {
+                    //child content is empty so we don't need to apply a mask
+                    continue;
+                }
+                var mask = child.__mask;
+                var maskBitmapData = mask.__getAsBitmapData();
+                if (!maskBitmapData) {
+                    //mask content is empty so we don't need to render the child
+                    continue;
+                }
+                
+                //create another bitmapData to apply the mask
+                if (child.__cache) {
+                    //if it already exists, reuse it
+                    child.__cache.__canvas.width = childBitmapData.width;
+                    child.__cache.__canvas.height = childBitmapData.height;
+                    child.__cache.__context.drawImage(childBitmapData.__canvas, 0, 0);
+                    child.__cache.__rect = childBitmapData.__rect.clone();
+                }
+                else {
+                    child.__cache = childBitmapData.clone();
+                }
+                var bitmapData = child.__cache;
+                var bitmapDataContext = bitmapData.__context;
+                
+                //create the masks matrix
+                var maskMatrix = mask.__transform.getConcatenatedMatrix();
+                var deltaMatrix = childMatrix.clone();
+                deltaMatrix.invert();
+                maskMatrix.concat(deltaMatrix);
+                maskMatrix.tx -= bitmapData.__rect.x;
+                maskMatrix.ty -= bitmapData.__rect.y;
+                
+                //apply the mask
+                bitmapDataContext.save();
+                bitmapDataContext.globalCompositeOperation = 'destination-in';
+                bitmapDataContext.setTransform(
+                    maskMatrix.a,
+                    maskMatrix.b,
+                    maskMatrix.c,
+                    maskMatrix.d,
+                    maskMatrix.tx,
+                    maskMatrix.ty
+                );
+                maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+                bitmapDataContext.restore();
+                
+                //render the bitmapData to the stage context
+                bitmapData.__render(context, childMatrix, childColor);
+                
+                //cache the masked bitmapData
+                //child.__cache = bitmapData;
+                continue;
+            }
+            
+            child.__renderList(context, childMatrix, childColor);
         }
     };
     //override
-    this.__update = function(matrix)
+    this.__updateList = function(matrix)
     {
+        //this.__update();
         var modified = this.__getModified();
         if (modified) {
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             
-            //collect dirty rects
-            this.__stage.__addDirtyRect(globalBounds);
+            //collect redraw regions
+            this.__stage.__addRedrawRegion(globalBounds);
             if (this.__globalBounds) {
-                this.__stage.__addDirtyRect(this.__globalBounds);
+                this.__stage.__addRedrawRegion(this.__globalBounds);
             }
             this.__globalBounds = globalBounds;
         }
@@ -102,7 +179,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
                 //if parent is modified child is to
                 child.__setModified(true);
             }
-            child.__update(childMatrix);
+            child.__updateList(childMatrix);
         }
         
         //reset modification
@@ -137,9 +214,9 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var child = this.__children[index];
         
-        //add dirty rects
+        //add redraw regions
         child.__setModified(true);
-        child.__update(child.__transform.getConcatenatedMatrix());
+        child.__updateList(child.__transform.getConcatenatedMatrix());
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -277,18 +354,6 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     this.getObjectsUnderPoint = function(point)
     {
-        var context;
-        if (this.__stage) {
-            context = this.__stage.__hiddenContext;
-        }
-        else {
-            //if there is no reference to a stage
-            //we have to create a new context to draw
-            var bounds = this.__getBounds();
-            var canvas = cs3.utils.createCanvas('_cs3_temp_canvas', bounds.width, bounds.height);
-            context = cs3.utils.getContext2d(canvas);
-        }
-        
         //TODO
     };
     

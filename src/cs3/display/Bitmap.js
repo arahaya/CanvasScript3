@@ -14,6 +14,11 @@ var Bitmap = new Class(DisplayObject, function()
         return new Rectangle();
     };
     //override
+    this.__getAsBitmapData = function()
+    {
+        return this.__bitmapData;
+    };
+    //override
     this.__getModified = function()
     {
         return (this.__modified ||
@@ -30,18 +35,36 @@ var Bitmap = new Class(DisplayObject, function()
         }
     };
     //override
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__render(context, matrix, color, rects);
+            this.__bitmapData.__render(context, matrix, colorTransform);
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__renderPoint(context, matrix, point);
+            var bounds = this.__getContentBounds();
+            
+            //convert point to local coords
+            var invertedMatrix = matrix.clone();
+            invertedMatrix.invert();
+            var localPoint = invertedMatrix.transformPoint(point);
+            
+            if (bounds.containsPoint(localPoint)) {
+                //fix the points back to ints
+                localPoint.x = Math.floor(localPoint.x);
+                localPoint.y = Math.floor(localPoint.y);
+                var imageData = this.__bitmapData.__context.getImageData(localPoint.x, localPoint.y, 1, 1);
+                var pixel = imageData.data;
+                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
+                if (pixel[3] !== 0) {
+                    return true;
+                }
+            }
         }
+        return false;
     };
     /* getters and setters */
     this.getBitmapData = function()

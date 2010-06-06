@@ -39,16 +39,14 @@ var Video = new Class(DisplayObject, function()
         this.__modified = v;
     };
     //override
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
         if (this.__media) {
-            try {
-                context.drawImage(this.__media, 0, 0);
-            }catch(e){}
+            context.drawImage(this.__media, 0, 0);
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         if (this.__media) {
             var bounds = this.__getContentBounds();
@@ -59,9 +57,10 @@ var Video = new Class(DisplayObject, function()
             var localPoint = invertedMatrix.transformPoint(point);
             
             if (bounds.containsPoint(localPoint)) {
-                context.drawImage(this.__media, localPoint.x, localPoint.y, 1, 1, localPoint.x, localPoint.y, 1, 1);
+                return true;
             }
         }
+        return false;
     };
     this.__onCanPlay = function()
     {

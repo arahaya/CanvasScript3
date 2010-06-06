@@ -71,7 +71,7 @@ MatrixTransformer.getSkewX = function(m)
 };
 MatrixTransformer.setSkewX = function(m, skewX)
 {
-    this.setSkewXRadians(m, skewX * 0.017453292519943295);
+    MatrixTransformer.setSkewXRadians(m, skewX * 0.017453292519943295);
 };
 MatrixTransformer.getSkewY = function(m)
 {
@@ -79,7 +79,7 @@ MatrixTransformer.getSkewY = function(m)
 };
 MatrixTransformer.setSkewY = function(m, skewY)
 {
-    this.setSkewYRadians(m, skewY * 0.017453292519943295);
+    MatrixTransformer.setSkewYRadians(m, skewY * 0.017453292519943295);
 };
 MatrixTransformer.getRotationRadians = function(m)
 {
@@ -108,7 +108,7 @@ MatrixTransformer.getRotation = function(m)
 };
 MatrixTransformer.setRotation = function(m, rotation)
 {
-    this.setRotationRadians(m, rotation * 0.017453292519943295);
+    MatrixTransformer.setRotationRadians(m, rotation * 0.017453292519943295);
 };
 MatrixTransformer.rotateAroundInternalPoint = function(m, x, y, angleDegrees)
 {

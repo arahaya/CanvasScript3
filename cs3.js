@@ -36,12 +36,11 @@ var cs3 = {
     core: {
         initialized: false,
         debug: false,
-        isOpera: false,
+        isOpera: (window.opera) ? true : false,//TODO add beter browser detection
+        isChrome: navigator.userAgent.toLowerCase().indexOf('chrome') > -1,
         stages: [],
         instanceId: 0,
         resizeTimeout: null,
-        testCanvas: null,
-        testContext: null,
         nextInstanceId: function()
         {
             ++this.instanceId;
@@ -55,24 +54,6 @@ var cs3 = {
                 alert('document not loaded');
                 return;
             }
-            
-            
-            //canvas for testing
-            this.testCanvas = document.createElement("CANVAS");
-            if (!this.testCanvas.getContext) {
-                try {
-                    G_vmlCanvasManager.initElement(this.testCanvas);
-                }
-                catch (e) {
-                    alert('no canvas support');
-                    return;
-                }
-            }
-            this.testContext = this.testCanvas.getContext('2d');
-            
-            
-            //TODO add beter browser detection
-            this.isOpera = (window.opera) ? true : false;
             
             window.onresize = this.resizeHandler;
             
@@ -316,6 +297,19 @@ var cs3 = {
         }
     }
 };
+var __clearContext = (function()
+{
+    if (cs3.core.isChrome) {
+        return function(context) {
+            context.canvas.width = context.canvas.width;
+        };
+    }
+    else {
+        return function(context) {
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        };
+    }
+})();
 /**
  * Fix rectangle coords from floats to integers
  */
@@ -922,13 +916,63 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__stage = null;
         this.__root = null;
         this.__globalBounds = null;
-        this.__cache = null;
         //this.blendMode = 'normal';
         //this.cacheAsBitmap = false;
         this.__filters = [];
         //this.loaderInfo = new LoaderInfo();
-        //this.mask = null;
+        this.__mask = null;
+        this.__maskee = null;
+        this.__bitmapData = null;//used for cacheAsBitmap, mask, maskee, filters
+        this.__cache = null;//cached result for mask and filters
         //this.opaqueBackground = null;
+    };
+    this.__getAsBitmapData = function()
+    {
+        var bounds = this.__getBounds();
+        if (bounds.isEmpty()) {
+            //if bounds is empty we can't create a BitmapData.
+            this.__bitmapData = null;
+            return null;
+        }
+        
+        var render = false;
+        if (this.__bitmapData === null) {
+            this.__bitmapData = new BitmapData(bounds.width, bounds.height, true, 0);
+            //we want the bitmapData.rect to be the exact same as bounds
+            this.__bitmapData.__rect = bounds;
+            render = true;
+        }
+        else if (bounds.equals(this.__bitmapData.__rect) === false) {
+            this.__bitmapData.__canvas.width = bounds.width;
+            this.__bitmapData.__canvas.height = bounds.height;
+            this.__bitmapData.__rect = bounds;
+            render = true;
+        }
+        
+        //if (render) {
+        if (true) {//disable caching for now
+            var context = this.__bitmapData.__context;
+            //context.clearRect(0, 0, bounds.width, bounds.height);
+            __clearContext(context);
+            
+            //create a matrix that makes the bounds to fit the context
+            var matrix = new Matrix(1, 0, 0, 1, -bounds.x, -bounds.y);
+            
+            //render the entire list to the bitmapdata context
+            context.save();
+            context.setTransform(
+                matrix.a,
+                matrix.b,
+                matrix.c,
+                matrix.d,
+                matrix.tx,
+                matrix.ty
+             );
+            this.__renderList(context, matrix, new ColorTransform());
+            context.restore();
+        }
+        
+        return this.__bitmapData;
     };
     this.__getBounds = function()
     {
@@ -948,20 +992,15 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
-        var bounds = matrix.transformRect(this.__getContentBounds());
-        if (bounds.containsPoint(point)) {
-            context.save();
-            //context.clearRect(point.x, point.y, 1, 1);
-            context.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-            this.__renderPoint(context, matrix, point);
-            context.restore();
-            var pixel = context.getImageData(point.x, point.y, 1, 1);
-            var data = pixel.data;
-            if (data[0] !== 0 || data[1] !== 0 || data[2] !== 0 || data[3] !== 0) {
-                return this;
-            }
+        context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        if (this.__hitTestPoint(context, matrix, point)) {
+            return this;
         }
         return null;
+    };
+    this.__hitTestPoint = function(context, matrix, point)
+    {
+        return false;
     };
     this.__getModified = function()
     {
@@ -972,13 +1011,10 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__modified = v;
         this.__transform.__modified = v;
     };
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
     };
-    this.__renderPoint = function(context, matrix, point)
-    {
-    };
-    this.__renderList = function(context, matrix, color, alpha, rects)
+    this.__renderList = function(context, matrix, colorTransform)
     {
         //apply ContextFilter's
         var filters = this.__filters;
@@ -989,28 +1025,39 @@ var DisplayObject = new Class(EventDispatcher, function()
             }
         }
         
-        context.save();
-        context.globalAlpha = alpha;
-        context.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-        
-        //if (this.__cache) {
-        //    this.__cache.__render(context, matrix, color, rects);
-        //}
-        //else {
-            this.__render(context, matrix, color, rects);
-        //}
-        context.restore();
-    };
+        this.__render(context, matrix, colorTransform);
+    }
     this.__update = function(matrix)
     {
+        /*
+        //clear bitmapData if self content or a child is modified
+        if (this.__mask) {
+            if (this.__mask.__bitmapData) {
+                this.__mask.__bitmapData.dispose();
+                this.__mask.__bitmapData = null;
+            }
+        }
+        this.__cache = null;
+        //clear cache if self bitmapData or mask bitmapData is cleared
+        if (this.__cache) {
+            if (this.__bitmapData === null || (this.__mask && this.__mask.__bitmapData === null)) {
+                this.__cache.dispose();
+                this.__cache = null;
+            }
+        }
+        */
+    };
+    this.__updateList = function(matrix)
+    {
+        //this.__update();
         var modified = this.__getModified();
         if (modified) {
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             
-            //collect dirty rects
-            this.__stage.__addDirtyRect(globalBounds);
+            //collect redraw regions
+            this.__stage.__addRedrawRegion(globalBounds);
             if (this.__globalBounds) {
-                this.__stage.__addDirtyRect(this.__globalBounds);
+                this.__stage.__addRedrawRegion(this.__globalBounds);
             }
             this.__globalBounds = globalBounds;
         }
@@ -1068,7 +1115,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         else {
             if (!this.__stage) {
                 //if shape flag is true and object is not addet to the stage
-                //always returns false;
+                //always return false;
                 return false;
             }
             
@@ -1099,9 +1146,9 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
         return this.__name;
     };
-    this.setName = function(v)
+    this.setName = function(name)
     {
-        this.__name = v;
+        this.__name = name;
     };
     this.getStage = function()
     {
@@ -1189,6 +1236,23 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         return this.globalToLocal(new Point(this.__stage.__mouseX, this.__stage.__mouseY)).y;
     };
+    this.getMask = function()
+    {
+        return this.__mask;
+    };
+    this.setMask = function(v)
+    {
+        //if the mask object is allready a mask of a different object remove it
+        if (v.__maskee) {
+            v.__maskee.__mask = null;
+        }
+        //if this allready has a mask remove it
+        if (this.__mask) {
+            this.__mask.__maskee = null;
+        }
+        this.__mask = v;
+        v.__maskee = this;
+    };
     this.getFilters = function()
     {
         return this.__filters.slice(0);
@@ -1237,6 +1301,8 @@ DisplayObject.prototype.__defineGetter__("alpha", DisplayObject.prototype.getAlp
 DisplayObject.prototype.__defineSetter__("alpha", DisplayObject.prototype.setAlpha);
 DisplayObject.prototype.__defineGetter__("visible", DisplayObject.prototype.getVisible);
 DisplayObject.prototype.__defineSetter__("visible", DisplayObject.prototype.setVisible);
+DisplayObject.prototype.__defineGetter__("mask", DisplayObject.prototype.getMask);
+DisplayObject.prototype.__defineSetter__("mask", DisplayObject.prototype.setMask);
 DisplayObject.prototype.__defineGetter__("filters", DisplayObject.prototype.getFilters);
 DisplayObject.prototype.__defineSetter__("filters", DisplayObject.prototype.setFilters);
 DisplayObject.prototype.__defineGetter__("transform", DisplayObject.prototype.getTransform);
@@ -1317,42 +1383,119 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         return DisplayObject.prototype.__getObjectUnderPoint.call(this, context, matrix, point);
     };
     //override
-    this.__renderList = function(context, matrix, color, alpha, rects)
+    /**
+     * NOTE: argument matrix and alpha is already applied to context
+     * NOTE: argument matrix already contains self local matrix
+     */
+    this.__renderList = function(context, matrix, colorTransform)
     {
-        DisplayObject.prototype.__renderList.call(this, context, matrix, color, alpha, rects);
-        
-        /*
-        if (this.__cache) {
-            //if rendered by cache, children do not need to be rendered
-            return;
+        //apply ContextFilter's
+        var filters = this.__filters;
+        for (var i = 0, l = filters.length; i < l; ++i)
+        {
+            if (filters[i] instanceof ContextFilter) {
+                filters[i].__filter(context, this);
+            }
         }
-        */
         
+        this.__render(context, matrix, colorTransform);
+        
+        var globalAlpha = context.globalAlpha;
         var children = this.__children;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
-            if (child.__visible) {
-                var childMatrix = child.__transform.__matrix.clone();
-                childMatrix.concat(matrix);
-                var childColor = child.__transform.__colorTransform.clone();
-                childColor.concat(color);
-                var childAlpha = alpha * child.__alpha;
-                child.__renderList(context, childMatrix, childColor, childAlpha, rects);
+            if (child.__visible === false) { continue; }
+            if (child.__maskee !== null) { continue; }
+            
+            var childMatrix = child.__transform.__matrix.clone();
+            childMatrix.concat(matrix);
+            var childColor = child.__transform.__colorTransform.clone();
+            childColor.concat(colorTransform);
+            
+            context.globalAlpha = globalAlpha * child.__alpha;
+            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            
+            /*
+            if (child.__cache) {
+                child.__cache.__render(context, childMatrix, childColor);
+                continue;
             }
+            */
+            
+            /*** experimental ***/
+            if (child.__mask) {
+                var childBitmapData = child.__getAsBitmapData();
+                if (!childBitmapData) {
+                    //child content is empty so we don't need to apply a mask
+                    continue;
+                }
+                var mask = child.__mask;
+                var maskBitmapData = mask.__getAsBitmapData();
+                if (!maskBitmapData) {
+                    //mask content is empty so we don't need to render the child
+                    continue;
+                }
+                
+                //create another bitmapData to apply the mask
+                if (child.__cache) {
+                    //if it already exists, reuse it
+                    child.__cache.__canvas.width = childBitmapData.width;
+                    child.__cache.__canvas.height = childBitmapData.height;
+                    child.__cache.__context.drawImage(childBitmapData.__canvas, 0, 0);
+                    child.__cache.__rect = childBitmapData.__rect.clone();
+                }
+                else {
+                    child.__cache = childBitmapData.clone();
+                }
+                var bitmapData = child.__cache;
+                var bitmapDataContext = bitmapData.__context;
+                
+                //create the masks matrix
+                var maskMatrix = mask.__transform.getConcatenatedMatrix();
+                var deltaMatrix = childMatrix.clone();
+                deltaMatrix.invert();
+                maskMatrix.concat(deltaMatrix);
+                maskMatrix.tx -= bitmapData.__rect.x;
+                maskMatrix.ty -= bitmapData.__rect.y;
+                
+                //apply the mask
+                bitmapDataContext.save();
+                bitmapDataContext.globalCompositeOperation = 'destination-in';
+                bitmapDataContext.setTransform(
+                    maskMatrix.a,
+                    maskMatrix.b,
+                    maskMatrix.c,
+                    maskMatrix.d,
+                    maskMatrix.tx,
+                    maskMatrix.ty
+                );
+                maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+                bitmapDataContext.restore();
+                
+                //render the bitmapData to the stage context
+                bitmapData.__render(context, childMatrix, childColor);
+                
+                //cache the masked bitmapData
+                //child.__cache = bitmapData;
+                continue;
+            }
+            
+            child.__renderList(context, childMatrix, childColor);
         }
     };
     //override
-    this.__update = function(matrix)
+    this.__updateList = function(matrix)
     {
+        //this.__update();
         var modified = this.__getModified();
         if (modified) {
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             
-            //collect dirty rects
-            this.__stage.__addDirtyRect(globalBounds);
+            //collect redraw regions
+            this.__stage.__addRedrawRegion(globalBounds);
             if (this.__globalBounds) {
-                this.__stage.__addDirtyRect(this.__globalBounds);
+                this.__stage.__addRedrawRegion(this.__globalBounds);
             }
             this.__globalBounds = globalBounds;
         }
@@ -1367,7 +1510,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
                 //if parent is modified child is to
                 child.__setModified(true);
             }
-            child.__update(childMatrix);
+            child.__updateList(childMatrix);
         }
         
         //reset modification
@@ -1402,9 +1545,9 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var child = this.__children[index];
         
-        //add dirty rects
+        //add redraw regions
         child.__setModified(true);
-        child.__update(child.__transform.getConcatenatedMatrix());
+        child.__updateList(child.__transform.getConcatenatedMatrix());
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -1542,18 +1685,6 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     this.getObjectsUnderPoint = function(point)
     {
-        var context;
-        if (this.__stage) {
-            context = this.__stage.__hiddenContext;
-        }
-        else {
-            //if there is no reference to a stage
-            //we have to create a new context to draw
-            var bounds = this.__getBounds();
-            var canvas = cs3.utils.createCanvas('_cs3_temp_canvas', bounds.width, bounds.height);
-            context = cs3.utils.getContext2d(canvas);
-        }
-        
         //TODO
     };
     
@@ -1584,6 +1715,11 @@ var Bitmap = new Class(DisplayObject, function()
         return new Rectangle();
     };
     //override
+    this.__getAsBitmapData = function()
+    {
+        return this.__bitmapData;
+    };
+    //override
     this.__getModified = function()
     {
         return (this.__modified ||
@@ -1600,18 +1736,36 @@ var Bitmap = new Class(DisplayObject, function()
         }
     };
     //override
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__render(context, matrix, color, rects);
+            this.__bitmapData.__render(context, matrix, colorTransform);
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__renderPoint(context, matrix, point);
+            var bounds = this.__getContentBounds();
+            
+            //convert point to local coords
+            var invertedMatrix = matrix.clone();
+            invertedMatrix.invert();
+            var localPoint = invertedMatrix.transformPoint(point);
+            
+            if (bounds.containsPoint(localPoint)) {
+                //fix the points back to ints
+                localPoint.x = Math.floor(localPoint.x);
+                localPoint.y = Math.floor(localPoint.y);
+                var imageData = this.__bitmapData.__context.getImageData(localPoint.x, localPoint.y, 1, 1);
+                var pixel = imageData.data;
+                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
+                if (pixel[3] !== 0) {
+                    return true;
+                }
+            }
         }
+        return false;
     };
     /* getters and setters */
     this.getBitmapData = function()
@@ -1669,62 +1823,20 @@ var BitmapData = new Class(Object, function()
         this.__width = width;
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
-        this.__canvas = document.createElement('CANVAS');
-        this.__canvas.width = width;
-        this.__canvas.height = height;
-        this.__context = this.__canvas.getContext('2d');
+        this.__canvas = cs3.utils.createCanvas("_cs3_bitmapdata_canvas", width, height);
+        this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
         this.__pixel = this.__context.createImageData(1, 1);
-        this.__lock = false;
         this.__modified = false;
         
         if (fillColor === null) { fillColor = 0xFFFFFFFF; }
-        this.fillRect(this.__rect, fillColor);
+        if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
-        /*
-        var rect = this.__rect;
-        
-        //convert rects to local coords
-        var invertedMatrix = matrix.clone();
-        invertedMatrix.invert();
-        
-        for (i = 0, l = rects.length; i < l; ++i)
-        {
-            var r = rect.intersection(invertedMatrix.transformRect(rects[i]));
-            if (r.isEmpty()) {
-                continue;
-            }
-            
-            __ceilRect(r);
-            context.drawImage(this.__canvas, r.x, r.y, r.width, r.height, r.x, r.y, r.width, r.height);
-        }
-        */
-        var rect = this.__rect;
-        if (rect.x !== 0 || rect.y !== 0) {
-            context.translate(rect.x, rect.y);
-        }
-        context.drawImage(this.__canvas, 0, 0);
-    };
-    this.__renderPoint = function(context, matrix, point)
-    {
-        var rect = this.__rect;
-        if (rect.x !== 0 || rect.y !== 0) {
-            context.translate(rect.x, rect.y);
-        }
-        
-        //convert point to local coords
-        var invertedMatrix = matrix.clone();
-        invertedMatrix.invert();
-        var localPoint = invertedMatrix.transformPoint(point);
-        
-        //fix the points back to ints
-        localPoint.x = Math.floor(localPoint.x);
-        localPoint.y = Math.floor(localPoint.y);
-        
-        if (rect.containsPoint(localPoint)) {
-            context.drawImage(this.__canvas, localPoint.x, localPoint.y, 1, 1, localPoint.x, localPoint.y, 1, 1);
+        if (this.__canvas) {
+            var rect = this.__rect;
+            context.drawImage(this.__canvas, rect.x, rect.y);
         }
     };
     this.__alphaBlend = function(src, dx, dy)
@@ -1902,9 +2014,10 @@ var BitmapData = new Class(Object, function()
     };
     this.clone = function()
     {
-        var b = new BitmapData(this.__width, this.__height);
-        b.__context.drawImage(this.__canvas, 0, 0);
-        return b;
+        var clone = new BitmapData(this.__width, this.__height, true, 0);
+        clone.__context.drawImage(this.__canvas, 0, 0);
+        clone.__rect = this.__rect.clone();
+        return clone;
     };
     this.colorTransform = function(rect, colorTransform)
     {
@@ -2035,8 +2148,15 @@ var BitmapData = new Class(Object, function()
     };
     this.copyPixels = function(sourceBitmapData, sourceRect, destPoint)
     {
+        /*
         var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
         this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
+        this.__modified = true;
+        */
+        //about 4 - 30 times faster
+        this.__context.clearRect(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
+        this.__context.drawImage(sourceBitmapData.__canvas, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height,
+                        destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
         this.__modified = true;
     };
     this.createImageData = function()
@@ -2073,7 +2193,7 @@ var BitmapData = new Class(Object, function()
     {
         //TODO a lot to fix..
         matrix = matrix || new Matrix();
-        source.__renderList(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
+        source.__render(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
         this.__modified = true;
     };
     this.fillRect = function(rect, color)
@@ -3019,6 +3139,14 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__contentLoaderInfo = new LoaderInfo(this);
         this.__img = null;
     };
+    //override
+    this.__getAsBitmapData = function()
+    {
+        if (this.__content) {
+            return this.__content.__bitmapData;
+        }
+        return null;
+    };
     this.load = function(request)
     {
         if (typeof request == 'string') {
@@ -3169,43 +3297,36 @@ var Shape = new Class(DisplayObject, function()
         }
     };
     //override
-    this.__render = function(context, matrix, color)
+    this.__render = function(context, matrix, colorTransform)
     {
-        if (!this.__graphics) {
-            return;
+        if (this.__graphics) {
+            this.__graphics.__render(context, matrix, colorTransform);
         }
-        /*
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(this.__graphics.__rect);
-        
-        //hit test
-        for (var i = 0, l = rects.length; i < l; ++i)
-        {
-            if (globalBounds.intersects(rects[i])) {
-                this.__graphics.__render(context);
-                return;
-            }
-        }
-        */
-        this.__graphics.__render(context, matrix, color);
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
-        if (!this.__graphics) {
-            return;
+        if (this.__graphics) {
+            var bounds = this.__getContentBounds();
+            
+            //convert point to local coords
+            var invertedMatrix = matrix.clone();
+            invertedMatrix.invert();
+            var localPoint = invertedMatrix.transformPoint(point);
+            
+            if (bounds.containsPoint(localPoint)) {
+                this.__graphics.__render(context, matrix, null);
+                
+                var imageData = context.getImageData(point.x, point.y, 1, 1);
+                var pixel = imageData.data;
+                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
+                if (pixel[3] !== 0) {
+                    return true;
+                }
+            }
         }
-        /*
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(this.__graphics.__rect);
-        
-        if (globalBounds.containsPoint(point)) {
-            this.__graphics.__render(context);
-        }
-        */
-        this.__graphics.__render(context, matrix, null);
+        return false;
     };
-    
     /* getters and setters */
     this.getGraphics = function()
     {
@@ -3236,7 +3357,7 @@ var Sprite = new Class(DisplayObjectContainer, function()
     this.__getModified = Shape.prototype.__getModified;
     this.__setModified = Shape.prototype.__setModified;
     this.__render = Shape.prototype.__render;
-    this.__renderPoint = Shape.prototype.__renderPoint;
+    this.__hitTestPoint = Shape.prototype.__hitTestPoint;
     this.startDrag = function(lockCenter, bounds)
     {
         this.__stage.startDrag(this, lockCenter, bounds);
@@ -3264,12 +3385,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         params.canvas     = params.canvas || null;
         params.width      = params.width | 0;
         params.height     = params.height | 0;
-        params.frameRate  = params.frameRate | 30;
+        params.frameRate  = params.frameRate || 30;
         params.align      = params.align || StageAlign.TOP_LEFT;
         params.scaleMode  = params.scaleMode || StageScaleMode.NO_SCALE;
         params.renderMode = params.renderMode || StageRenderMode.AUTO;/* all, dirty, auto */
         params.debug      = (params.debug) ? true : false;
-        
         params.preventMouseWheel = (params.preventMouseWheel) ? true : false;
         params.preventTabKey     = (params.preventTabKey) ? true : false;
         
@@ -3297,7 +3417,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__lockFrameEvent = false;
         this.__blockedFrameEvent = false;
         this.__renderAll = true;
-        this.__dirtyRects = [];
+        this.__redrawRegions = [];
         this.__keyPressTimer = null;
         this.__isKeyDown = false;
         this.__preventMouseWheel = params.preventMouseWheel;
@@ -3368,7 +3488,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__initialized = true;
         this.__enterFrame();
     };
-    this.__addDirtyRect = function(rect)
+    this.__addRedrawRegion = function(rect)
     {
         rect = rect.clone();
         
@@ -3385,21 +3505,21 @@ var Stage = new Class(DisplayObjectContainer, function()
         //convert float's to int's
         __ceilRect(rect);
         
-        var dirtyRects = this.__dirtyRects;
-        var i = dirtyRects.length;
+        var redrawRegions = this.__redrawRegions;
+        var i = redrawRegions.length;
         while (i--)
         {
-            var dirty = dirtyRects[i];
-            if (dirty.intersects(rect)) {
-                //var intersection = dirty.intersection(rect);
+            var region = redrawRegions[i];
+            if (region.intersects(rect)) {
+                //var intersection = region.intersection(rect);
                 //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
-                    dirtyRects[i] = dirty.union(rect);
+                    redrawRegions[i] = region.union(rect);
                     return;
                 //}
             }
         }
         
-        dirtyRects.push(rect);
+        redrawRegions.push(rect);
     };
     this.__focusHandler = function(e)
     {
@@ -3528,7 +3648,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__mouseDownHandler = function(e)
     {
         //FIXED in opera and chrome we can't capture mousemove events while the contextmenu is open.
-        //so without the code bellow if you right click then left click the mouse position will not be updated.
+        //so without the code bellow if you right click then left click, the mouse position will not be updated.
         this.__mouseMoveHandler(e);
         
         var target = this.__objectUnderMouse || this;
@@ -3631,7 +3751,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         //reserve next frame
         var self = this;
         clearTimeout(this.__timer);
-        this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.frameRate);
+        this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
         //resize
         //this.__resize();
@@ -3639,16 +3759,16 @@ var Stage = new Class(DisplayObjectContainer, function()
         //run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
-        this.__update();
+        this.__updateStage();
         
         this.__lockFrameEvent = false;
         if (this.__blockedFrameEvent === true) {
             //if block occurred during process, run the next frame right away
             ///this.__enterFrame();
-            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1);
+            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 5);
         }
     };
-    this.__update = function()
+    this.__updateStage = function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
@@ -3656,42 +3776,38 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         
         //render
+        var redrawRegions;
         context.save();
         if (this.__renderMode == 'all' || this.__renderAll) {
             //force to render the entire stage
-            dirtyRects = [stageRect];
+            redrawRegions = [stageRect];
             this.__renderAll = false;
         }
         else {
-            //update modified objects and collect dirty rects
-            for (var i = 0, l = this.__children.length; i < l; ++i)
-            {
-                this.__children[i].__update(new Matrix());
-            }
-            var dirtyRects = this.__dirtyRects;
+            //update modified objects and collect redraw regions
+            this.__updateList(new Matrix());
+            redrawRegions = this.__redrawRegions;
             
-            if (this.__renderMode == 'auto' && dirtyRects.length > 50) {
-                dirtyRects = [stageRect];
+            if (this.__renderMode == 'auto' && redrawRegions.length > 50) {
+                redrawRegions = [stageRect];
             }
         }
         
-        //clear context and clip dirty rects for rendering
+        //clear context and clip redraw regions for rendering
         context.beginPath();
-        for (i = 0, l = dirtyRects.length; i < l; ++i)
+        for (i = 0, l = redrawRegions.length; i < l; ++i)
         {
-            var rect = dirtyRects[i];
+            var rect = redrawRegions[i];
             context.clearRect(rect.x, rect.y, rect.width, rect.height);
             context.rect(rect.x, rect.y, rect.width, rect.height);
         }
         context.clip();
         
-        this.__renderList(context, new Matrix(), new ColorTransform(), 1, dirtyRects);
+        this.__renderList(context, new Matrix(), new ColorTransform(), 1, redrawRegions);
         context.restore();
         
-        
         //catch mouse events
-        //this.__updateObjectUnderMouse();
-        
+        this.__updateObjectUnderMouse();
         
         //debug
         if (this.showRedrawRegions) {
@@ -3699,9 +3815,9 @@ var Stage = new Class(DisplayObjectContainer, function()
             context.strokeStyle = "#FF0000";
             context.lineWidth = 1;
             context.beginPath();
-            for (i = 0, l = dirtyRects.length; i < l; ++i)
+            for (i = 0, l = redrawRegions.length; i < l; ++i)
             {
-                rect = dirtyRects[i];
+                rect = redrawRegions[i];
                 context.rect(rect.x, rect.y, rect.width, rect.height);
             }
             context.stroke();
@@ -3709,14 +3825,14 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         //clean up
-        this.__dirtyRects = [];
+        this.__redrawRegions = [];
     };
     this.__updateObjectUnderMouse = function()
     {
         var current = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
         
         //TODO test in flash
-        //should the default target be the stage?
+        //should the stage be the default target?
         current = current || this;
         
         var last = this.__objectUnderMouse;
@@ -3868,7 +3984,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.setFrameRate = function(v)
     {
-        this.__frameRate = v | 1;
+        this.__frameRate = +v || 1;
     };
 });
 Stage.prototype.__defineGetter__("mouseX", Stage.prototype.getMouseX);
@@ -3925,6 +4041,9 @@ BitmapFilter.prototype.toString = function()
 var ContextFilter = new Class(Object, function()
 {
     this.__filter = function(context, target)
+    {
+    };
+    this.__generateRect = function(sourceRect)
     {
     };
     this.clone = function()
@@ -3984,9 +4103,9 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         var inflateX = this.blurX * this.quality / 2;
         var inflateY = this.blurY * this.quality / 2;
-        var rect = sourceRect.clone();
-        rect.inflate(inflateX, inflateY);
-        return rect;
+        var newRect = sourceRect.clone();
+        newRect.inflate(inflateX, inflateY);
+        return newRect;
     };
     this.__blur = function(src, dst, width, height, radius)
     {
@@ -4081,6 +4200,28 @@ var DropShadowFilter = new Class(ContextFilter, function()
         context.shadowColor = __toRGBA(((this.alpha * 255) << 24) + this.color);
         context.shadowOffsetX = this.distance * Math.cos(radian);
         context.shadowOffsetY = this.distance * Math.sin(radian);
+    };
+    //override
+    this.__generateRect = function(sourceRect)
+    {
+        //TODO figure out how blur effects the size
+        var newRect = sourceRect.clone();
+        var point = Point.polar(this.distance, this.angle * 0.017453292519943295);
+        if (point.x > 0) {
+            newRect.width += point.x;
+        }
+        else if (point.x < 0) {
+            newRect.x += point.x;
+            newRect.width -= point.x;
+        }
+        if (point.y > 0) {
+            newRect.height += point.y;
+        }
+        else if (point.y < 0) {
+            newRect.y += point.y;
+            newRect.height -= point.y;
+        }
+        return newRect;
     };
     //override
     this.clone = function()
@@ -4430,7 +4571,7 @@ MatrixTransformer.getSkewX = function(m)
 };
 MatrixTransformer.setSkewX = function(m, skewX)
 {
-    this.setSkewXRadians(m, skewX * 0.017453292519943295);
+    MatrixTransformer.setSkewXRadians(m, skewX * 0.017453292519943295);
 };
 MatrixTransformer.getSkewY = function(m)
 {
@@ -4438,7 +4579,7 @@ MatrixTransformer.getSkewY = function(m)
 };
 MatrixTransformer.setSkewY = function(m, skewY)
 {
-    this.setSkewYRadians(m, skewY * 0.017453292519943295);
+    MatrixTransformer.setSkewYRadians(m, skewY * 0.017453292519943295);
 };
 MatrixTransformer.getRotationRadians = function(m)
 {
@@ -4467,7 +4608,7 @@ MatrixTransformer.getRotation = function(m)
 };
 MatrixTransformer.setRotation = function(m, rotation)
 {
-    this.setRotationRadians(m, rotation * 0.017453292519943295);
+    MatrixTransformer.setRotationRadians(m, rotation * 0.017453292519943295);
 };
 MatrixTransformer.rotateAroundInternalPoint = function(m, x, y, angleDegrees)
 {
@@ -5093,16 +5234,14 @@ var Video = new Class(DisplayObject, function()
         this.__modified = v;
     };
     //override
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
         if (this.__media) {
-            try {
-                context.drawImage(this.__media, 0, 0);
-            }catch(e){}
+            context.drawImage(this.__media, 0, 0);
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         if (this.__media) {
             var bounds = this.__getContentBounds();
@@ -5113,9 +5252,10 @@ var Video = new Class(DisplayObject, function()
             var localPoint = invertedMatrix.transformPoint(point);
             
             if (bounds.containsPoint(localPoint)) {
-                context.drawImage(this.__media, localPoint.x, localPoint.y, 1, 1, localPoint.x, localPoint.y, 1, 1);
+                return true;
             }
         }
+        return false;
     };
     this.__onCanPlay = function()
     {
@@ -5446,6 +5586,10 @@ URLVariables.prototype.toString = function()
 };
 var TextField = new Class(InteractiveObject, function()
 {
+    //context used for measureing text width
+    var textCanvas = cs3.utils.createCanvas("_cs3_textfield_canvas", 0, 0);
+    var textContext = cs3.utils.getContext2d(textCanvas);
+    
     this.__init__ = function()
     {
         InteractiveObject.call(this);
@@ -5586,25 +5730,27 @@ var TextField = new Class(InteractiveObject, function()
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         var bounds = this.__getContentBounds();
         
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(bounds);
+        //convert point to local coords
+        var invertedMatrix = matrix.clone();
+        invertedMatrix.invert();
+        var localPoint = invertedMatrix.transformPoint(point);
         
-        if (globalBounds.containsPoint(point)) {
-            context.beginPath();
-            context.rect(0, 0, bounds.width, bounds.height);
-            context.fill();
+        if (bounds.containsPoint(localPoint)) {
+            return true;
         }
+        
+        return false;
     };
     /**
      * update width and height and set modified flag to TRUE
      */
     this.__updateRect = function()
     {
-        var context = cs3.core.testContext;
+        var context = textContext;
         var width = 0;
         var height = 0;
         var buffer = this.__buffer;
@@ -5618,8 +5764,8 @@ var TextField = new Class(InteractiveObject, function()
         context.font = font;
         for (var i = 0, l = buffer.length; i < l; ++i)
         {
-            var testWidth = context.measureText(buffer[i]).width;
-            width = (testWidth > width) ? testWidth : width;
+            var textWidth = context.measureText(buffer[i]).width;
+            width = (textWidth > width) ? textWidth : width;
             height += lineHeight;
         }
         
@@ -5661,15 +5807,25 @@ TextField.prototype.toString = function()
 };
 var TextFormat = new Class(Object, function()
 {
-    this.__init__ = function()
+    this.__init__ = function(font, size, color, bold, italic, underline, url, target, align, leftMargin, rightMargin, indent, leading)
     {
-        this.align = TextFormatAlign.LEFT;
-        this.bold = false;
-        this.color = 0;
-        this.font = "Times New Roman";
-        this.italic = false;
-        this.leading = 0;
-        this.size = 12;
+        this.align = (align) ? align : TextFormatAlign.LEFT;
+        this.blockIndent = 0;
+        this.bold = (bold) ? true : false;
+        this.bullet = false;
+        this.color = color | 0;
+        this.font = (font) ? font : "Times New Roman";//TODO MacOS should be 'Times'
+        this.indent = (indent) ? indent : 0;
+        this.italic = (italic) ? true : false;
+        this.kerning = false;
+        this.leading = (leading) ? leading : 0;
+        this.leftMargin = (leftMargin) ? leftMargin : 0;
+        this.rightMargin = (rightMargin) ? rightMargin : 0;
+        this.size = (size) ? size : 12;
+        this.tabStops = [];
+        this.target = (target) ? target : "";
+        this.underline = (underline) ? true : false;
+        this.url = (url) ? url : "";
     };
 });
 var TextFormatAlign = {

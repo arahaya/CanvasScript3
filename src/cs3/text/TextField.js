@@ -1,5 +1,9 @@
 var TextField = new Class(InteractiveObject, function()
 {
+    //context used for measureing text width
+    var textCanvas = cs3.utils.createCanvas("_cs3_textfield_canvas", 0, 0);
+    var textContext = cs3.utils.getContext2d(textCanvas);
+    
     this.__init__ = function()
     {
         InteractiveObject.call(this);
@@ -140,25 +144,27 @@ var TextField = new Class(InteractiveObject, function()
         }
     };
     //override
-    this.__renderPoint = function(context, matrix, point)
+    this.__hitTestPoint = function(context, matrix, point)
     {
         var bounds = this.__getContentBounds();
         
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(bounds);
+        //convert point to local coords
+        var invertedMatrix = matrix.clone();
+        invertedMatrix.invert();
+        var localPoint = invertedMatrix.transformPoint(point);
         
-        if (globalBounds.containsPoint(point)) {
-            context.beginPath();
-            context.rect(0, 0, bounds.width, bounds.height);
-            context.fill();
+        if (bounds.containsPoint(localPoint)) {
+            return true;
         }
+        
+        return false;
     };
     /**
      * update width and height and set modified flag to TRUE
      */
     this.__updateRect = function()
     {
-        var context = cs3.core.testContext;
+        var context = textContext;
         var width = 0;
         var height = 0;
         var buffer = this.__buffer;
@@ -172,8 +178,8 @@ var TextField = new Class(InteractiveObject, function()
         context.font = font;
         for (var i = 0, l = buffer.length; i < l; ++i)
         {
-            var testWidth = context.measureText(buffer[i]).width;
-            width = (testWidth > width) ? testWidth : width;
+            var textWidth = context.measureText(buffer[i]).width;
+            width = (textWidth > width) ? textWidth : width;
             height += lineHeight;
         }
         

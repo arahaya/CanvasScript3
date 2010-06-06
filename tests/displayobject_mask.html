@@ -1,0 +1,97 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>DisplayObject - Mask</title>
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        //add a bitmap
+        var maskee = new Loader();
+        maskee.load(new URLRequest("./img/photo01.jpg"));
+        this.addChild(maskee);
+        
+        
+        var mask = new Sprite();
+        mask.x = 200;
+        mask.y = 200;
+        mask.graphics.lineStyle(0);
+        mask.graphics.beginFill(0xFF0000);
+        mask.graphics.drawCircle(0, 0, 100);
+        mask.graphics.endFill();
+        this.addChild(mask);
+        
+        
+        //add a child to the mask
+        var mask_child = new Sprite();
+        mask_child.x = 50;
+        mask_child.y = 50;
+        mask_child.graphics.lineStyle(0);
+        mask_child.graphics.beginFill(0x000FF);
+        mask_child.graphics.drawRect(0, 0, 200, 200);
+        mask_child.graphics.endFill();
+        mask.addChild(mask_child);
+        
+        
+        //add a transparent bitmap to the mask
+        var mask_child2 = new Loader();
+        mask_child2.x = 100;
+        mask_child2.y = -100;
+        mask_child2.load(new URLRequest("./img/Flap.png"));
+        mask.addChild(mask_child2);
+        
+        
+        //add a child that animates
+        var mask_child3 = new Sprite();
+        mask_child3.x = -50;
+        mask_child3.y = 200;
+        mask_child3.graphics.lineStyle(0);
+        mask_child3.graphics.beginFill(0x000FF);
+        mask_child3.graphics.drawRect(0, 0, 200, 200);
+        mask_child3.graphics.endFill();
+        mask.addChild(mask_child3);
+        
+        
+        //set the mask
+        maskee.mask = mask;
+        
+        
+        var fps = 0;
+        this.addEventListener(Event.ENTER_FRAME, function(e)
+        {
+            fps++;
+            mask_child3.rotation += 1;
+        });
+        
+        setInterval(function()
+        {
+            document.getElementById('fps').innerHTML = fps;
+            fps = 0;
+        }, 1000);
+    }
+});
+
+new Stage({canvas:"stage", frameRate:30}).addChild(new Main());
+</script>
+</head>
+<body>
+<p>This test should only work in Opera.</p>
+<p>FPS: <span id="fps">0</span>/30</p>
+<canvas id="stage"></canvas>
+</body>
+</html>

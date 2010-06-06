@@ -22,9 +22,7 @@ var Main = new Class(Sprite, function()
     
     this.init = function()
     {
-        var loader;
-        
-        loader = new Loader();
+        var loader = new Loader();
         loader.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e)
         {
             trace('loaded');

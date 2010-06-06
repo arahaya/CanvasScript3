@@ -46,9 +46,9 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         var inflateX = this.blurX * this.quality / 2;
         var inflateY = this.blurY * this.quality / 2;
-        var rect = sourceRect.clone();
-        rect.inflate(inflateX, inflateY);
-        return rect;
+        var newRect = sourceRect.clone();
+        newRect.inflate(inflateX, inflateY);
+        return newRect;
     };
     this.__blur = function(src, dst, width, height, radius)
     {

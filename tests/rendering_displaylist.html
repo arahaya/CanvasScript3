@@ -1,0 +1,93 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>Rendering - DisplayList</title>
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
+<script type="text/javascript">
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        //draw graphics on Main
+        //this should be the deapest
+        this.graphics.beginFill(0);
+        this.graphics.drawRect(0, 0, 300, 300);
+        this.graphics.endFill();
+        
+        
+        //add a bitmap
+        var child1 = new Loader();
+        child1.x = 100;
+        child1.y = 100;
+        child1.load(new URLRequest("./img/photo01.jpg"));
+        this.addChild(child1);
+        
+        
+        var child2 = new Sprite();
+        child2.x = 200;
+        child2.y = 200;
+        child2.graphics.lineStyle(0);
+        child2.graphics.beginFill(0xFF0000);
+        child2.graphics.drawCircle(0, 0, 50);
+        child2.graphics.endFill();
+        this.addChild(child2);
+        
+        
+        //child2 should be on top of child1
+        var child3 = new Sprite();
+        child3.x = 250;
+        child3.y = 250;
+        child3.graphics.lineStyle(0);
+        child3.graphics.beginFill(0x000FF);
+        child3.graphics.drawCircle(0, 0, 50);
+        child3.graphics.endFill();
+        this.addChild(child3);
+        
+        
+        //an empty sprite with children
+        var child4 = new Sprite();
+        child4.x = 300;
+        child4.y = 300;
+        this.addChild(child4);
+        
+        //add children to child3
+        var child4_child1 = new Sprite();
+        child4_child1.x = 0;
+        child4_child1.y = 0;
+        child4_child1.graphics.lineStyle(0);
+        child4_child1.graphics.beginFill(0x00FF00);
+        child4_child1.graphics.drawRect(0, 0, 100, 100);
+        child4_child1.graphics.endFill();
+        child4.addChild(child4_child1);
+        
+        var child4_child2 = new Sprite();
+        child4_child2.x = 50;
+        child4_child2.y = 50;
+        child4_child2.graphics.lineStyle(0);
+        child4_child2.graphics.beginFill(0xFFFF00);
+        child4_child2.graphics.drawRect(0, 0, 100, 100);
+        child4_child2.graphics.endFill();
+        child4.addChild(child4_child2);
+    }
+});
+
+new Stage({canvas:"stage"}).addChild(new Main());
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+</body>
+</html>

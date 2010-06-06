@@ -18,6 +18,28 @@ var DropShadowFilter = new Class(ContextFilter, function()
         context.shadowOffsetY = this.distance * Math.sin(radian);
     };
     //override
+    this.__generateRect = function(sourceRect)
+    {
+        //TODO figure out how blur effects the size
+        var newRect = sourceRect.clone();
+        var point = Point.polar(this.distance, this.angle * 0.017453292519943295);
+        if (point.x > 0) {
+            newRect.width += point.x;
+        }
+        else if (point.x < 0) {
+            newRect.x += point.x;
+            newRect.width -= point.x;
+        }
+        if (point.y > 0) {
+            newRect.height += point.y;
+        }
+        else if (point.y < 0) {
+            newRect.y += point.y;
+            newRect.height -= point.y;
+        }
+        return newRect;
+    };
+    //override
     this.clone = function()
     {
         return new DropShadowFilter(this.distance, this.angle, this.color, this.alpha, this.blur);

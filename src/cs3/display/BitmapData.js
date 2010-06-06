@@ -16,62 +16,20 @@ var BitmapData = new Class(Object, function()
         this.__width = width;
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
-        this.__canvas = document.createElement('CANVAS');
-        this.__canvas.width = width;
-        this.__canvas.height = height;
-        this.__context = this.__canvas.getContext('2d');
+        this.__canvas = cs3.utils.createCanvas("_cs3_bitmapdata_canvas", width, height);
+        this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
         this.__pixel = this.__context.createImageData(1, 1);
-        this.__lock = false;
         this.__modified = false;
         
         if (fillColor === null) { fillColor = 0xFFFFFFFF; }
-        this.fillRect(this.__rect, fillColor);
+        if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
-    this.__render = function(context, matrix, color, rects)
+    this.__render = function(context, matrix, colorTransform)
     {
-        /*
-        var rect = this.__rect;
-        
-        //convert rects to local coords
-        var invertedMatrix = matrix.clone();
-        invertedMatrix.invert();
-        
-        for (i = 0, l = rects.length; i < l; ++i)
-        {
-            var r = rect.intersection(invertedMatrix.transformRect(rects[i]));
-            if (r.isEmpty()) {
-                continue;
-            }
-            
-            __ceilRect(r);
-            context.drawImage(this.__canvas, r.x, r.y, r.width, r.height, r.x, r.y, r.width, r.height);
-        }
-        */
-        var rect = this.__rect;
-        if (rect.x !== 0 || rect.y !== 0) {
-            context.translate(rect.x, rect.y);
-        }
-        context.drawImage(this.__canvas, 0, 0);
-    };
-    this.__renderPoint = function(context, matrix, point)
-    {
-        var rect = this.__rect;
-        if (rect.x !== 0 || rect.y !== 0) {
-            context.translate(rect.x, rect.y);
-        }
-        
-        //convert point to local coords
-        var invertedMatrix = matrix.clone();
-        invertedMatrix.invert();
-        var localPoint = invertedMatrix.transformPoint(point);
-        
-        //fix the points back to ints
-        localPoint.x = Math.floor(localPoint.x);
-        localPoint.y = Math.floor(localPoint.y);
-        
-        if (rect.containsPoint(localPoint)) {
-            context.drawImage(this.__canvas, localPoint.x, localPoint.y, 1, 1, localPoint.x, localPoint.y, 1, 1);
+        if (this.__canvas) {
+            var rect = this.__rect;
+            context.drawImage(this.__canvas, rect.x, rect.y);
         }
     };
     this.__alphaBlend = function(src, dx, dy)
@@ -249,9 +207,10 @@ var BitmapData = new Class(Object, function()
     };
     this.clone = function()
     {
-        var b = new BitmapData(this.__width, this.__height);
-        b.__context.drawImage(this.__canvas, 0, 0);
-        return b;
+        var clone = new BitmapData(this.__width, this.__height, true, 0);
+        clone.__context.drawImage(this.__canvas, 0, 0);
+        clone.__rect = this.__rect.clone();
+        return clone;
     };
     this.colorTransform = function(rect, colorTransform)
     {
@@ -382,8 +341,15 @@ var BitmapData = new Class(Object, function()
     };
     this.copyPixels = function(sourceBitmapData, sourceRect, destPoint)
     {
+        /*
         var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
         this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
+        this.__modified = true;
+        */
+        //about 4 - 30 times faster
+        this.__context.clearRect(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
+        this.__context.drawImage(sourceBitmapData.__canvas, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height,
+                        destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
         this.__modified = true;
     };
     this.createImageData = function()
@@ -420,7 +386,7 @@ var BitmapData = new Class(Object, function()
     {
         //TODO a lot to fix..
         matrix = matrix || new Matrix();
-        source.__renderList(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
+        source.__render(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
         this.__modified = true;
     };
     this.fillRect = function(rect, color)
