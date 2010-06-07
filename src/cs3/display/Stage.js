@@ -30,8 +30,14 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__renderMode = params.renderMode;
         this.__mouseX = 0;
         this.__mouseY = 0;
+        //the current object under the mouse point.
+        //if this is NULL the mouse is out of the stage.
         this.__objectUnderMouse = null;
+        //the object that the mouse was pressed.
+        //if this is NULL the mouse is not pressed.
         this.__mouseDownObject = null;
+        //the last object that received a CLICK event.
+        //if this object gets clicked again in 500ms DOUBLE_CLICK will be called.
         this.__mouseClickObject = null;
         this.__dragOffsetX = 0;
         this.__dragOffsetY = 0;
@@ -79,12 +85,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         if (!this.canvas) {
-            this.canvas = cs3.utils.createCanvas("_cs3_canvas_" + this.__id, 0, 0);
+            this.canvas = cs3.utils.createCanvas(0, 0);
             document.body.appendChild(this.canvas);
         }
         
         this.__context = cs3.utils.getContext2d(this.canvas);
-        this.__hiddenCanvas = cs3.utils.createCanvas("_cs3_hidden_canvas_" + this.__id, 0, 0);
+        this.__hiddenCanvas = cs3.utils.createCanvas(0, 0);
         this.__hiddenContext = cs3.utils.getContext2d(this.__hiddenCanvas);
         
         this.canvas.style.cursor = 'default';
@@ -99,8 +105,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__resize();
         
         //call children ADDED_TO_STAGE events
-        //this.__stage = this;
-        //this.__root = this;
         __applyDown(this, function(stage, event)
         {
             this.__stage = this.__root = stage;
@@ -205,17 +209,20 @@ var Stage = new Class(DisplayObjectContainer, function()
      */
     this.__mouseMoveHandler = function(e)
     {
+        //TODO: fix the mouse position relative to canvas
         var x, y;
+        var canvas = this.canvas;
+        /*
         if (e.offsetX) {
-            x = e.offsetX;
-            y = e.offsetY;
+            x = e.offsetX - target.offsetLeft;
+            y = e.offsetY - target.offsetTop;
         }
         else {
-            var target = e.target;//the canvas
-            x = e.pageX - target.offsetLeft;
-            y = e.pageY - target.offsetTop;
-        }
-        
+            
+
+        }*/
+            x = e.pageX - canvas.offsetLeft;
+            y = e.pageY - canvas.offsetTop;
         /*
         if (this.__scaleX || this.__scaleY) {
             x = Math.round(x / this.__scaleX);
@@ -223,23 +230,41 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         */
         
-        if (this.__rect.contains(x, y) === false) {
-            return;
-        }
-        
         if (x === this.__mouseX && y === this.__mouseY) {
             return;
         }
         
-        this.__mouseX = x;
-        this.__mouseY = y;
-        
-        this.__updateObjectUnderMouse();
         
         //mouse move events
-        if (this.__objectUnderMouse) {
-            this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+        if (this.__rect.contains(x, y) === true) {
+            this.__mouseX = x;
+            this.__mouseY = y;
+            
+            this.__updateObjectUnderMouse();
+            
+            if (this.__objectUnderMouse) {
+                this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            }
+            else {
+                //if there is no abject under the mouse point,
+                //stage's mousemove event gets called
+                this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            }
         }
+        else if (this.__mouseDownObject) {
+            //if the mouse is out of the stage but the mouse is down
+            //stage's mousemove event gets called
+            this.__mouseX = x;
+            this.__mouseY = y;
+            this.__objectUnderMouse = null;
+            this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+        }
+        else {
+            //mouse is out of the stage and mouse is not down
+            this.__objectUnderMouse = null;
+            return;
+        }
+        
         
         //handle startDrag
         var drag = this.__dragTarget;
@@ -274,7 +299,9 @@ var Stage = new Class(DisplayObjectContainer, function()
         //so without the code bellow if you right click then left click, the mouse position will not be updated.
         this.__mouseMoveHandler(e);
         
-        var target = this.__objectUnderMouse || this;
+        var target = this.__objectUnderMouse;
+        if (!target) { return; }
+        
         //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //left click
@@ -294,7 +321,17 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__mouseUpHandler = function(e)
     {
         this.__mouseMoveHandler(e);
-        var target = this.__objectUnderMouse || this;
+        var stage = this;
+        var target = this.__objectUnderMouse;
+        if (!target) {
+            if (this.__mouseDownObject) {
+                target = stage;
+            }
+            else {
+                return;
+            }
+        }
+        
         //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
@@ -310,7 +347,6 @@ var Stage = new Class(DisplayObjectContainer, function()
                 }
                 else {
                     this.__mouseClickObject = target;
-                    var stage = this;
                     this.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
                 }
             }
@@ -327,7 +363,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__mouseWheelHandler = function(e)
     {
-        var target = this.__objectUnderMouse || this;
+        var target = this.__objectUnderMouse;
         
         var delta = 0;
         if (e.wheelDelta) { /* IE/Opera. */
@@ -351,6 +387,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__getObjectUnderPoint = function(point)
     {
+        if (this.__rect.containsPoint(point) === false) { return null; }
+        
         var context = this.__hiddenContext;
         context.clearRect(point.x, point.y, 1, 1);
         context.save();
@@ -359,7 +397,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         context.clip();
         var result = DisplayObjectContainer.prototype.__getObjectUnderPoint.call(this, context, new Matrix(), point);
         context.restore();
-        return result;
+        return result || this;
     };
     this.__enterFrame = function()
     {
@@ -395,16 +433,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
-        var stageRect = this.__rect.clone();
+        var stageRect = this.__rect;
         
-        
-        //render
+        //update the display list
         var redrawRegions;
-        context.save();
         if (this.__renderMode == 'all' || this.__renderAll) {
             //force to render the entire stage
             redrawRegions = [stageRect];
-            this.__renderAll = false;
         }
         else {
             //update modified objects and collect redraw regions
@@ -416,49 +451,55 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
         }
         
-        //clear context and clip redraw regions for rendering
-        context.beginPath();
-        for (i = 0, l = redrawRegions.length; i < l; ++i)
-        {
-            var rect = redrawRegions[i];
-            context.clearRect(rect.x, rect.y, rect.width, rect.height);
-            context.rect(rect.x, rect.y, rect.width, rect.height);
-        }
-        context.clip();
-        
-        this.__renderList(context, new Matrix(), new ColorTransform(), 1, redrawRegions);
-        context.restore();
-        
-        //catch mouse events
-        this.__updateObjectUnderMouse();
-        
-        //debug
-        if (this.showRedrawRegions) {
+        if (redrawRegions.length) {
+            //begin rendering
             context.save();
-            context.strokeStyle = "#FF0000";
-            context.lineWidth = 1;
+            
+            //clear the redraw regions and clip for rendering
             context.beginPath();
             for (i = 0, l = redrawRegions.length; i < l; ++i)
             {
-                rect = redrawRegions[i];
+                var rect = redrawRegions[i];
+                context.clearRect(rect.x, rect.y, rect.width, rect.height);
                 context.rect(rect.x, rect.y, rect.width, rect.height);
             }
-            context.stroke();
+            context.clip();
+            
+            this.__renderList(context, new Matrix(), new ColorTransform());
             context.restore();
+            
+            //catch mouse events
+            this.__updateObjectUnderMouse();
+            
+            //debug
+            if (this.showRedrawRegions) {
+                context.save();
+                context.strokeStyle = "#FF0000";
+                context.lineWidth = 1;
+                context.beginPath();
+                for (i = 0, l = redrawRegions.length; i < l; ++i)
+                {
+                    rect = redrawRegions[i];
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                }
+                context.stroke();
+                context.restore();
+            }
         }
         
         //clean up
+        this.__renderAll = false;
         this.__redrawRegions = [];
     };
     this.__updateObjectUnderMouse = function()
     {
-        var current = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
+        //NOTE: do not call these events against the stage.
+        var stage = this;
+        var last = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
-        //TODO test in flash
-        //should the stage be the default target?
-        current = current || this;
+        this.__objectUnderMouse = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
+        var current = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
-        var last = this.__objectUnderMouse;
         if (current !== last) {
             if (last) {
                 //mouse out
@@ -477,14 +518,10 @@ var Stage = new Class(DisplayObjectContainer, function()
                     }, [current, rollOutEvent]);
                 }
                 else {
-                    //all parents fire event
-                    __applyUp(last, function(event)
-                    {
-                        this.dispatchEvent(event);
-                    }, [rollOutEvent]);
+                    last.dispatchEvent(rollOutEvent);
                 }
                 
-                this.__objectUnderMouse = null;
+                //this.__objectUnderMouse = null;
             }
             if (current) {
                 //mouse over
@@ -503,21 +540,17 @@ var Stage = new Class(DisplayObjectContainer, function()
                     }, [last, rollOverEvent]);
                 }
                 else {
-                    //all parents fire event
-                    __applyUp(current, function(event)
-                    {
-                        this.dispatchEvent(event);
-                    }, [rollOverEvent]);
+                    current.dispatchEvent(rollOverEvent);
                 }
                 
-                this.__objectUnderMouse = current;
+                //this.__objectUnderMouse = current;
             }
         }
         
         //button mode
         //TODO buttonMode should effect children to
-        current = this.__objectUnderMouse;
-        if (current && current.buttonMode && current.useHandCursor) {
+        var target = this.__objectUnderMouse;
+        if (target && target.buttonMode && target.useHandCursor) {
             this.canvas.style.cursor = 'pointer';
         }
         else {
@@ -544,7 +577,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__hiddenCanvas.width = this.__canvasWidth;
             this.__hiddenCanvas.height = this.__canvasHeight;
             
-            //TODO force top left for now
+            //force top left for now
             this.__rect = new Rectangle(0, 0, this.__canvasWidth, this.__canvasHeight);
             this.dispatchEvent(new Event(Event.RESIZE, false, false));
         }

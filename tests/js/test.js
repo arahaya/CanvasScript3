@@ -15,7 +15,7 @@ cs3.utils.addOnload(function()
         }
         
         var time = (new Date()).getTime();
-        msg = (time - startTime) + "ms: " + msg;
+        //msg = (time - startTime) + "ms: " + msg;
         panel.value += msg + "\n";
         try {
             console.log(msg);

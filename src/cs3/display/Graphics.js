@@ -29,13 +29,13 @@ var Graphics = new Class(Object, function()
     {
         var rect = new Rectangle(x, y, width, height);
         rect.repair();
-        //todo consider line caps
+        //TODO: consider line caps
         rect.inflate(this.__lineWidth * 0.5, this.__lineWidth * 0.5);
         this.__rect = this.__rect.union(rect);
     };
     this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     {
-        //TODO
+        //TODO:
     };
     this.beginFill = function(color, alpha)
     {
@@ -44,11 +44,11 @@ var Graphics = new Class(Object, function()
     };
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
-        //TODO
+        //TODO:
     };
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
     {
-        //TODO calculate rect
+        //TODO: calculate rect
         this.__updateRect(this.__x, this.__y, Math.max(controlX, anchorX) - this.__x, Math.max(controlY, anchorY) - this.__y);
         this.__x = anchorX;
         this.__y = anchorY;
@@ -129,10 +129,8 @@ var Graphics = new Class(Object, function()
         this.__commands = [];
         this.__modified = true;
     };
-    this.__fill = function(context, doFill, fillAlpha)
+    this.__fill = function(context, fillAlpha)
     {
-        if (!doFill) { return; }
-        
         context.closePath();
 
         if (fillAlpha === 1) {
@@ -145,10 +143,8 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
-    this.__stroke = function(context, doStroke, strokeAlpha)
+    this.__stroke = function(context, strokeAlpha)
     {
-        if (!doStroke) { return; }
-        
         if (strokeAlpha === 1) {
             context.stroke();
         }
@@ -159,16 +155,15 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
-    this.__closeStroke = function(context, doFill, sx, sy, ax, ay)
+    this.__closeStroke = function(context, sx, sy, ax, ay)
     {
-        if (!doFill) { return; }
-        
         if (sx !== ax || sy !== ay) {
             context.lineTo(sx, sy);
         }
     };
     this.__render = function(context, matrix, colorTransform)
     {
+        //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
         var doStroke = false;
@@ -203,7 +198,7 @@ var Graphics = new Class(Object, function()
             switch (cmd[0])
             {
                 case BEGIN_FILL:
-                    this.__fill(context, doFill, fillAlpha);
+                    if (doFill) { this.__fill(context, fillAlpha); }
                     color = cmd[1];
                     alpha = cmd[2];
                     doFill = true;
@@ -292,7 +287,7 @@ var Graphics = new Class(Object, function()
                     context.lineTo(ax, ay);
                     break;
                 case END_FILL:
-                    this.__fill(context, doFill, fillAlpha);
+                    if (doFill) { this.__fill(context, fillAlpha); }
                     doFill = false;
                     break;
                 case LINE_STYLE:
@@ -315,7 +310,7 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        this.__fill(context, doFill, fillAlpha);
+        if (doFill) { this.__fill(context, fillAlpha); }
         
         //stroke phase
         sx = sy = ax = ay = 0;
@@ -327,7 +322,7 @@ var Graphics = new Class(Object, function()
             switch (cmd[0])
             {
                 case BEGIN_FILL:
-                    this.__closeStroke(context, doFill, sx, sy, ax, ay);
+                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;
                     ay = sy;
                     doFill = true;
@@ -416,13 +411,13 @@ var Graphics = new Class(Object, function()
                     sy = ay;
                     break;
                 case END_FILL:
-                    this.__closeStroke(context, doFill, sx, sy, ax, ay);
+                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;
                     ay = sy;
                     doFill = false;
                     break;
                 case LINE_STYLE:
-                    this.__stroke(context, doStroke, strokeAlpha);
+                    if (doStroke) { this.__stroke(context, strokeAlpha); }
                     thickness    = cmd[1];
                     color        = cmd[2];
                     alpha        = cmd[3];
@@ -459,8 +454,8 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        this.__closeStroke(context, doFill, sx, sy, ax, ay);
-        this.__stroke(context, doStroke, strokeAlpha);
+        if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+        if (doStroke) { this.__stroke(context, strokeAlpha); }
     };
 });
 Graphics.prototype.toString = function()

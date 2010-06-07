@@ -39,6 +39,7 @@ var cs3 = {
         isOpera: (window.opera) ? true : false,//TODO add beter browser detection
         isChrome: navigator.userAgent.toLowerCase().indexOf('chrome') > -1,
         stages: [],
+        canvasId: 0,
         instanceId: 0,
         resizeTimeout: null,
         nextInstanceId: function()
@@ -80,9 +81,12 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
-            cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
+            cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             //Firefox
             if (window.addEventListener) {
                 canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
@@ -269,10 +273,11 @@ var cs3 = {
             }
             return req;
         },
-        createCanvas: function(id, width, height)
+        createCanvas: function(width, height)
         {
+            cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
-            canvas.id = id || null;
+            canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
             canvas.width = width | 0;
             canvas.height = height | 0;
             return canvas;
@@ -823,6 +828,13 @@ var EventDispatcher = new Class(Object, function()
             this.__events[type] = [];
         }
         
+        if (typeof(listener) === 'function') {
+            listener = new EventListener(this, listener);
+        }
+        else if (listener instanceof Array) {
+            listener = new EventListener(listener[0], listener[1]);
+        }
+        
         this.__events[type].push(listener);
     };
     this.dispatchEvent = function(event)
@@ -837,11 +849,12 @@ var EventDispatcher = new Class(Object, function()
         }
         event.currentTarget = this;
         
-        var events = this.__events[event.type];
-        if (events !== undefined) {
-            for (var i = 0, l = events.length; i < l; ++i) {
-                events[i].call(this, event);
+        var listeners = this.__events[event.type];
+        if (listeners !== undefined) {
+            for (var i = 0, l = listeners.length; i < l; ++i) {
+                //events[i].call(this, event);
                 //events[i](event);
+                listeners[i].call(event);
             }
         }
         if (event.bubbles && this.__parent) {
@@ -862,13 +875,20 @@ var EventDispatcher = new Class(Object, function()
     this.removeEventListener = function(type, listener, useCapture)
     {
         //TODO useCapture
-        var events = this.__events[type];
-        if (events === undefined) { return; }
+        var listeners = this.__events[type];
+        if (listeners === undefined) { return; }
         
-        for (var i = 0, l = events.length; i < l; ++i)
+        if (typeof(listener) === 'function') {
+            listener = new EventListener(this, listener);
+        }
+        else if (listener instanceof Array) {
+            listener = new EventListener(listener[0], listener[1]);
+        }
+        
+        for (var i = 0, l = listeners.length; i < l; ++i)
         {
-            if (events[i] == listener) {
-                events.splice(i, 1);
+            if (listener.equals(listeners[i])) {
+                listeners.splice(i, 1);
             }
         }
     };
@@ -889,6 +909,30 @@ var EventDispatcher = new Class(Object, function()
 EventDispatcher.prototype.toString = function()
 {
     return '[object EventDispatcher]';
+};
+var EventListener = new Class(Object, function()
+{
+    this.__init__ = function(scope, callback)
+    {
+        this.scope = scope;
+        this.callback = callback;
+        //this.useCapture = (useCapture) ? true : false;
+        //this.priority = priority | 0;
+    };
+    this.call = function()
+    {
+        this.callback.apply(this.scope, arguments);
+    };
+    this.equals = function(toCompare)
+    {
+        return (
+            toCompare.scope === this.scope &&
+            toCompare.callback === this.callback) ? true : false;
+    };
+});
+EventListener.prototype.toString = function()
+{
+    return '[object EventListener]';
 };
 CapsStyle = {
     NONE: 'butt',
@@ -1067,7 +1111,6 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.getBounds = function(targetCoordinateSpace)
     {
-        //TODO not tested at all
         var bounds = this.__getBounds();
         targetCoordinateSpace = targetCoordinateSpace || this.__root || this;
         if (targetCoordinateSpace === this) {
@@ -1077,20 +1120,19 @@ var DisplayObject = new Class(EventDispatcher, function()
             return this.__transform.__matrix.transformRect(bounds);
         }
         
-        //tansform your global bounds to targets local bounds
         var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(bounds);
         if (targetCoordinateSpace === this.__root) {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
         
+        //tansform your global bounds to targets local bounds
         var targetMatrix = targetCoordinateSpace.__transform.getConcatenatedMatrix();
         targetMatrix.invert();
         return targetMatrix.transformRect(globalBounds);
     };
     this.getRect = function(targetCoordinateSpace)
     {
-        //TODO
         return this.getBounds(targetCoordinateSpace);
     };
     this.globalToLocal = function(point)
@@ -1107,7 +1149,6 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.hitTestPoint = function(x, y, shapeFlag)
     {
-        //TODO shapeFlag=true
         if (shapeFlag === false) {
             var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);
@@ -1807,49 +1848,22 @@ Bitmap.prototype.toString = function()
 };
 var BitmapData = new Class(Object, function()
 {
-    var invalidBitmapData = function() {
+    var invalidBitmapData = function()
+    {
         throw new ArgumentError("Invalid BitmapData.");
     };
     
-    this.__init__ = function(width, height, transparent, fillColor)
+    var __alphaBlend = function(context, src, dx, dy)
     {
-        //transparent=false doesn't work
-        width  = width  | 0;
-        height = height | 0;
-        if (!width || !height) {
-            throw new ArgumentError("Invalid BitmapData.");
-        }
-        
-        this.__width = width;
-        this.__height = height;
-        //this.__transparent = (transparent) ? true : false;
-        this.__canvas = cs3.utils.createCanvas("_cs3_bitmapdata_canvas", width, height);
-        this.__context = cs3.utils.getContext2d(this.__canvas);
-        this.__rect = new Rectangle(0, 0, width, height);
-        this.__pixel = this.__context.createImageData(1, 1);
-        this.__modified = false;
-        
-        if (fillColor === null) { fillColor = 0xFFFFFFFF; }
-        if (fillColor) { this.fillRect(this.__rect, fillColor); }
+        var dst = context.getImageData(dx, dy, src.width, src.height);
+        __alphaBlendImageData(dst, src);
+        context.putImageData(dst, dx, dy);
     };
-    this.__render = function(context, matrix, colorTransform)
+    var __alphaBlendImageData = function(dst, src)
     {
-        if (this.__canvas) {
-            var rect = this.__rect;
-            context.drawImage(this.__canvas, rect.x, rect.y);
-        }
+        __alphaBlendArray(dst.data, src.data);
     };
-    this.__alphaBlend = function(src, dx, dy)
-    {
-        var dst = this.__context.getImageData(dx, dy, src.width, src.height);
-        this.__alphaBlendImageData(dst, src);
-        this.__context.putImageData(dst, dx, dy);
-    };
-    this.__alphaBlendImageData = function(dst, src)
-    {
-        this.__alphaBlendArray(dst.data, src.data);
-    };
-    this.__alphaBlendArray = function(dst, src)
+    var __alphaBlendArray = function(dst, src)
     {
         var srcLength = src.length;
         var ri, gi, bi, ai;
@@ -1866,14 +1880,14 @@ var BitmapData = new Class(Object, function()
                 continue;
             }
             else if (src[ai] === 255 || dst[ai] === 0) {
-                //src is solid OR dst is transparent, simply overwrite dst
+                //src is solid OR dst is transparent, overwrite dst
                 dst[ri] = src[ri];
                 dst[gi] = src[gi];
                 dst[bi] = src[bi];
                 dst[ai] = src[ai];
             }
             else if (dst[ai] !== 255) {
-                //caculate the new color
+                //merge
                 sa = src[ai] / 255;
                 da = dst[ai] / 255;
                 na = da + sa - sa * da;
@@ -1884,6 +1898,7 @@ var BitmapData = new Class(Object, function()
                 dst[ai] = na * 255;
             }
             else {
+                //add
                 sa = src[ai] / 255;
                 ma = 1 - sa;
                 dst[ri] = src[ri] * sa + dst[ri] * ma;
@@ -1892,7 +1907,7 @@ var BitmapData = new Class(Object, function()
             }
         }
     };
-    this.__floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
+    var __floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -1941,7 +1956,7 @@ var BitmapData = new Class(Object, function()
             pop = stack.pop();
         }
     };
-    this.__floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
+    var __floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -2005,6 +2020,36 @@ var BitmapData = new Class(Object, function()
             }
             
             pop = stack.pop();
+        }
+    };
+    
+    this.__init__ = function(width, height, transparent, fillColor)
+    {
+        //transparent=false doesn't work
+        width  = width  | 0;
+        height = height | 0;
+        if (!width || !height) {
+            throw new ArgumentError("Invalid BitmapData.");
+        }
+        
+        this.__width = width;
+        this.__height = height;
+        //this.__transparent = (transparent) ? true : false;
+        this.__canvas = cs3.utils.createCanvas(width, height);
+        this.__context = cs3.utils.getContext2d(this.__canvas);
+        this.__rect = new Rectangle(0, 0, width, height);
+        this.__pixel = this.__context.createImageData(1, 1);
+        this.__modified = false;
+        this.__disposed = false;
+        
+        if (fillColor === null) { fillColor = 0xFFFFFFFF; }
+        if (fillColor) { this.fillRect(this.__rect, fillColor); }
+    };
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__canvas) {
+            var rect = this.__rect;
+            context.drawImage(this.__canvas, rect.x, rect.y);
         }
     };
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
@@ -2169,16 +2214,16 @@ var BitmapData = new Class(Object, function()
         this.__height = 0;
         this.__canvas.width = 0;
         this.__canvas.height = 0;
-        //this.__canvas = null;
-        //this.__context = null;
+        this.__canvas = null;
+        this.__context = null;
         this.__rect.setEmpty();
         this.__pixel = null;
         
-        //disable all methods
-        //excluding toString and private methods
+        //disable all public methods
+        //excluding toString
         for (var p in this)
         {
-            if (p !== 'toString' && p.charAt(0) !== '_' && typeof this[p] == 'function') {
+            if (p !== 'toString' && p.charAt(0) !== '_' && typeof(this[p]) === 'function') {
                 this[p] = invalidBitmapData;
             }
         }
@@ -2187,7 +2232,9 @@ var BitmapData = new Class(Object, function()
         this.__defineGetter__("width", invalidBitmapData);
         this.__defineGetter__("height", invalidBitmapData);
         this.__defineGetter__("rect", invalidBitmapData);
+        
         this.__modified = true;
+        this.__disposed = true;
     };
     this.draw = function(source, matrix)
     {
@@ -2231,7 +2278,7 @@ var BitmapData = new Class(Object, function()
         }
         
         //start the search
-        this.__floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
+        __floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
         
         this.__context.putImageData(pixels, 0, 0);
         this.__modified = true;
@@ -2410,10 +2457,18 @@ var BitmapData = new Class(Object, function()
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
         var destPixels = destImageData.data;
+        var width = destImageData.width;
+        var height = destImageData.height;
         var size = destImageData.width * destImageData.height;
-        var i, p;
+        var i, p, c;
         
-        if (numPixels === undefined) { numPixels = size / 30; }
+        if (!numPixels) { numPixels = (size / 30) | 0; }
+        else if (numPixels > size) { numPixels = size; }
+        
+        if (randomSeed < 1) { randomSeed = (randomSeed * size) | 0; }
+        
+        var coordinateShuffler = new CoordinateShuffler(width, height, 0xBADA55, 3, 256);
+        var coords = coordinateShuffler.getCoordinates(numPixels, randomSeed);
         
         if (sourceBitmapData === this) {
             fillColor = fillColor | 0;
@@ -2424,9 +2479,8 @@ var BitmapData = new Class(Object, function()
             
             for (i = 0; i < numPixels; ++i)
             {
-                //TODO need a better random algorithm
-                randomSeed = (randomSeed * 9301 + 49297) % 233280;
-                p = Math.floor((randomSeed / 233280.0) * size) * 4;
+                c = coords[i];
+                p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = fillRed;
                 destPixels[p+1] = fillGreen;
                 destPixels[p+2] = fillBlue;
@@ -2438,9 +2492,8 @@ var BitmapData = new Class(Object, function()
             var sourcePixels = sourceImageData.data;
             for (i = 0; i < numPixels; ++i)
             {
-                //TODO need a better random algorithm
-                randomSeed = (randomSeed * 9301 + 49297) % 233280;
-                p = Math.floor((randomSeed / 233280.0) * size) * 4;
+                c = coords[i];
+                p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = sourcePixels[p];
                 destPixels[p+1] = sourcePixels[p+1];
                 destPixels[p+2] = sourcePixels[p+2];
@@ -2450,7 +2503,8 @@ var BitmapData = new Class(Object, function()
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
-        return randomSeed;
+        //return randomSeed;
+        return coordinateShuffler.getIndex();
     };
     this.putImageData = function()
     {
@@ -2688,13 +2742,13 @@ var Graphics = new Class(Object, function()
     {
         var rect = new Rectangle(x, y, width, height);
         rect.repair();
-        //todo consider line caps
+        //TODO: consider line caps
         rect.inflate(this.__lineWidth * 0.5, this.__lineWidth * 0.5);
         this.__rect = this.__rect.union(rect);
     };
     this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     {
-        //TODO
+        //TODO:
     };
     this.beginFill = function(color, alpha)
     {
@@ -2703,11 +2757,11 @@ var Graphics = new Class(Object, function()
     };
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
-        //TODO
+        //TODO:
     };
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
     {
-        //TODO calculate rect
+        //TODO: calculate rect
         this.__updateRect(this.__x, this.__y, Math.max(controlX, anchorX) - this.__x, Math.max(controlY, anchorY) - this.__y);
         this.__x = anchorX;
         this.__y = anchorY;
@@ -2788,10 +2842,8 @@ var Graphics = new Class(Object, function()
         this.__commands = [];
         this.__modified = true;
     };
-    this.__fill = function(context, doFill, fillAlpha)
+    this.__fill = function(context, fillAlpha)
     {
-        if (!doFill) { return; }
-        
         context.closePath();
 
         if (fillAlpha === 1) {
@@ -2804,10 +2856,8 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
-    this.__stroke = function(context, doStroke, strokeAlpha)
+    this.__stroke = function(context, strokeAlpha)
     {
-        if (!doStroke) { return; }
-        
         if (strokeAlpha === 1) {
             context.stroke();
         }
@@ -2818,16 +2868,15 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
-    this.__closeStroke = function(context, doFill, sx, sy, ax, ay)
+    this.__closeStroke = function(context, sx, sy, ax, ay)
     {
-        if (!doFill) { return; }
-        
         if (sx !== ax || sy !== ay) {
             context.lineTo(sx, sy);
         }
     };
     this.__render = function(context, matrix, colorTransform)
     {
+        //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
         var doStroke = false;
@@ -2862,7 +2911,7 @@ var Graphics = new Class(Object, function()
             switch (cmd[0])
             {
                 case BEGIN_FILL:
-                    this.__fill(context, doFill, fillAlpha);
+                    if (doFill) { this.__fill(context, fillAlpha); }
                     color = cmd[1];
                     alpha = cmd[2];
                     doFill = true;
@@ -2951,7 +3000,7 @@ var Graphics = new Class(Object, function()
                     context.lineTo(ax, ay);
                     break;
                 case END_FILL:
-                    this.__fill(context, doFill, fillAlpha);
+                    if (doFill) { this.__fill(context, fillAlpha); }
                     doFill = false;
                     break;
                 case LINE_STYLE:
@@ -2974,7 +3023,7 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        this.__fill(context, doFill, fillAlpha);
+        if (doFill) { this.__fill(context, fillAlpha); }
         
         //stroke phase
         sx = sy = ax = ay = 0;
@@ -2986,7 +3035,7 @@ var Graphics = new Class(Object, function()
             switch (cmd[0])
             {
                 case BEGIN_FILL:
-                    this.__closeStroke(context, doFill, sx, sy, ax, ay);
+                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;
                     ay = sy;
                     doFill = true;
@@ -3075,13 +3124,13 @@ var Graphics = new Class(Object, function()
                     sy = ay;
                     break;
                 case END_FILL:
-                    this.__closeStroke(context, doFill, sx, sy, ax, ay);
+                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;
                     ay = sy;
                     doFill = false;
                     break;
                 case LINE_STYLE:
-                    this.__stroke(context, doStroke, strokeAlpha);
+                    if (doStroke) { this.__stroke(context, strokeAlpha); }
                     thickness    = cmd[1];
                     color        = cmd[2];
                     alpha        = cmd[3];
@@ -3118,8 +3167,8 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        this.__closeStroke(context, doFill, sx, sy, ax, ay);
-        this.__stroke(context, doStroke, strokeAlpha);
+        if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+        if (doStroke) { this.__stroke(context, strokeAlpha); }
     };
 });
 Graphics.prototype.toString = function()
@@ -3407,8 +3456,14 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__renderMode = params.renderMode;
         this.__mouseX = 0;
         this.__mouseY = 0;
+        //the current object under the mouse point.
+        //if this is NULL the mouse is out of the stage.
         this.__objectUnderMouse = null;
+        //the object that the mouse was pressed.
+        //if this is NULL the mouse is not pressed.
         this.__mouseDownObject = null;
+        //the last object that received a CLICK event.
+        //if this object gets clicked again in 500ms DOUBLE_CLICK will be called.
         this.__mouseClickObject = null;
         this.__dragOffsetX = 0;
         this.__dragOffsetY = 0;
@@ -3456,12 +3511,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         if (!this.canvas) {
-            this.canvas = cs3.utils.createCanvas("_cs3_canvas_" + this.__id, 0, 0);
+            this.canvas = cs3.utils.createCanvas(0, 0);
             document.body.appendChild(this.canvas);
         }
         
         this.__context = cs3.utils.getContext2d(this.canvas);
-        this.__hiddenCanvas = cs3.utils.createCanvas("_cs3_hidden_canvas_" + this.__id, 0, 0);
+        this.__hiddenCanvas = cs3.utils.createCanvas(0, 0);
         this.__hiddenContext = cs3.utils.getContext2d(this.__hiddenCanvas);
         
         this.canvas.style.cursor = 'default';
@@ -3476,8 +3531,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__resize();
         
         //call children ADDED_TO_STAGE events
-        //this.__stage = this;
-        //this.__root = this;
         __applyDown(this, function(stage, event)
         {
             this.__stage = this.__root = stage;
@@ -3582,17 +3635,20 @@ var Stage = new Class(DisplayObjectContainer, function()
      */
     this.__mouseMoveHandler = function(e)
     {
+        //TODO: fix the mouse position relative to canvas
         var x, y;
+        var canvas = this.canvas;
+        /*
         if (e.offsetX) {
-            x = e.offsetX;
-            y = e.offsetY;
+            x = e.offsetX - target.offsetLeft;
+            y = e.offsetY - target.offsetTop;
         }
         else {
-            var target = e.target;//the canvas
-            x = e.pageX - target.offsetLeft;
-            y = e.pageY - target.offsetTop;
-        }
-        
+            
+
+        }*/
+            x = e.pageX - canvas.offsetLeft;
+            y = e.pageY - canvas.offsetTop;
         /*
         if (this.__scaleX || this.__scaleY) {
             x = Math.round(x / this.__scaleX);
@@ -3600,23 +3656,41 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         */
         
-        if (this.__rect.contains(x, y) === false) {
-            return;
-        }
-        
         if (x === this.__mouseX && y === this.__mouseY) {
             return;
         }
         
-        this.__mouseX = x;
-        this.__mouseY = y;
-        
-        this.__updateObjectUnderMouse();
         
         //mouse move events
-        if (this.__objectUnderMouse) {
-            this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+        if (this.__rect.contains(x, y) === true) {
+            this.__mouseX = x;
+            this.__mouseY = y;
+            
+            this.__updateObjectUnderMouse();
+            
+            if (this.__objectUnderMouse) {
+                this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            }
+            else {
+                //if there is no abject under the mouse point,
+                //stage's mousemove event gets called
+                this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            }
         }
+        else if (this.__mouseDownObject) {
+            //if the mouse is out of the stage but the mouse is down
+            //stage's mousemove event gets called
+            this.__mouseX = x;
+            this.__mouseY = y;
+            this.__objectUnderMouse = null;
+            this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+        }
+        else {
+            //mouse is out of the stage and mouse is not down
+            this.__objectUnderMouse = null;
+            return;
+        }
+        
         
         //handle startDrag
         var drag = this.__dragTarget;
@@ -3651,7 +3725,9 @@ var Stage = new Class(DisplayObjectContainer, function()
         //so without the code bellow if you right click then left click, the mouse position will not be updated.
         this.__mouseMoveHandler(e);
         
-        var target = this.__objectUnderMouse || this;
+        var target = this.__objectUnderMouse;
+        if (!target) { return; }
+        
         //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //left click
@@ -3671,7 +3747,17 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__mouseUpHandler = function(e)
     {
         this.__mouseMoveHandler(e);
-        var target = this.__objectUnderMouse || this;
+        var stage = this;
+        var target = this.__objectUnderMouse;
+        if (!target) {
+            if (this.__mouseDownObject) {
+                target = stage;
+            }
+            else {
+                return;
+            }
+        }
+        
         //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
@@ -3687,7 +3773,6 @@ var Stage = new Class(DisplayObjectContainer, function()
                 }
                 else {
                     this.__mouseClickObject = target;
-                    var stage = this;
                     this.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
                 }
             }
@@ -3704,7 +3789,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__mouseWheelHandler = function(e)
     {
-        var target = this.__objectUnderMouse || this;
+        var target = this.__objectUnderMouse;
         
         var delta = 0;
         if (e.wheelDelta) { /* IE/Opera. */
@@ -3728,6 +3813,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__getObjectUnderPoint = function(point)
     {
+        if (this.__rect.containsPoint(point) === false) { return null; }
+        
         var context = this.__hiddenContext;
         context.clearRect(point.x, point.y, 1, 1);
         context.save();
@@ -3736,7 +3823,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         context.clip();
         var result = DisplayObjectContainer.prototype.__getObjectUnderPoint.call(this, context, new Matrix(), point);
         context.restore();
-        return result;
+        return result || this;
     };
     this.__enterFrame = function()
     {
@@ -3772,16 +3859,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
-        var stageRect = this.__rect.clone();
+        var stageRect = this.__rect;
         
-        
-        //render
+        //update the display list
         var redrawRegions;
-        context.save();
         if (this.__renderMode == 'all' || this.__renderAll) {
             //force to render the entire stage
             redrawRegions = [stageRect];
-            this.__renderAll = false;
         }
         else {
             //update modified objects and collect redraw regions
@@ -3793,49 +3877,55 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
         }
         
-        //clear context and clip redraw regions for rendering
-        context.beginPath();
-        for (i = 0, l = redrawRegions.length; i < l; ++i)
-        {
-            var rect = redrawRegions[i];
-            context.clearRect(rect.x, rect.y, rect.width, rect.height);
-            context.rect(rect.x, rect.y, rect.width, rect.height);
-        }
-        context.clip();
-        
-        this.__renderList(context, new Matrix(), new ColorTransform(), 1, redrawRegions);
-        context.restore();
-        
-        //catch mouse events
-        this.__updateObjectUnderMouse();
-        
-        //debug
-        if (this.showRedrawRegions) {
+        if (redrawRegions.length) {
+            //begin rendering
             context.save();
-            context.strokeStyle = "#FF0000";
-            context.lineWidth = 1;
+            
+            //clear the redraw regions and clip for rendering
             context.beginPath();
             for (i = 0, l = redrawRegions.length; i < l; ++i)
             {
-                rect = redrawRegions[i];
+                var rect = redrawRegions[i];
+                context.clearRect(rect.x, rect.y, rect.width, rect.height);
                 context.rect(rect.x, rect.y, rect.width, rect.height);
             }
-            context.stroke();
+            context.clip();
+            
+            this.__renderList(context, new Matrix(), new ColorTransform());
             context.restore();
+            
+            //catch mouse events
+            this.__updateObjectUnderMouse();
+            
+            //debug
+            if (this.showRedrawRegions) {
+                context.save();
+                context.strokeStyle = "#FF0000";
+                context.lineWidth = 1;
+                context.beginPath();
+                for (i = 0, l = redrawRegions.length; i < l; ++i)
+                {
+                    rect = redrawRegions[i];
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                }
+                context.stroke();
+                context.restore();
+            }
         }
         
         //clean up
+        this.__renderAll = false;
         this.__redrawRegions = [];
     };
     this.__updateObjectUnderMouse = function()
     {
-        var current = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
+        //NOTE: do not call these events against the stage.
+        var stage = this;
+        var last = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
-        //TODO test in flash
-        //should the stage be the default target?
-        current = current || this;
+        this.__objectUnderMouse = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
+        var current = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
-        var last = this.__objectUnderMouse;
         if (current !== last) {
             if (last) {
                 //mouse out
@@ -3854,14 +3944,10 @@ var Stage = new Class(DisplayObjectContainer, function()
                     }, [current, rollOutEvent]);
                 }
                 else {
-                    //all parents fire event
-                    __applyUp(last, function(event)
-                    {
-                        this.dispatchEvent(event);
-                    }, [rollOutEvent]);
+                    last.dispatchEvent(rollOutEvent);
                 }
                 
-                this.__objectUnderMouse = null;
+                //this.__objectUnderMouse = null;
             }
             if (current) {
                 //mouse over
@@ -3880,21 +3966,17 @@ var Stage = new Class(DisplayObjectContainer, function()
                     }, [last, rollOverEvent]);
                 }
                 else {
-                    //all parents fire event
-                    __applyUp(current, function(event)
-                    {
-                        this.dispatchEvent(event);
-                    }, [rollOverEvent]);
+                    current.dispatchEvent(rollOverEvent);
                 }
                 
-                this.__objectUnderMouse = current;
+                //this.__objectUnderMouse = current;
             }
         }
         
         //button mode
         //TODO buttonMode should effect children to
-        current = this.__objectUnderMouse;
-        if (current && current.buttonMode && current.useHandCursor) {
+        var target = this.__objectUnderMouse;
+        if (target && target.buttonMode && target.useHandCursor) {
             this.canvas.style.cursor = 'pointer';
         }
         else {
@@ -3921,7 +4003,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__hiddenCanvas.width = this.__canvasWidth;
             this.__hiddenCanvas.height = this.__canvasHeight;
             
-            //TODO force top left for now
+            //force top left for now
             this.__rect = new Rectangle(0, 0, this.__canvasWidth, this.__canvasHeight);
             this.dispatchEvent(new Event(Event.RESIZE, false, false));
         }
@@ -4348,58 +4430,14 @@ var Matrix = new Class(Object, function()
         var d  = this.d;
         var tx = this.tx;
         var ty = this.ty;
+        var det  = a * d - b * c;
         
-        var na  = 1;
-        var nb  = 0;
-        var nc  = 0;
-        var nd  = 1;
-        var ntx = 0;
-        var nty = 0;
-
-        var v01 = b;
-        var v11 = d;
-        var v21 = ty;
-
-        if (a) {
-            na  /= a;
-            v01 /= a;
-        }
-        v11 -= c  * v01;
-        nc  -= c  * na;
-        v21 -= tx * v01;
-        ntx -= tx * na;
-
-        if (v11) {
-            nc /= v11;
-        }
-        ntx -= v21 * nc;
-        na  -= v01 * nc;
-
-        v01 = b;
-        v11 = d;
-        v21 = ty;
-
-        if (a) {
-            nb  /= a;
-            v01 /= a;
-        }
-        v11 -= c  * v01;
-        nd  -= c  * nb;
-        v21 -= tx * v01;
-        nty -= tx * nb;
-
-        if (v11) {
-            nd /= v11;
-        }
-        nty -= v21 * nd;
-        nb  -= v01 * nd;
-
-        this.a  = na;
-        this.b  = nb;
-        this.c  = nc;
-        this.d  = nd;
-        this.tx = ntx;
-        this.ty = nty;
+        this.a  =  d / det;
+        this.b  = -b / det;
+        this.c  = -c / det;
+        this.d  =  a / det;
+        this.tx =  (c * ty - d * tx) / det;
+        this.ty = -(a * ty - b * tx) / det;
     };
     this.rotate = function(angle)
     {
@@ -5587,7 +5625,7 @@ URLVariables.prototype.toString = function()
 var TextField = new Class(InteractiveObject, function()
 {
     //context used for measureing text width
-    var textCanvas = cs3.utils.createCanvas("_cs3_textfield_canvas", 0, 0);
+    var textCanvas = cs3.utils.createCanvas(0, 0);
     var textContext = cs3.utils.getContext2d(textCanvas);
     
     this.__init__ = function()
@@ -5945,3 +5983,277 @@ Tween.prototype.toString = function()
 {
     return '[object Tween]';
 };
+/**
+* CoordinateShuffler by Mario Klingemann. Dec 14, 2008
+* Visit www.quasimondo.com for documentation, updates and more free code.
+*
+*
+* Copyright (c) 2008 Mario Klingemann
+* 
+* Permission is hereby granted, free of charge, to any person
+* obtaining a copy of this software and associated documentation
+* files (the "Software"), to deal in the Software without
+* restriction, including without limitation the rights to use,
+* copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the
+* Software is furnished to do so, subject to the following
+* conditions:
+* 
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+* OTHER DEALINGS IN THE SOFTWARE.
+**/
+var CoordinateShuffler = new Class(Object, function()
+{
+    this.__init__ = function(width, height, seed, shuffleDepth, lookupTableSize)
+    {
+        this.__width = width;
+        this.__height = height;
+        this.__maximumIndex = width * height;
+        this.__currentIndex = 0;
+        this.__shuffleDepth = shuffleDepth || 3;
+        this.__lookupTableSize = lookupTableSize || 256;
+        this.__hLookup = [];
+        this.__vLookup = [];
+        this.__seed0 = 0;
+        this.__seed1 = 0;
+        this.__seed2 = 0;
+        this.setSeed(seed || 0xBADA55);
+    };
+    
+    /**
+    * Returns a unique coordinate within the given width and height
+    * Valid values for index go from 0 to width * height, 
+    * bigger values will be wrapped around  
+    **/
+    this.getCoordinate = function(index)
+    {
+        var __width = this.__width;
+        var __height = this.__height;
+        var __hLookup = this.__hLookup;
+        var __vLookup = this.__vLookup;
+        var __maximumIndex = this.__maximumIndex;
+        var __shuffleDepth = this.__shuffleDepth;
+        var __lookupTableSize = this.__lookupTableSize;
+        
+        index %= __maximumIndex;
+        var x = index % __width;
+        var y = index / __width | 0;
+        
+        for (var i = 0; i < __shuffleDepth; ++i)
+        {
+            y = ( y + __hLookup[ (i * __width  + x) % __lookupTableSize ] ) % __height;
+            x = ( x + __vLookup[ (i * __height + y) % __lookupTableSize ] ) % __width;
+        }
+        this.__currentIndex = index++;
+        return [x, y];
+    };
+    
+    
+    /**
+    * Returns a unique coordinate within the given width and height
+    * and increments the internal index
+    **/
+    this.getNextCoordinate = function()
+    {
+        this.__currentIndex %= this.__maximumIndex;
+        return this.getCoordinate( this.__currentIndex++ );
+    };
+    
+    /**
+    * Returns a list of unique coordinate within the given width and height
+    * The maximum amount of returned coordinates is width * height which constitutes all pixels, 
+    **/
+    this.getCoordinates = function(count, index)
+    {
+        var __width = this.__width;
+        var __height = this.__height;
+        var __hLookup = this.__hLookup;
+        var __vLookup = this.__vLookup;
+        var __maximumIndex = this.__maximumIndex;
+        var __shuffleDepth = this.__shuffleDepth;
+        var __lookupTableSize = this.__lookupTableSize;
+        var list = [];
+        
+        if ( count < 1 ) { return []; }
+        count = Math.min(count, __maximumIndex);
+        
+        index %= __maximumIndex;
+        var xx = index % __width;
+        var yy = index / __width | 0;
+        
+        while (count > 0)
+        {
+            var x = xx;
+            var y = yy;
+            for (var i = 0; i < __shuffleDepth; ++i)
+            {
+                y = ( y + __hLookup[ (i * __width  + x) % __lookupTableSize ] ) % __height;
+                x = ( x + __vLookup[ (i * __height + y) % __lookupTableSize ] ) % __width;
+            }
+            list.push([x, y]);
+            
+            index++;
+            index %= __maximumIndex;
+            
+            xx = (xx + 1) % __width;
+            if (xx === 0) {
+                yy = (yy + 1) % __height;
+            }
+            
+            count--;
+        }
+        
+        this.__currentIndex = index + count % __maximumIndex;
+        return list;
+    };
+    
+    /**
+    * Controls how often the coordinates get shuffled around
+    * A higher should create a more random looking pattern
+    * minimum value is 1 
+    **/
+    this.getShuffleDepth = function()
+    {
+        return this.__shuffleDepth;
+    };
+    this.setShuffleDepth = function(v)
+    {
+        this.__shuffleDepth = Math.max(1, v);
+        this.setSeed(this.__seed);
+    };
+    
+    
+    /**
+    * Sets the size of the internal coordinate shuffle tables
+    * Smaller values create a more geometric looking pattern
+    * Bigger values need a bit longer for the initial setup of the table 
+    * minimum value is 1 
+    **/
+    this.getLookupTableSize = function()
+    {
+        return this.__lookupTableSize;
+    };
+    this.setLookupTableSize = function(v)
+    {
+        this.__lookupTableSize = Math.max(1, v);
+        this.setSeed(this.__seed);
+    };
+    
+    this.getMaximumIndex = function()
+    {
+        return this.__maximumIndex;
+    };
+    
+    this.getWidth = function()
+    {
+        return this.__width;
+    };
+    this.setWidth = function(v)
+    {
+        this.__width = v;
+        this.__maximumIndex = v * this.__height;
+        this.setSeed(this.__seed);
+    };
+    
+    this.getHeight = function()
+    {
+        return this.__height;
+    };
+    this.setHeight = function(v)
+    {
+        this.__height = v;
+        this.__maximumIndex = this.__width * v;
+        this.setSeed(this.__seed);
+    };
+    
+    /**
+    * Sets the next point index
+    * used in conjuntion with getNextCoordinate
+    **/
+    this.getIndex = function(v)
+    {
+        return this.__currentIndex;
+    };
+    this.setIndex = function(v)
+    {
+        this.__currentIndex = v % this.__maximumIndex;
+    };
+    
+    /**
+    * Sets the random seed 
+    * different seeds will return the coordinates in different order 
+    **/
+    this.setSeed = function(v)
+    {
+        var __seed = v;
+        
+        var __seed0 = (69069 * __seed) & 0xffffffff;
+        if (__seed0 < 2) {
+            __seed0 += 2;
+        }
+
+        var __seed1 = (69069 * __seed0) & 0xffffffff;
+        if (__seed1 < 8) {
+            __seed1 += 8;
+        }
+
+        var __seed2 = (69069 * __seed1) & 0xffffffff;
+        if (__seed2 < 16) {
+            __seed2 += 16;
+        }
+        
+        this.__seed  = __seed;
+        this.__seed0 = __seed0;
+        this.__seed1 = __seed1;
+        this.__seed2 = __seed2;
+        
+        this.update();
+    };
+    
+    this.update = function()
+    {
+        var __width = this.__width;
+        var __height = this.__height;
+        var __lookupTableSize = this.__lookupTableSize;
+        
+        var i;
+        var __hLookup = [];
+        var __vLookup = [];
+        
+        for (i = __lookupTableSize - 1; i >= 0; --i)
+        {
+            __hLookup[i] = this.getNextInt() % __height;
+        }
+        
+        for (i = __lookupTableSize - 1; i >= 0; --i)
+        {
+            __vLookup[i] = this.getNextInt() % __width;
+        }
+        
+        this.__hLookup = __hLookup;
+        this.__vLookup = __vLookup;
+    };
+    
+    this.getNextInt = function()
+    {
+        var __seed0 = this.__seed0;
+        var __seed1 = this.__seed1;
+        var __seed2 = this.__seed2;
+        __seed0 = ((( __seed0 & 4294967294) << 12) & 0xffffffff) ^ ((((__seed0 << 13) & 0xffffffff) ^ __seed0) >>> 19);
+        __seed1 = ((( __seed1 & 4294967288) <<  4) & 0xffffffff) ^ ((((__seed1 <<  2) & 0xffffffff) ^ __seed1) >>> 25);
+        __seed2 = ((( __seed2 & 4294967280) << 17) & 0xffffffff) ^ ((((__seed2 <<  3) & 0xffffffff) ^ __seed2) >>> 11);
+        this.__seed0 = __seed0;
+        this.__seed1 = __seed1;
+        this.__seed2 = __seed2;
+        return (__seed0 ^ __seed1 ^ __seed2) >>> 0;
+    };
+});

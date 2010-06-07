@@ -20,16 +20,17 @@ var Main = new Class(Sprite, function()
         
         this.linesCount = 0;
         
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
+        this.addEventListener(Event.ADDED_TO_STAGE, this.init);
     }
     
     this.init = function()
     {
-        this.addEventListener(MouseEvent.MOUSE_DOWN, this.startDraw);
         //this.stage.showRedrawRegions = true;
+        this.isDrawing = false;
+        
+        this.stage.addEventListener(MouseEvent.MOUSE_DOWN, new EventListener(this, this.startDraw));
+        this.stage.addEventListener(MouseEvent.MOUSE_MOVE, new EventListener(this, this.updateDraw));
+        this.stage.addEventListener(MouseEvent.MOUSE_UP, new EventListener(this, this.stopDraw));
         
         var fps = 0;
         this.addEventListener(Event.ENTER_FRAME, function(e)
@@ -46,23 +47,22 @@ var Main = new Class(Sprite, function()
     
     this.startDraw = function(e)
     {
+        this.isDrawing = true;
         this.linesCount = 0;
         this.canvas.graphics.lineStyle(4, 0x000000);
         this.canvas.graphics.moveTo(this.mouseX, this.mouseY);
-        this.addEventListener(MouseEvent.MOUSE_MOVE, this.updateDraw);
-        this.addEventListener(MouseEvent.MOUSE_UP, this.stopDraw);
     };
     
     this.updateDraw = function(e)
     {
+        if (!this.isDrawing) { return; }
         this.linesCount++;
         this.canvas.graphics.lineTo(this.mouseX, this.mouseY);
     };
     
     this.stopDraw = function(e)
     {
-        this.removeEventListener(MouseEvent.MOUSE_MOVE, this.updateDraw);
-        this.removeEventListener(MouseEvent.MOUSE_UP, this.stopDraw);
+        this.isDrawing = false;
         
         if (this.linesCount == 0) {
             //if the mouse did not move
@@ -79,7 +79,6 @@ var Main = new Class(Sprite, function()
         this.canvas.graphics.clear();
     };
 });
-
 cs3.utils.addOnload(function()
 {
     var params = {

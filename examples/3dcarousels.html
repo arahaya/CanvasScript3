@@ -11,23 +11,19 @@ var Main = new Class(Sprite, function()
     {
         Sprite.call(this);
         
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
+        this.addEventListener(Event.ADDED_TO_STAGE, this.init);
     }
     
     this.init = function()
     {
         //this.stage.showRedrawRegions = true;
         
-        var self = this;
         var loader = new Loader();
-        loader.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e)
+        loader.contentLoaderInfo.addEventListener(Event.COMPLETE, new EventListener(this, function(e)
         {
-            self.bitmapData = loader.content.bitmapData;
-            self.run();
-        });
+            this.bitmapData = loader.content.bitmapData;
+            this.run();
+        }));
         loader.load(new URLRequest('./img/Flap.png'));
         
         

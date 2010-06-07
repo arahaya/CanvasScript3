@@ -13,7 +13,11 @@ var Main = new Class(Sprite, function()
     this.__init__ = function()
     {
         Sprite.call(this);
-        
+        this.addEventListener(Event.ADDED_TO_STAGE, callback(this, this.init));
+    }
+    
+    this.init = function()
+    {
         var red = new Sprite();
         red.x = 300;
         red.y = 300;
@@ -52,6 +56,11 @@ var Main = new Class(Sprite, function()
             trace('green mouseout');
         });
         blue.addChild(green);
+        
+        this.stage.addEventListener(MouseEvent.MOUSE_OUT, function(e)
+        {
+            trace("stage mouseout");
+        });
     }
 });
 

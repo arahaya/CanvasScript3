@@ -1,48 +1,21 @@
 var BitmapData = new Class(Object, function()
 {
-    var invalidBitmapData = function() {
+    var invalidBitmapData = function()
+    {
         throw new ArgumentError("Invalid BitmapData.");
     };
     
-    this.__init__ = function(width, height, transparent, fillColor)
+    var __alphaBlend = function(context, src, dx, dy)
     {
-        //transparent=false doesn't work
-        width  = width  | 0;
-        height = height | 0;
-        if (!width || !height) {
-            throw new ArgumentError("Invalid BitmapData.");
-        }
-        
-        this.__width = width;
-        this.__height = height;
-        //this.__transparent = (transparent) ? true : false;
-        this.__canvas = cs3.utils.createCanvas("_cs3_bitmapdata_canvas", width, height);
-        this.__context = cs3.utils.getContext2d(this.__canvas);
-        this.__rect = new Rectangle(0, 0, width, height);
-        this.__pixel = this.__context.createImageData(1, 1);
-        this.__modified = false;
-        
-        if (fillColor === null) { fillColor = 0xFFFFFFFF; }
-        if (fillColor) { this.fillRect(this.__rect, fillColor); }
+        var dst = context.getImageData(dx, dy, src.width, src.height);
+        __alphaBlendImageData(dst, src);
+        context.putImageData(dst, dx, dy);
     };
-    this.__render = function(context, matrix, colorTransform)
+    var __alphaBlendImageData = function(dst, src)
     {
-        if (this.__canvas) {
-            var rect = this.__rect;
-            context.drawImage(this.__canvas, rect.x, rect.y);
-        }
+        __alphaBlendArray(dst.data, src.data);
     };
-    this.__alphaBlend = function(src, dx, dy)
-    {
-        var dst = this.__context.getImageData(dx, dy, src.width, src.height);
-        this.__alphaBlendImageData(dst, src);
-        this.__context.putImageData(dst, dx, dy);
-    };
-    this.__alphaBlendImageData = function(dst, src)
-    {
-        this.__alphaBlendArray(dst.data, src.data);
-    };
-    this.__alphaBlendArray = function(dst, src)
+    var __alphaBlendArray = function(dst, src)
     {
         var srcLength = src.length;
         var ri, gi, bi, ai;
@@ -59,14 +32,14 @@ var BitmapData = new Class(Object, function()
                 continue;
             }
             else if (src[ai] === 255 || dst[ai] === 0) {
-                //src is solid OR dst is transparent, simply overwrite dst
+                //src is solid OR dst is transparent, overwrite dst
                 dst[ri] = src[ri];
                 dst[gi] = src[gi];
                 dst[bi] = src[bi];
                 dst[ai] = src[ai];
             }
             else if (dst[ai] !== 255) {
-                //caculate the new color
+                //merge
                 sa = src[ai] / 255;
                 da = dst[ai] / 255;
                 na = da + sa - sa * da;
@@ -77,6 +50,7 @@ var BitmapData = new Class(Object, function()
                 dst[ai] = na * 255;
             }
             else {
+                //add
                 sa = src[ai] / 255;
                 ma = 1 - sa;
                 dst[ri] = src[ri] * sa + dst[ri] * ma;
@@ -85,7 +59,7 @@ var BitmapData = new Class(Object, function()
             }
         }
     };
-    this.__floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
+    var __floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -134,7 +108,7 @@ var BitmapData = new Class(Object, function()
             pop = stack.pop();
         }
     };
-    this.__floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
+    var __floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -198,6 +172,36 @@ var BitmapData = new Class(Object, function()
             }
             
             pop = stack.pop();
+        }
+    };
+    
+    this.__init__ = function(width, height, transparent, fillColor)
+    {
+        //transparent=false doesn't work
+        width  = width  | 0;
+        height = height | 0;
+        if (!width || !height) {
+            throw new ArgumentError("Invalid BitmapData.");
+        }
+        
+        this.__width = width;
+        this.__height = height;
+        //this.__transparent = (transparent) ? true : false;
+        this.__canvas = cs3.utils.createCanvas(width, height);
+        this.__context = cs3.utils.getContext2d(this.__canvas);
+        this.__rect = new Rectangle(0, 0, width, height);
+        this.__pixel = this.__context.createImageData(1, 1);
+        this.__modified = false;
+        this.__disposed = false;
+        
+        if (fillColor === null) { fillColor = 0xFFFFFFFF; }
+        if (fillColor) { this.fillRect(this.__rect, fillColor); }
+    };
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__canvas) {
+            var rect = this.__rect;
+            context.drawImage(this.__canvas, rect.x, rect.y);
         }
     };
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
@@ -362,16 +366,16 @@ var BitmapData = new Class(Object, function()
         this.__height = 0;
         this.__canvas.width = 0;
         this.__canvas.height = 0;
-        //this.__canvas = null;
-        //this.__context = null;
+        this.__canvas = null;
+        this.__context = null;
         this.__rect.setEmpty();
         this.__pixel = null;
         
-        //disable all methods
-        //excluding toString and private methods
+        //disable all public methods
+        //excluding toString
         for (var p in this)
         {
-            if (p !== 'toString' && p.charAt(0) !== '_' && typeof this[p] == 'function') {
+            if (p !== 'toString' && p.charAt(0) !== '_' && typeof(this[p]) === 'function') {
                 this[p] = invalidBitmapData;
             }
         }
@@ -380,7 +384,9 @@ var BitmapData = new Class(Object, function()
         this.__defineGetter__("width", invalidBitmapData);
         this.__defineGetter__("height", invalidBitmapData);
         this.__defineGetter__("rect", invalidBitmapData);
+        
         this.__modified = true;
+        this.__disposed = true;
     };
     this.draw = function(source, matrix)
     {
@@ -424,7 +430,7 @@ var BitmapData = new Class(Object, function()
         }
         
         //start the search
-        this.__floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
+        __floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
         
         this.__context.putImageData(pixels, 0, 0);
         this.__modified = true;
@@ -603,10 +609,18 @@ var BitmapData = new Class(Object, function()
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
         var destPixels = destImageData.data;
+        var width = destImageData.width;
+        var height = destImageData.height;
         var size = destImageData.width * destImageData.height;
-        var i, p;
+        var i, p, c;
         
-        if (numPixels === undefined) { numPixels = size / 30; }
+        if (!numPixels) { numPixels = (size / 30) | 0; }
+        else if (numPixels > size) { numPixels = size; }
+        
+        if (randomSeed < 1) { randomSeed = (randomSeed * size) | 0; }
+        
+        var coordinateShuffler = new CoordinateShuffler(width, height, 0xBADA55, 3, 256);
+        var coords = coordinateShuffler.getCoordinates(numPixels, randomSeed);
         
         if (sourceBitmapData === this) {
             fillColor = fillColor | 0;
@@ -617,9 +631,8 @@ var BitmapData = new Class(Object, function()
             
             for (i = 0; i < numPixels; ++i)
             {
-                //TODO need a better random algorithm
-                randomSeed = (randomSeed * 9301 + 49297) % 233280;
-                p = Math.floor((randomSeed / 233280.0) * size) * 4;
+                c = coords[i];
+                p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = fillRed;
                 destPixels[p+1] = fillGreen;
                 destPixels[p+2] = fillBlue;
@@ -631,9 +644,8 @@ var BitmapData = new Class(Object, function()
             var sourcePixels = sourceImageData.data;
             for (i = 0; i < numPixels; ++i)
             {
-                //TODO need a better random algorithm
-                randomSeed = (randomSeed * 9301 + 49297) % 233280;
-                p = Math.floor((randomSeed / 233280.0) * size) * 4;
+                c = coords[i];
+                p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = sourcePixels[p];
                 destPixels[p+1] = sourcePixels[p+1];
                 destPixels[p+2] = sourcePixels[p+2];
@@ -643,7 +655,8 @@ var BitmapData = new Class(Object, function()
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
-        return randomSeed;
+        //return randomSeed;
+        return coordinateShuffler.getIndex();
     };
     this.putImageData = function()
     {

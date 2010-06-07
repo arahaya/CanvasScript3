@@ -52,58 +52,14 @@ var Matrix = new Class(Object, function()
         var d  = this.d;
         var tx = this.tx;
         var ty = this.ty;
+        var det  = a * d - b * c;
         
-        var na  = 1;
-        var nb  = 0;
-        var nc  = 0;
-        var nd  = 1;
-        var ntx = 0;
-        var nty = 0;
-
-        var v01 = b;
-        var v11 = d;
-        var v21 = ty;
-
-        if (a) {
-            na  /= a;
-            v01 /= a;
-        }
-        v11 -= c  * v01;
-        nc  -= c  * na;
-        v21 -= tx * v01;
-        ntx -= tx * na;
-
-        if (v11) {
-            nc /= v11;
-        }
-        ntx -= v21 * nc;
-        na  -= v01 * nc;
-
-        v01 = b;
-        v11 = d;
-        v21 = ty;
-
-        if (a) {
-            nb  /= a;
-            v01 /= a;
-        }
-        v11 -= c  * v01;
-        nd  -= c  * nb;
-        v21 -= tx * v01;
-        nty -= tx * nb;
-
-        if (v11) {
-            nd /= v11;
-        }
-        nty -= v21 * nd;
-        nb  -= v01 * nd;
-
-        this.a  = na;
-        this.b  = nb;
-        this.c  = nc;
-        this.d  = nd;
-        this.tx = ntx;
-        this.ty = nty;
+        this.a  =  d / det;
+        this.b  = -b / det;
+        this.c  = -c / det;
+        this.d  =  a / det;
+        this.tx =  (c * ty - d * tx) / det;
+        this.ty = -(a * ty - b * tx) / det;
     };
     this.rotate = function(angle)
     {

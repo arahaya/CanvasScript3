@@ -165,7 +165,6 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.getBounds = function(targetCoordinateSpace)
     {
-        //TODO not tested at all
         var bounds = this.__getBounds();
         targetCoordinateSpace = targetCoordinateSpace || this.__root || this;
         if (targetCoordinateSpace === this) {
@@ -175,20 +174,19 @@ var DisplayObject = new Class(EventDispatcher, function()
             return this.__transform.__matrix.transformRect(bounds);
         }
         
-        //tansform your global bounds to targets local bounds
         var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(bounds);
         if (targetCoordinateSpace === this.__root) {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
         
+        //tansform your global bounds to targets local bounds
         var targetMatrix = targetCoordinateSpace.__transform.getConcatenatedMatrix();
         targetMatrix.invert();
         return targetMatrix.transformRect(globalBounds);
     };
     this.getRect = function(targetCoordinateSpace)
     {
-        //TODO
         return this.getBounds(targetCoordinateSpace);
     };
     this.globalToLocal = function(point)
@@ -205,7 +203,6 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.hitTestPoint = function(x, y, shapeFlag)
     {
-        //TODO shapeFlag=true
         if (shapeFlag === false) {
             var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);

@@ -5,7 +5,6 @@
 <meta http-equiv="Content-Style-Type" content="text/css" />
 <title>BitmapData - PixelDissolve</title>
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
-<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
 <script type="text/javascript">
@@ -21,15 +20,26 @@ var Main = new Class(Sprite, function()
             var bitmapdata = bitmap.bitmapData;
             var bottomHalf = new Rectangle(0, bitmapdata.height / 2, bitmapdata.width, bitmapdata.height / 2);
             var point = new Point(0, bitmapdata.height / 2);
+            var seed = Math.random();
             
-            bitmapdata.pixelDissolve(bitmapdata, bottomHalf, point, Math.random(), bitmapdata.width * bitmapdata.height / 10, 0xFF000000);
+            var step = 0;
+            loader.addEventListener(Event.ENTER_FRAME, function(e)
+            {
+                seed = bitmapdata.pixelDissolve(bitmapdata, bottomHalf, point, seed, null, 0xFF000000);
+                step++;
+                trace("step: " + step + "/30");
+                if (step == 30) {
+                    //it should be done.
+                    loader.removeEventListener(Event.ENTER_FRAME, arguments.callee);
+                }
+            })
         });
         loader.load(new URLRequest('img/photo01.jpg'));
         this.addChild(loader);
     }
 });
 
-new Stage({canvas:"stage"}).addChild(new Main());
+new Stage({canvas:"stage", frameRate:10}).addChild(new Main());
 </script>
 </head>
 <body>

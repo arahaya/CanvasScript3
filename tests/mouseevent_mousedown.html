@@ -13,6 +13,14 @@ var Main = new Class(Sprite, function()
     this.__init__ = function()
     {
         Sprite.call(this);
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
         var red = new Sprite();
         red.x = 300;
         red.y = 300;
@@ -51,6 +59,11 @@ var Main = new Class(Sprite, function()
             trace('green mousedown');
         });
         blue.addChild(green);
+        
+        this.stage.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
+        {
+            trace("stage mousedown");
+        });
     }
 });
 

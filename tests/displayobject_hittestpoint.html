@@ -29,19 +29,30 @@ var Main = new Class(Sprite, function()
         this.addChild(circle);
 
         var point1 = new Point(0, 10);
-        trace(circle.hitTestPoint(point1.x, point1.y, true)); // false
-        trace(circle.hitTestPoint(point1.x, point1.y, false)); // false
-        trace(circle.globalToLocal(point1)); // [x=-10, y=0]
-
         var point2 = new Point(10, 11);
-        trace(circle.hitTestPoint(point2.x, point2.y, true)); // false
-        trace(circle.hitTestPoint(point2.x, point2.y, false)); // true
-        trace(circle.globalToLocal(point2)); // [x=0, y=1]
-
         var point3 = new Point(30, 30);
+        
+        trace("result");
+        trace("answer");
+        trace("---------------------");
+        trace(circle.hitTestPoint(point1.x, point1.y, true)); // false
+        trace("false");
+        trace("---------------------");
+        trace(circle.hitTestPoint(point1.x, point1.y, false)); // false
+        trace("false");
+        trace("---------------------");
+        trace(circle.hitTestPoint(point2.x, point2.y, true)); // false
+        trace("false");
+        trace("---------------------");
+        trace(circle.hitTestPoint(point2.x, point2.y, false)); // true
+        trace("true");
+        trace("---------------------");
         trace(circle.hitTestPoint(point3.x, point3.y, true)); // true
+        trace("true");
+        trace("---------------------");
         trace(circle.hitTestPoint(point3.x, point3.y, false)); // true
-        trace(circle.globalToLocal(point3)); // [x=20, y=20]
+        trace("true");
+        trace("---------------------");
     }
 });
 

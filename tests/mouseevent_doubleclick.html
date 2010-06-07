@@ -13,9 +13,15 @@ var Main = new Class(Sprite, function()
     this.__init__ = function()
     {
         Sprite.call(this);
-        var shape;
-        
-        red = new Sprite();
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        var red = new Sprite();
         red.x = 300;
         red.y = 300;
         red.graphics.lineStyle(0);
@@ -28,7 +34,7 @@ var Main = new Class(Sprite, function()
         });
         this.addChild(red);
         
-        blue = new Sprite();
+        var blue = new Sprite();
         blue.x = 0;
         blue.y = 0;
         blue.graphics.lineStyle(0);
@@ -41,7 +47,7 @@ var Main = new Class(Sprite, function()
         });
         red.addChild(blue);
         
-        green = new Sprite();
+        var green = new Sprite();
         green.x = 0;
         green.y = 0;
         green.graphics.lineStyle(0);
@@ -53,6 +59,11 @@ var Main = new Class(Sprite, function()
             trace('green doubleclick');
         });
         blue.addChild(green);
+        
+        this.stage.addEventListener(MouseEvent.DOUBLE_CLICK, function(e)
+        {
+            trace("stage doubleclick");
+        });
     }
 });
 

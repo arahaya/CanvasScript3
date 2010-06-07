@@ -39,6 +39,7 @@ var cs3 = {
         isOpera: (window.opera) ? true : false,//TODO add beter browser detection
         isChrome: navigator.userAgent.toLowerCase().indexOf('chrome') > -1,
         stages: [],
+        canvasId: 0,
         instanceId: 0,
         resizeTimeout: null,
         nextInstanceId: function()
@@ -80,9 +81,12 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
-            cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
+            cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
+            //cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             //Firefox
             if (window.addEventListener) {
                 canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
@@ -269,10 +273,11 @@ var cs3 = {
             }
             return req;
         },
-        createCanvas: function(id, width, height)
+        createCanvas: function(width, height)
         {
+            cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
-            canvas.id = id || null;
+            canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
             canvas.width = width | 0;
             canvas.height = height | 0;
             return canvas;

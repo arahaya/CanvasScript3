@@ -11,6 +11,13 @@ var EventDispatcher = new Class(Object, function()
             this.__events[type] = [];
         }
         
+        if (typeof(listener) === 'function') {
+            listener = new EventListener(this, listener);
+        }
+        else if (listener instanceof Array) {
+            listener = new EventListener(listener[0], listener[1]);
+        }
+        
         this.__events[type].push(listener);
     };
     this.dispatchEvent = function(event)
@@ -25,11 +32,12 @@ var EventDispatcher = new Class(Object, function()
         }
         event.currentTarget = this;
         
-        var events = this.__events[event.type];
-        if (events !== undefined) {
-            for (var i = 0, l = events.length; i < l; ++i) {
-                events[i].call(this, event);
+        var listeners = this.__events[event.type];
+        if (listeners !== undefined) {
+            for (var i = 0, l = listeners.length; i < l; ++i) {
+                //events[i].call(this, event);
                 //events[i](event);
+                listeners[i].call(event);
             }
         }
         if (event.bubbles && this.__parent) {
@@ -50,13 +58,20 @@ var EventDispatcher = new Class(Object, function()
     this.removeEventListener = function(type, listener, useCapture)
     {
         //TODO useCapture
-        var events = this.__events[type];
-        if (events === undefined) { return; }
+        var listeners = this.__events[type];
+        if (listeners === undefined) { return; }
         
-        for (var i = 0, l = events.length; i < l; ++i)
+        if (typeof(listener) === 'function') {
+            listener = new EventListener(this, listener);
+        }
+        else if (listener instanceof Array) {
+            listener = new EventListener(listener[0], listener[1]);
+        }
+        
+        for (var i = 0, l = listeners.length; i < l; ++i)
         {
-            if (events[i] == listener) {
-                events.splice(i, 1);
+            if (listener.equals(listeners[i])) {
+                listeners.splice(i, 1);
             }
         }
     };

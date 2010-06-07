@@ -1,7 +1,7 @@
 var TextField = new Class(InteractiveObject, function()
 {
     //context used for measureing text width
-    var textCanvas = cs3.utils.createCanvas("_cs3_textfield_canvas", 0, 0);
+    var textCanvas = cs3.utils.createCanvas(0, 0);
     var textContext = cs3.utils.getContext2d(textCanvas);
     
     this.__init__ = function()

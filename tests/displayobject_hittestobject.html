@@ -39,9 +39,18 @@ var Main = new Class(Sprite, function()
         circle3.y = 67;
         this.addChild(circle3);
 
+        trace("result");
+        trace("answer");
+        trace("---------------------");
         trace(circle1.hitTestObject(circle2)); // true
+        trace("true");
+        trace("---------------------");
         trace(circle1.hitTestObject(circle3)); // false
+        trace("false");
+        trace("---------------------");
         trace(circle2.hitTestObject(circle3)); // true
+        trace("true");
+        trace("---------------------");
     }
 });
 
