@@ -966,38 +966,43 @@ var DisplayObject = new Class(EventDispatcher, function()
         //this.loaderInfo = new LoaderInfo();
         this.__mask = null;
         this.__maskee = null;
-        this.__bitmapData = null;//used for cacheAsBitmap, mask, maskee, filters
+        this.__bitmap = null;//used for cacheAsBitmap, mask, maskee, filters
         this.__cache = null;//cached result for mask and filters
         //this.opaqueBackground = null;
     };
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
         if (bounds.isEmpty()) {
             //if bounds is empty we can't create a BitmapData.
-            this.__bitmapData = null;
             return null;
         }
         
-        var render = false;
-        if (this.__bitmapData === null) {
-            this.__bitmapData = new BitmapData(bounds.width, bounds.height, true, 0);
-            //we want the bitmapData.rect to be the exact same as bounds
-            this.__bitmapData.__rect = bounds;
-            render = true;
+        var bitmap = this.__bitmap;
+        var bitmapData;
+        if (bitmap === null) {
+            bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
+            bitmap.setX(bounds.x);
+            bitmap.setY(bounds.y);
         }
-        else if (bounds.equals(this.__bitmapData.__rect) === false) {
-            this.__bitmapData.__canvas.width = bounds.width;
-            this.__bitmapData.__canvas.height = bounds.height;
-            this.__bitmapData.__rect = bounds;
+        
+        //TODO: check if the bitmap needs to be rendered
+        //always true for now
+        var render = false;
+        if (true) {
             render = true;
         }
         
-        //if (render) {
-        if (true) {//disable caching for now
-            var context = this.__bitmapData.__context;
-            //context.clearRect(0, 0, bounds.width, bounds.height);
-            __clearContext(context);
+        if (render) {
+            //update the position
+            bitmap.setX(bounds.x);
+            bitmap.setY(bounds.y);
+            
+            //update the size(this also clears the contents)
+            bitmap.__bitmapData.__resize(bounds.width, bounds.height);
+            
+            var context = bitmap.__bitmapData.__context;
+            //__clearContext(context);
             
             //create a matrix that makes the bounds to fit the context
             var matrix = new Matrix(1, 0, 0, 1, -bounds.x, -bounds.y);
@@ -1010,13 +1015,13 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.c,
                 matrix.d,
                 matrix.tx,
-                matrix.ty
-             );
+                matrix.ty);
             this.__renderList(context, matrix, new ColorTransform());
             context.restore();
         }
         
-        return this.__bitmapData;
+        this.__bitmap = bitmap;
+        return bitmap;
     };
     this.__getBounds = function()
     {
@@ -1060,9 +1065,10 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.__renderList = function(context, matrix, colorTransform)
     {
+        var i;
         //apply ContextFilter's
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
@@ -1070,7 +1076,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
         
         this.__render(context, matrix, colorTransform);
-    }
+    };
     this.__update = function(matrix)
     {
         /*
@@ -1430,9 +1436,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
      */
     this.__renderList = function(context, matrix, colorTransform)
     {
+        var i;
         //apply ContextFilter's
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
@@ -1443,7 +1450,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         var globalAlpha = context.globalAlpha;
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
             if (child.__visible === false) { continue; }
@@ -1466,39 +1473,49 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             
             /*** experimental ***/
             if (child.__mask) {
-                var childBitmapData = child.__getAsBitmapData();
-                if (!childBitmapData) {
+                var childBitmap = child.__getAsBitmap();
+                if (!childBitmap) {
                     //child content is empty so we don't need to apply a mask
                     continue;
                 }
                 var mask = child.__mask;
-                var maskBitmapData = mask.__getAsBitmapData();
-                if (!maskBitmapData) {
+                var maskBitmap = mask.__getAsBitmap();
+                if (!maskBitmap) {
                     //mask content is empty so we don't need to render the child
                     continue;
                 }
                 
-                //create another bitmapData to apply the mask
+                var childBitmapData = childBitmap.__bitmapData;
+                var maskBitmapData = maskBitmap.__bitmapData;
+                
+                //create another bitmap to apply the mask
                 if (child.__cache) {
                     //if it already exists, reuse it
-                    child.__cache.__canvas.width = childBitmapData.width;
-                    child.__cache.__canvas.height = childBitmapData.height;
-                    child.__cache.__context.drawImage(childBitmapData.__canvas, 0, 0);
-                    child.__cache.__rect = childBitmapData.__rect.clone();
+                    child.__cache.__bitmapData.__resize(childBitmapData.__width, childBitmapData.__height);
+                    child.__cache.__bitmapData.__context.drawImage(childBitmapData.__canvas, 0, 0);
+                    child.__cache.setX(childBitmap.getX());
+                    child.__cache.setY(childBitmap.getY());
                 }
                 else {
-                    child.__cache = childBitmapData.clone();
+                    //create a new bitmap
+                    child.__cache = new Bitmap(childBitmapData.clone());
+                    child.__cache.setX(childBitmap.getX());
+                    child.__cache.setY(childBitmap.getY());
                 }
-                var bitmapData = child.__cache;
+                
+                var bitmap = child.__cache;
+                var bitmapData = bitmap.__bitmapData;
                 var bitmapDataContext = bitmapData.__context;
                 
-                //create the masks matrix
+                //create the mask's matrix
                 var maskMatrix = mask.__transform.getConcatenatedMatrix();
                 var deltaMatrix = childMatrix.clone();
                 deltaMatrix.invert();
                 maskMatrix.concat(deltaMatrix);
-                maskMatrix.tx -= bitmapData.__rect.x;
-                maskMatrix.ty -= bitmapData.__rect.y;
+                
+                //adjust the position to draw
+                maskMatrix.tx += maskBitmap.getX();
+                maskMatrix.ty += maskBitmap.getY();
                 
                 //apply the mask
                 bitmapDataContext.save();
@@ -1509,8 +1526,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
                     maskMatrix.c,
                     maskMatrix.d,
                     maskMatrix.tx,
-                    maskMatrix.ty
-                );
+                    maskMatrix.ty);
                 maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
                 bitmapDataContext.restore();
                 
@@ -1756,9 +1772,12 @@ var Bitmap = new Class(DisplayObject, function()
         return new Rectangle();
     };
     //override
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
-        return this.__bitmapData;
+        if (this.__bitmapData) {
+            return this;
+        }
+        return null;
     };
     //override
     this.__getModified = function()
@@ -1796,9 +1815,9 @@ var Bitmap = new Class(DisplayObject, function()
             
             if (bounds.containsPoint(localPoint)) {
                 //fix the points back to ints
-                localPoint.x = Math.floor(localPoint.x);
-                localPoint.y = Math.floor(localPoint.y);
-                var imageData = this.__bitmapData.__context.getImageData(localPoint.x, localPoint.y, 1, 1);
+                localPoint.x = localPoint.x | 0;
+                localPoint.y = localPoint.y | 0;
+                var imageData = this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1);
                 var pixel = imageData.data;
                 //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
                 if (pixel[3] !== 0) {
@@ -2049,8 +2068,17 @@ var BitmapData = new Class(Object, function()
     {
         if (this.__canvas) {
             var rect = this.__rect;
-            context.drawImage(this.__canvas, rect.x, rect.y);
+            context.drawImage(this.__canvas, 0, 0);
         }
+    };
+    this.__resize = function(width, height)
+    {
+        this.__width = width;
+        this.__height = height;
+        this.__rect.width = width;
+        this.__rect.height = height;
+        this.__canvas.width = width;
+        this.__canvas.height = height;
     };
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
     {
@@ -2206,7 +2234,7 @@ var BitmapData = new Class(Object, function()
     };
     this.createImageData = function()
     {
-        return this.__context.createImageData(arguments);
+        return this.__context.createImageData.apply(this.__context, arguments);
     };
     this.dispose = function()
     {
@@ -2240,7 +2268,18 @@ var BitmapData = new Class(Object, function()
     {
         //TODO a lot to fix..
         matrix = matrix || new Matrix();
-        source.__render(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
+        
+        var context = this.__context;
+        context.save();
+        context.setTransform(
+            matrix.a,
+            matrix.b,
+            matrix.c,
+            matrix.d,
+            matrix.tx,
+            matrix.ty);
+        source.__renderList(context, matrix, new ColorTransform());
+        context.restore();
         this.__modified = true;
     };
     this.fillRect = function(rect, color)
@@ -2345,7 +2384,7 @@ var BitmapData = new Class(Object, function()
     };
     this.getImageData = function()
     {
-        return this.__context.getImageData(arguments);
+        return this.__context.getImageData.apply(this.__context, arguments);
     };
     this.getPixel = function(x, y)
     {
@@ -2465,10 +2504,14 @@ var BitmapData = new Class(Object, function()
         if (!numPixels) { numPixels = (size / 30) | 0; }
         else if (numPixels > size) { numPixels = size; }
         
-        if (randomSeed < 1) { randomSeed = (randomSeed * size) | 0; }
+        if (randomSeed < 1) { randomSeed = (randomSeed * 0xFFFFFFFF) | 0; }
         
-        var coordinateShuffler = new CoordinateShuffler(width, height, 0xBADA55, 3, 256);
-        var coords = coordinateShuffler.getCoordinates(numPixels, randomSeed);
+        //extract the real seed and index from randomSeed
+        var seed  = randomSeed & 0xFF;//only 256 patterns
+        var index = randomSeed >> 8 & 0xFFFFFF;//max is 16,777,215
+        
+        var coordinateShuffler = new CoordinateShuffler(width, height, seed, 3, 256);
+        var coords = coordinateShuffler.getCoordinates(numPixels, index);
         
         if (sourceBitmapData === this) {
             fillColor = fillColor | 0;
@@ -2503,12 +2546,13 @@ var BitmapData = new Class(Object, function()
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
-        //return randomSeed;
-        return coordinateShuffler.getIndex();
+        
+        //return the new seed
+        return ((coordinateShuffler.getIndex() << 8) | seed) >>> 0;
     };
     this.putImageData = function()
     {
-        this.__context.putImageData(arguments);
+        this.__context.putImageData.apply(this.__context, arguments);
     };
     this.scroll = function(x, y)
     {
@@ -3189,12 +3233,11 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__img = null;
     };
     //override
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
         if (this.__content) {
-            return this.__content.__bitmapData;
+            return this.__content.__getAsBitmap();
         }
-        return null;
     };
     this.load = function(request)
     {
@@ -6254,6 +6297,12 @@ var CoordinateShuffler = new Class(Object, function()
         this.__seed0 = __seed0;
         this.__seed1 = __seed1;
         this.__seed2 = __seed2;
-        return (__seed0 ^ __seed1 ^ __seed2) >>> 0;
+        
+        //for some reason this doesn't work in opera
+        //return (__seed0 ^ __seed1 ^ __seed2) >>> 0;
+        
+        var result = __seed0 ^ __seed1 ^ __seed2;
+        if (result < 0) { result = 4294967296 + result; }
+        return result;
     };
 });

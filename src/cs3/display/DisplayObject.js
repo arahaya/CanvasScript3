@@ -20,38 +20,43 @@ var DisplayObject = new Class(EventDispatcher, function()
         //this.loaderInfo = new LoaderInfo();
         this.__mask = null;
         this.__maskee = null;
-        this.__bitmapData = null;//used for cacheAsBitmap, mask, maskee, filters
+        this.__bitmap = null;//used for cacheAsBitmap, mask, maskee, filters
         this.__cache = null;//cached result for mask and filters
         //this.opaqueBackground = null;
     };
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
         if (bounds.isEmpty()) {
             //if bounds is empty we can't create a BitmapData.
-            this.__bitmapData = null;
             return null;
         }
         
-        var render = false;
-        if (this.__bitmapData === null) {
-            this.__bitmapData = new BitmapData(bounds.width, bounds.height, true, 0);
-            //we want the bitmapData.rect to be the exact same as bounds
-            this.__bitmapData.__rect = bounds;
-            render = true;
+        var bitmap = this.__bitmap;
+        var bitmapData;
+        if (bitmap === null) {
+            bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
+            bitmap.setX(bounds.x);
+            bitmap.setY(bounds.y);
         }
-        else if (bounds.equals(this.__bitmapData.__rect) === false) {
-            this.__bitmapData.__canvas.width = bounds.width;
-            this.__bitmapData.__canvas.height = bounds.height;
-            this.__bitmapData.__rect = bounds;
+        
+        //TODO: check if the bitmap needs to be rendered
+        //always true for now
+        var render = false;
+        if (true) {
             render = true;
         }
         
-        //if (render) {
-        if (true) {//disable caching for now
-            var context = this.__bitmapData.__context;
-            //context.clearRect(0, 0, bounds.width, bounds.height);
-            __clearContext(context);
+        if (render) {
+            //update the position
+            bitmap.setX(bounds.x);
+            bitmap.setY(bounds.y);
+            
+            //update the size(this also clears the contents)
+            bitmap.__bitmapData.__resize(bounds.width, bounds.height);
+            
+            var context = bitmap.__bitmapData.__context;
+            //__clearContext(context);
             
             //create a matrix that makes the bounds to fit the context
             var matrix = new Matrix(1, 0, 0, 1, -bounds.x, -bounds.y);
@@ -64,13 +69,13 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.c,
                 matrix.d,
                 matrix.tx,
-                matrix.ty
-             );
+                matrix.ty);
             this.__renderList(context, matrix, new ColorTransform());
             context.restore();
         }
         
-        return this.__bitmapData;
+        this.__bitmap = bitmap;
+        return bitmap;
     };
     this.__getBounds = function()
     {
@@ -114,9 +119,10 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.__renderList = function(context, matrix, colorTransform)
     {
+        var i;
         //apply ContextFilter's
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
@@ -124,7 +130,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
         
         this.__render(context, matrix, colorTransform);
-    }
+    };
     this.__update = function(matrix)
     {
         /*

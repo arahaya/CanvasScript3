@@ -12,12 +12,11 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__img = null;
     };
     //override
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
         if (this.__content) {
-            return this.__content.__bitmapData;
+            return this.__content.__getAsBitmap();
         }
-        return null;
     };
     this.load = function(request)
     {

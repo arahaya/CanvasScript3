@@ -269,6 +269,12 @@ var CoordinateShuffler = new Class(Object, function()
         this.__seed0 = __seed0;
         this.__seed1 = __seed1;
         this.__seed2 = __seed2;
-        return (__seed0 ^ __seed1 ^ __seed2) >>> 0;
+        
+        //for some reason this doesn't work in opera
+        //return (__seed0 ^ __seed1 ^ __seed2) >>> 0;
+        
+        var result = __seed0 ^ __seed1 ^ __seed2;
+        if (result < 0) { result = 4294967296 + result; }
+        return result;
     };
 });

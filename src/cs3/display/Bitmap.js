@@ -14,9 +14,12 @@ var Bitmap = new Class(DisplayObject, function()
         return new Rectangle();
     };
     //override
-    this.__getAsBitmapData = function()
+    this.__getAsBitmap = function()
     {
-        return this.__bitmapData;
+        if (this.__bitmapData) {
+            return this;
+        }
+        return null;
     };
     //override
     this.__getModified = function()
@@ -54,9 +57,9 @@ var Bitmap = new Class(DisplayObject, function()
             
             if (bounds.containsPoint(localPoint)) {
                 //fix the points back to ints
-                localPoint.x = Math.floor(localPoint.x);
-                localPoint.y = Math.floor(localPoint.y);
-                var imageData = this.__bitmapData.__context.getImageData(localPoint.x, localPoint.y, 1, 1);
+                localPoint.x = localPoint.x | 0;
+                localPoint.y = localPoint.y | 0;
+                var imageData = this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1);
                 var pixel = imageData.data;
                 //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
                 if (pixel[3] !== 0) {

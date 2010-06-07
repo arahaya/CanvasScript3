@@ -58,9 +58,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
      */
     this.__renderList = function(context, matrix, colorTransform)
     {
+        var i;
         //apply ContextFilter's
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
@@ -71,7 +72,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         var globalAlpha = context.globalAlpha;
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
             if (child.__visible === false) { continue; }
@@ -94,39 +95,49 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             
             /*** experimental ***/
             if (child.__mask) {
-                var childBitmapData = child.__getAsBitmapData();
-                if (!childBitmapData) {
+                var childBitmap = child.__getAsBitmap();
+                if (!childBitmap) {
                     //child content is empty so we don't need to apply a mask
                     continue;
                 }
                 var mask = child.__mask;
-                var maskBitmapData = mask.__getAsBitmapData();
-                if (!maskBitmapData) {
+                var maskBitmap = mask.__getAsBitmap();
+                if (!maskBitmap) {
                     //mask content is empty so we don't need to render the child
                     continue;
                 }
                 
-                //create another bitmapData to apply the mask
+                var childBitmapData = childBitmap.__bitmapData;
+                var maskBitmapData = maskBitmap.__bitmapData;
+                
+                //create another bitmap to apply the mask
                 if (child.__cache) {
                     //if it already exists, reuse it
-                    child.__cache.__canvas.width = childBitmapData.width;
-                    child.__cache.__canvas.height = childBitmapData.height;
-                    child.__cache.__context.drawImage(childBitmapData.__canvas, 0, 0);
-                    child.__cache.__rect = childBitmapData.__rect.clone();
+                    child.__cache.__bitmapData.__resize(childBitmapData.__width, childBitmapData.__height);
+                    child.__cache.__bitmapData.__context.drawImage(childBitmapData.__canvas, 0, 0);
+                    child.__cache.setX(childBitmap.getX());
+                    child.__cache.setY(childBitmap.getY());
                 }
                 else {
-                    child.__cache = childBitmapData.clone();
+                    //create a new bitmap
+                    child.__cache = new Bitmap(childBitmapData.clone());
+                    child.__cache.setX(childBitmap.getX());
+                    child.__cache.setY(childBitmap.getY());
                 }
-                var bitmapData = child.__cache;
+                
+                var bitmap = child.__cache;
+                var bitmapData = bitmap.__bitmapData;
                 var bitmapDataContext = bitmapData.__context;
                 
-                //create the masks matrix
+                //create the mask's matrix
                 var maskMatrix = mask.__transform.getConcatenatedMatrix();
                 var deltaMatrix = childMatrix.clone();
                 deltaMatrix.invert();
                 maskMatrix.concat(deltaMatrix);
-                maskMatrix.tx -= bitmapData.__rect.x;
-                maskMatrix.ty -= bitmapData.__rect.y;
+                
+                //adjust the position to draw
+                maskMatrix.tx += maskBitmap.getX();
+                maskMatrix.ty += maskBitmap.getY();
                 
                 //apply the mask
                 bitmapDataContext.save();
@@ -137,8 +148,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
                     maskMatrix.c,
                     maskMatrix.d,
                     maskMatrix.tx,
-                    maskMatrix.ty
-                );
+                    maskMatrix.ty);
                 maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
                 bitmapDataContext.restore();
                 

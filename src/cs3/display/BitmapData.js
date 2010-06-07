@@ -201,8 +201,17 @@ var BitmapData = new Class(Object, function()
     {
         if (this.__canvas) {
             var rect = this.__rect;
-            context.drawImage(this.__canvas, rect.x, rect.y);
+            context.drawImage(this.__canvas, 0, 0);
         }
+    };
+    this.__resize = function(width, height)
+    {
+        this.__width = width;
+        this.__height = height;
+        this.__rect.width = width;
+        this.__rect.height = height;
+        this.__canvas.width = width;
+        this.__canvas.height = height;
     };
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
     {
@@ -358,7 +367,7 @@ var BitmapData = new Class(Object, function()
     };
     this.createImageData = function()
     {
-        return this.__context.createImageData(arguments);
+        return this.__context.createImageData.apply(this.__context, arguments);
     };
     this.dispose = function()
     {
@@ -392,7 +401,18 @@ var BitmapData = new Class(Object, function()
     {
         //TODO a lot to fix..
         matrix = matrix || new Matrix();
-        source.__render(this.__context, matrix, new ColorTransform(), 1, [this.__rect]);
+        
+        var context = this.__context;
+        context.save();
+        context.setTransform(
+            matrix.a,
+            matrix.b,
+            matrix.c,
+            matrix.d,
+            matrix.tx,
+            matrix.ty);
+        source.__renderList(context, matrix, new ColorTransform());
+        context.restore();
         this.__modified = true;
     };
     this.fillRect = function(rect, color)
@@ -497,7 +517,7 @@ var BitmapData = new Class(Object, function()
     };
     this.getImageData = function()
     {
-        return this.__context.getImageData(arguments);
+        return this.__context.getImageData.apply(this.__context, arguments);
     };
     this.getPixel = function(x, y)
     {
@@ -617,10 +637,14 @@ var BitmapData = new Class(Object, function()
         if (!numPixels) { numPixels = (size / 30) | 0; }
         else if (numPixels > size) { numPixels = size; }
         
-        if (randomSeed < 1) { randomSeed = (randomSeed * size) | 0; }
+        if (randomSeed < 1) { randomSeed = (randomSeed * 0xFFFFFFFF) | 0; }
         
-        var coordinateShuffler = new CoordinateShuffler(width, height, 0xBADA55, 3, 256);
-        var coords = coordinateShuffler.getCoordinates(numPixels, randomSeed);
+        //extract the real seed and index from randomSeed
+        var seed  = randomSeed & 0xFF;//only 256 patterns
+        var index = randomSeed >> 8 & 0xFFFFFF;//max is 16,777,215
+        
+        var coordinateShuffler = new CoordinateShuffler(width, height, seed, 3, 256);
+        var coords = coordinateShuffler.getCoordinates(numPixels, index);
         
         if (sourceBitmapData === this) {
             fillColor = fillColor | 0;
@@ -655,12 +679,13 @@ var BitmapData = new Class(Object, function()
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
-        //return randomSeed;
-        return coordinateShuffler.getIndex();
+        
+        //return the new seed
+        return ((coordinateShuffler.getIndex() << 8) | seed) >>> 0;
     };
     this.putImageData = function()
     {
-        this.__context.putImageData(arguments);
+        this.__context.putImageData.apply(this.__context, arguments);
     };
     this.scroll = function(x, y)
     {
