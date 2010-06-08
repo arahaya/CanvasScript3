@@ -119,7 +119,7 @@ var DisplayObject = new Class(EventDispatcher, function()
     };
     this.__renderList = function(context, matrix, colorTransform)
     {
-        var i;
+        var i, l;
         //apply ContextFilter's
         var filters = this.__filters;
         for (i = 0, l = filters.length; i < l; ++i)
