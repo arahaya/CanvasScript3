@@ -23,7 +23,11 @@ var Main = new Class(Sprite, function()
     {
         this.stage.addEventListener(KeyboardEvent.KEY_UP, function(e)
         {
-            trace(e);
+            trace("keyCode : " + e.keyCode);
+            trace("ctrlKey : " + e.ctrlKey);
+            trace("altKey  : " + e.altKey);
+            trace("shiftKey: " + e.shiftKey);
+            trace("-------------");
         });
     }
 });

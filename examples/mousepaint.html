@@ -49,7 +49,7 @@ var Main = new Class(Sprite, function()
     {
         this.isDrawing = true;
         this.linesCount = 0;
-        this.canvas.graphics.lineStyle(4, 0x000000);
+        this.canvas.graphics.lineStyle(4, 0x000000, 1, false, 'normal', CapsStyle.ROUND, JointStyle.ROUND);
         this.canvas.graphics.moveTo(this.mouseX, this.mouseY);
     };
     

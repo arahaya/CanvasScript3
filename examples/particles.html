@@ -31,6 +31,9 @@ var Main = new Class(Sprite, function()
         var particles = this.particles;
         var location = window.location.href;
         
+        //disable mouse events for performance
+        stage.mouseChildren = false;
+        
         // If shadows are turned on
         if (location.match(/shadows=true/))
         {
@@ -66,29 +69,25 @@ var Main = new Class(Sprite, function()
         });
         
         var fps = 0;
+        var lastTime = new Date().getTime();
         this.addEventListener(Event.ENTER_FRAME, function(e)
         {
             fps++;
             
-            var timeDelta = 1000 / stage.frameRate;
+            var currentTime = new Date().getTime();
+            var timeDelta = currentTime - lastTime;
             
             for (var i = 0; i < MAX_PARTICLES; ++i)
             {
                 particles[i].update(timeDelta);
             }
+            
+            lastTime = currentTime;
         });
         
         setInterval(function()
         {
             document.getElementById('fps').innerHTML = fps;
-            
-            if (fps >= stage.frameRate) {
-                stage.frameRate++;
-            }
-            else if (fps < stage.frameRate - 5) {
-                stage.frameRate--;
-            }
-            trace(stage.frameRate)
             fps = 0;
         }, 1000);
     };
@@ -188,7 +187,7 @@ cs3.utils.addOnload(function()
 {
     var params = {
         canvas: 'stage',
-        frameRate: 30,
+        frameRate: 1000,
         renderMode: StageRenderMode.ALL,
         width: STAGE_WIDTH,
         height: STAGE_HEIGHT

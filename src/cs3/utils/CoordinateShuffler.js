@@ -68,7 +68,7 @@ var CoordinateShuffler = new Class(Object, function()
             y = ( y + __hLookup[ (i * __width  + x) % __lookupTableSize ] ) % __height;
             x = ( x + __vLookup[ (i * __height + y) % __lookupTableSize ] ) % __width;
         }
-        this.__currentIndex = index++;
+        this.__currentIndex = (index + 1) % __maximumIndex;
         return [x, y];
     };
     
@@ -79,8 +79,7 @@ var CoordinateShuffler = new Class(Object, function()
     **/
     this.getNextCoordinate = function()
     {
-        this.__currentIndex %= this.__maximumIndex;
-        return this.getCoordinate( this.__currentIndex++ );
+        return this.getCoordinate(this.__currentIndex + 1);
     };
     
     /**
@@ -247,10 +246,6 @@ var CoordinateShuffler = new Class(Object, function()
         for (i = __lookupTableSize - 1; i >= 0; --i)
         {
             __hLookup[i] = this.getNextInt() % __height;
-        }
-        
-        for (i = __lookupTableSize - 1; i >= 0; --i)
-        {
             __vLookup[i] = this.getNextInt() % __width;
         }
         

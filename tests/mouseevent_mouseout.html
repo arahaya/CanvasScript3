@@ -13,7 +13,10 @@ var Main = new Class(Sprite, function()
     this.__init__ = function()
     {
         Sprite.call(this);
-        this.addEventListener(Event.ADDED_TO_STAGE, callback(this, this.init));
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
     }
     
     this.init = function()

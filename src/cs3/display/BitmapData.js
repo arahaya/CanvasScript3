@@ -288,7 +288,7 @@ var BitmapData = new Class(Object, function()
         var length = sourceImageData.length;
         var isDifferent = false;
         
-        for (var i = 0; i < length; i += 4)
+        for (var i = 0; i < length;)
         {
             var sr = sourcePixels[i];
             var sg = sourcePixels[i+1];
@@ -300,17 +300,17 @@ var BitmapData = new Class(Object, function()
             var oa = otherPixels[i+3];
             
             if ((sr !== or) || (sg !== og) || (sb !== ob)) {
-                newPixels[i]   = sr - or;
-                newPixels[i+1] = sg - og;
-                newPixels[i+2] = sb - ob;
-                newPixels[i+3] = 0xFF;
+                newPixels[i++] = sr - or;
+                newPixels[i++] = sg - og;
+                newPixels[i++] = sb - ob;
+                newPixels[i++] = 0xFF;
                 isDifferent = true;
             }
             else if (sa !== oa) {
-                newPixels[i]   = 0xFF;
-                newPixels[i+1] = 0xFF;
-                newPixels[i+2] = 0xFF;
-                newPixels[i+3] = sa - oa;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = sa - oa;
                 isDifferent = true;
             }
         }
@@ -631,7 +631,7 @@ var BitmapData = new Class(Object, function()
         var destPixels = destImageData.data;
         var width = destImageData.width;
         var height = destImageData.height;
-        var size = destImageData.width * destImageData.height;
+        var size = width * height;
         var i, p, c;
         
         if (!numPixels) { numPixels = (size / 30) | 0; }
@@ -664,16 +664,17 @@ var BitmapData = new Class(Object, function()
             }
         }
         else {
-            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
+            //TODO: make sure the sourceRect and destRect are the same size
+            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
             var sourcePixels = sourceImageData.data;
             for (i = 0; i < numPixels; ++i)
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = sourcePixels[p];
-                destPixels[p+1] = sourcePixels[p+1];
-                destPixels[p+2] = sourcePixels[p+2];
-                destPixels[p+3] = sourcePixels[p+3];
+                destPixels[++p] = sourcePixels[p];
+                destPixels[++p] = sourcePixels[p];
+                destPixels[++p] = sourcePixels[p];
             }
         }
         

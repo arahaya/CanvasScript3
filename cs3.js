@@ -66,9 +66,9 @@ var cs3 = {
             var c = cs3.core;
             var t = c.resizeTimeout;
             clearTimeout(t);
-            t = setTimeout(c.lazyResizeHandler, 10);
+            t = setTimeout(c.resizeHandlerDelay, 10);
         },
-        lazyResizeHandler: function(e)
+        resizeHandlerDelay: function(e)
         {
             var s = cs3.core.stages;
             for (var i = 0, l = s.length; i < l; ++i) {
@@ -81,7 +81,7 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
@@ -315,6 +315,13 @@ var __clearContext = (function()
         };
     }
 })();
+function __closure(scope, func, args)
+{
+    return function()
+    {
+        func.apply(scope, args);
+    };
+}
 /**
  * Fix rectangle coords from floats to integers
  */
@@ -378,8 +385,6 @@ function __noImp(name)
 {
     throw new Error(name + ' is not implemented');
 }
-
-
 var trace = (function()
 {
     if (window.console) {
@@ -414,165 +419,6 @@ var ArgumentError = function(message)
     this.message = message;
 };
 ArgumentError.prototype = new Error();
-
-
-var SimpleTween = new Class(Object, function()
-{
-    this.__init__ = function(displayObject, property, from, to, frames)
-    {
-        var range = to - from;
-        var frame = 0;
-        displayObject[property] = from;
-        displayObject.addEventListener(Event.ENTER_FRAME, function(e)
-        {
-            ++frame;
-            var ratio = SimpleTween.Elastic.easeOut(frame / frames);
-            var next = from + (range * ratio);
-            displayObject[property] = next;
-            if (frame == frames) {
-                displayObject[property] = to;
-                displayObject.removeEventListener(Event.ENTER_FRAME, arguments.callee);
-            }
-        });
-    };
-});
-SimpleTween.Back = {
-    easeIn: function(t) {
-        return 3 * t * t * t - 2 * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Bounce = {
-    DH: 1 / 22,
-    D1: 1 / 11,
-    D2: 2 / 11,
-    D3: 3 / 11,
-    D4: 4 / 11,
-    D5: 5 / 11,
-    D7: 7 / 11,
-    IH: 1 / this.DH,
-    I1: 1 / this.D1,
-    I2: 1 / this.D2,
-    I4D: 1 / this.D4 / this.D4,
-    easeIn: function(t) {
-        var s;
-        if (t < this.D1) {
-            s = t - this.DH;
-            s = this.DH - s * s * this.IH;
-        } else if (t < this.D3) {
-            s = t - this.D2;
-            s = this.D1 - s * s * this.I1;
-        } else if (t < this.D7) {
-            s = t - this.D5;
-            s = this.D2 - s * s * this.I2;
-        } else {
-            s = t - 1;
-            s = 1 - s * s * this.I4D;
-        }
-        return s;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Circ = {
-    easeIn: function(t) {
-        return 1.0 - Math.sqrt(1.0 - t * t);
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Cubic = {
-    easeIn: function(t) {
-        return t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Elastic = {
-    easeIn: function(t) {
-        return 1.0 - this.easeOut(1.0 - t);
-    },
-    easeOut: function(t) {
-        var s = 1 - t;
-        return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Linear = {
-    easeIn: function(t) {
-        return t;
-    },
-    easeOut: function(t) {
-        return t;
-    },
-    easeInOut: function(t) {
-        return t;
-    }
-};
-SimpleTween.Quad = {
-    easeIn: function(t) {
-        return t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Quart = {
-    easeIn: function(t) {
-        return t * t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Quint = {
-    easeIn: function(t) {
-        return t * t * t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Sine = {
-    _HALF_PI: Math.PI / 2,
-    easeIn: function(t) {
-        return 1.0 - Math.cos(t * this._HALF_PI);
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
 
 
 var XML = new Class(Object, function()
@@ -2155,7 +2001,7 @@ var BitmapData = new Class(Object, function()
         var length = sourceImageData.length;
         var isDifferent = false;
         
-        for (var i = 0; i < length; i += 4)
+        for (var i = 0; i < length;)
         {
             var sr = sourcePixels[i];
             var sg = sourcePixels[i+1];
@@ -2167,17 +2013,17 @@ var BitmapData = new Class(Object, function()
             var oa = otherPixels[i+3];
             
             if ((sr !== or) || (sg !== og) || (sb !== ob)) {
-                newPixels[i]   = sr - or;
-                newPixels[i+1] = sg - og;
-                newPixels[i+2] = sb - ob;
-                newPixels[i+3] = 0xFF;
+                newPixels[i++] = sr - or;
+                newPixels[i++] = sg - og;
+                newPixels[i++] = sb - ob;
+                newPixels[i++] = 0xFF;
                 isDifferent = true;
             }
             else if (sa !== oa) {
-                newPixels[i]   = 0xFF;
-                newPixels[i+1] = 0xFF;
-                newPixels[i+2] = 0xFF;
-                newPixels[i+3] = sa - oa;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = 0xFF;
+                newPixels[i++] = sa - oa;
                 isDifferent = true;
             }
         }
@@ -2498,7 +2344,7 @@ var BitmapData = new Class(Object, function()
         var destPixels = destImageData.data;
         var width = destImageData.width;
         var height = destImageData.height;
-        var size = destImageData.width * destImageData.height;
+        var size = width * height;
         var i, p, c;
         
         if (!numPixels) { numPixels = (size / 30) | 0; }
@@ -2531,16 +2377,17 @@ var BitmapData = new Class(Object, function()
             }
         }
         else {
-            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
+            //TODO: make sure the sourceRect and destRect are the same size
+            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
             var sourcePixels = sourceImageData.data;
             for (i = 0; i < numPixels; ++i)
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
                 destPixels[p]   = sourcePixels[p];
-                destPixels[p+1] = sourcePixels[p+1];
-                destPixels[p+2] = sourcePixels[p+2];
-                destPixels[p+3] = sourcePixels[p+3];
+                destPixels[++p] = sourcePixels[p];
+                destPixels[++p] = sourcePixels[p];
+                destPixels[++p] = sourcePixels[p];
             }
         }
         
@@ -2774,13 +2621,11 @@ var Graphics = new Class(Object, function()
     this.__init__ = function()
     {
         this.__lineWidth = 0;
-        this.__strokeStyle = null;
-        this.__fillStyle = null;
         this.__x = 0;
         this.__y = 0;
         this.__rect = new Rectangle();
         this.__commands = [];
-        this.__lastCommands = [];
+        this.__modified = false;
     };
     this.__updateRect = function(x, y, width, height)
     {
@@ -2797,7 +2642,7 @@ var Graphics = new Class(Object, function()
     this.beginFill = function(color, alpha)
     {
         if (alpha === undefined) { alpha = 1; }
-        this.__commands.push([BEGIN_FILL, __toRGB(color), alpha]);
+        this.__commands.push([BEGIN_FILL, color, alpha]);
     };
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
@@ -2864,7 +2709,7 @@ var Graphics = new Class(Object, function()
         if (joints === undefined) { joints = JointStyle.ROUND; }
         if (miterLimit === undefined) { miterLimit = 3; }
         this.__lineWidth = thickness;
-        this.__commands.push([LINE_STYLE, thickness, __toRGB(color), alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
+        this.__commands.push([LINE_STYLE, thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
     };
     this.moveTo = function(x, y)
     {
@@ -2936,10 +2781,9 @@ var Graphics = new Class(Object, function()
         var commandLength = commands.length;
         
         //a lot of declarations to avoid redeclarations
-        var cmd, i, ii;
+        var cmd, type, i, ii;
         var color, alpha;
         var thickness, pixelHinting, scaleMode, caps, joints, miterLimit;
-        var controlX, controlY, anchorX, anchorY;
         var x, y, radius;
         var widht, height;
         var ellipseWidth, ellipseHeight;
@@ -2952,72 +2796,55 @@ var Graphics = new Class(Object, function()
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
-            switch (cmd[0])
+            type = cmd[0];
+            switch (type)
             {
+                case LINE_TO:
+                    ax = cmd[1];
+                    ay = cmd[2];
+                    context.lineTo(ax, ay);
+                    break;
+                case MOVE_TO:
+                    ax = cmd[1];
+                    ay = cmd[2];
+                    context.moveTo(ax, ay);
+                    break;
                 case BEGIN_FILL:
                     if (doFill) { this.__fill(context, fillAlpha); }
-                    color = cmd[1];
-                    alpha = cmd[2];
                     doFill = true;
-                    fillAlpha = alpha;
+                    fillAlpha = cmd[2];
                     context.beginPath();
                     context.moveTo(ax, ay);
-                    context.fillStyle = color;
+                    context.fillStyle = (colorTransform) ?
+                            __toRGB(colorTransform.transformColor(cmd[1])) :
+                            __toRGB(cmd[1]);
+                    break;
+                case LINE_STYLE:
                     break;
                 case CURVE_TO:
-                    controlX = cmd[1];
-                    controlY = cmd[2];
-                    anchorX = cmd[3];
-                    anchorY = cmd[4];
-                    context.quadraticCurveTo(controlX, controlY, anchorX, anchorY);
-                    ax = anchorX;
-                    ay = anchorY;
+                    ax = cmd[3];
+                    ay = cmd[4];
+                    context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
+                    break;
+                case END_FILL:
+                    if (doFill) { this.__fill(context, fillAlpha); }
+                    doFill = false;
+                    break;
+                case DRAW_RECT:
+                    //anchor at the top left
+                    ax = cmd[1];
+                    ay = cmd[2];
+                    context.rect(ax, ay, cmd[3], cmd[4]);
+                    context.moveTo(ax, ay);
                     break;
                 case DRAW_CIRCLE:
                     //anchor at the right edge
                     x = cmd[1];
-                    y = cmd[2];
                     radius = cmd[3];
-                    context.moveTo(x + radius, y);
-                    context.arc(x, y, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     ax = x + radius;
-                    ay = y;
-                    break;
-                case DRAW_ELLIPSE:
-                    //anchor at the right edge
-                    x = cmd[1];
-                    y = cmd[2];
-                    width = cmd[3];
-                    height = cmd[4];
-                    xRadius = width / 2;
-                    yRadius = height / 2;
-                    centerX = x + xRadius;
-                    centerY = y + yRadius;
-                    angleDelta = 0.7853981633974483;/*Math.PI / 4*/
-                    xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
-                    yCtrlDist = yRadius / 0.9238795325112867;
-                    angle = 0;
-                    context.moveTo(x + width, y + yRadius);
-                    for (ii = 0; ii < 8; ii++)
-                    {
-                        angle += angleDelta;
-                        rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
-                        ry = centerY + Math.sin(angle - 0.39269908169872414) * yCtrlDist;
-                        ax = centerX + Math.cos(angle) * xRadius;
-                        ay = centerY + Math.sin(angle) * yRadius;
-                        context.quadraticCurveTo(rx, ry, ax, ay);
-                    }
-                    break;
-                case DRAW_RECT:
-                    //anchor at the top left
-                    x = cmd[1];
-                    y = cmd[2];
-                    width = cmd[3];
-                    height = cmd[4];
-                    context.rect(x, y, width, height);
-                    ax = x;
-                    ay = y;
+                    ay = cmd[2];
                     context.moveTo(ax, ay);
+                    context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
@@ -3043,25 +2870,30 @@ var Graphics = new Class(Object, function()
                     context.quadraticCurveTo(right, y, right, y + ellipseHeight);
                     context.lineTo(ax, ay);
                     break;
-                case END_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
-                    doFill = false;
-                    break;
-                case LINE_STYLE:
-                    break;
-                case LINE_TO:
+                case DRAW_ELLIPSE:
+                    //anchor at the right edge
                     x = cmd[1];
                     y = cmd[2];
-                    context.lineTo(x, y);
-                    ax = x;
-                    ay = y;
-                    break;
-                case MOVE_TO:
-                    x = cmd[1];
-                    y = cmd[2];
-                    context.moveTo(x, y);
-                    ax = x;
-                    ay = y;
+                    width = cmd[3];
+                    height = cmd[4];
+                    xRadius = width / 2;
+                    yRadius = height / 2;
+                    centerX = x + xRadius;
+                    centerY = y + yRadius;
+                    angleDelta = 0.7853981633974483;/*Math.PI / 4*/
+                    xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
+                    yCtrlDist = yRadius / 0.9238795325112867;
+                    angle = 0;
+                    context.moveTo(x + width, y + yRadius);
+                    for (ii = 0; ii < 8; ii++)
+                    {
+                        angle += angleDelta;
+                        rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
+                        ry = centerY + Math.sin(angle - 0.39269908169872414) * yCtrlDist;
+                        ax = centerX + Math.cos(angle) * xRadius;
+                        ay = centerY + Math.sin(angle) * yRadius;
+                        context.quadraticCurveTo(rx, ry, ax, ay);
+                    }
                     break;
                 default:
                     break;
@@ -3076,70 +2908,68 @@ var Graphics = new Class(Object, function()
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
-            switch (cmd[0])
+            type = cmd[0];
+            switch (type)
             {
+                case LINE_TO:
+                    ax = cmd[1];
+                    ay = cmd[2];
+                    context.lineTo(ax, ay);
+                    break;
+                case MOVE_TO:
+                    sx = ax = cmd[1];
+                    sy = ay = cmd[2];
+                    context.moveTo(ax, ay);
+                    break;
                 case BEGIN_FILL:
                     if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;
                     ay = sy;
                     doFill = true;
                     break;
+                case LINE_STYLE:
+                    if (doStroke) { this.__stroke(context, strokeAlpha); }
+                    thickness    = cmd[1];
+                    //pixelHinting = cmd[4];
+                    //scaleMode    = cmd[5];
+                    doStroke = (thickness) ? true : false;
+                    strokeAlpha = cmd[3];
+                    context.beginPath();
+                    context.moveTo(ax, ay);
+                    context.lineWidth = thickness;
+                    context.strokeStyle = (colorTransform) ?
+                            __toRGB(colorTransform.transformColor(cmd[2])) :
+                            __toRGB(cmd[2]);
+                    context.lineCap = cmd[6];
+                    context.lineJoin = cmd[7];
+                    context.miterLimit = cmd[8];
+                    break;
                 case CURVE_TO:
-                    controlX = cmd[1];
-                    controlY = cmd[2];
-                    anchorX = cmd[3];
-                    anchorY = cmd[4];
-                    context.quadraticCurveTo(controlX, controlY, anchorX, anchorY);
-                    ax = anchorX;
-                    ay = anchorY;
+                    ax = cmd[3];
+                    ay = cmd[4];
+                    context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
+                    break;
+                case END_FILL:
+                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+                    ax = sx;
+                    ay = sy;
+                    doFill = false;
+                    break;
+                case DRAW_RECT:
+                    //anchor at the top left
+                    sx = ax = cmd[1];
+                    sy = ay = cmd[2];
+                    context.rect(ax, ay, cmd[3], cmd[4]);
+                    context.moveTo(ax, ay);
                     break;
                 case DRAW_CIRCLE:
                     //anchor at the right edge
                     x = cmd[1];
-                    y = cmd[2];
                     radius = cmd[3];
-                    context.moveTo(x + radius, y);
-                    context.arc(x, y, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     sx = ax = x + radius;
-                    sy = ay = y;
-                    break;
-                case DRAW_ELLIPSE:
-                    //anchor at the right edge
-                    x = cmd[1];
-                    y = cmd[2];
-                    width = cmd[3];
-                    height = cmd[4];
-                    xRadius = width / 2;
-                    yRadius = height / 2;
-                    centerX = x + xRadius;
-                    centerY = y + yRadius;
-                    angleDelta = 0.7853981633974483;/*Math.PI / 4*/
-                    xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
-                    yCtrlDist = yRadius / 0.9238795325112867;
-                    angle = 0;
-                    context.moveTo(x + width, y + yRadius);
-                    for (ii = 0; ii < 8; ii++)
-                    {
-                        angle += angleDelta;
-                        rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
-                        ry = centerY + Math.sin(angle - 0.39269908169872414) * yCtrlDist;
-                        ax = centerX + Math.cos(angle) * xRadius;
-                        ay = centerY + Math.sin(angle) * yRadius;
-                        context.quadraticCurveTo(rx, ry, ax, ay);
-                    }
-                    sx = ax;
-                    sy = ay;
-                    break;
-                case DRAW_RECT:
-                    //anchor at the top left
-                    x = cmd[1];
-                    y = cmd[2];
-                    width = cmd[3];
-                    height = cmd[4];
-                    context.rect(x, y, width, height);
-                    sx = ax = x;
-                    sy = ay = y;
+                    sy = ay = cmd[2];
                     context.moveTo(ax, ay);
+                    context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
@@ -3167,45 +2997,32 @@ var Graphics = new Class(Object, function()
                     sx = ax;
                     sy = ay;
                     break;
-                case END_FILL:
-                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
-                    ax = sx;
-                    ay = sy;
-                    doFill = false;
-                    break;
-                case LINE_STYLE:
-                    if (doStroke) { this.__stroke(context, strokeAlpha); }
-                    thickness    = cmd[1];
-                    color        = cmd[2];
-                    alpha        = cmd[3];
-                    pixelHinting = cmd[4];
-                    scaleMode    = cmd[5];
-                    caps         = cmd[6];
-                    joints       = cmd[7];
-                    miterLimit   = cmd[8];
-                    doStroke = (thickness) ? true : false;
-                    strokeAlpha = alpha;
-                    context.beginPath();
-                    context.moveTo(ax, ay);
-                    context.lineWidth = thickness;
-                    context.strokeStyle = color;
-                    context.lineCap = caps;
-                    context.lineJoin = joints;
-                    context.miterLimit = miterLimit;
-                    break;
-                case LINE_TO:
+                case DRAW_ELLIPSE:
+                    //anchor at the right edge
                     x = cmd[1];
                     y = cmd[2];
-                    context.lineTo(x, y);
-                    ax = x;
-                    ay = y;
-                    break;
-                case MOVE_TO:
-                    x = cmd[1];
-                    y = cmd[2];
-                    context.moveTo(x, y);
-                    sx = ax = x;
-                    sy = ay = y;
+                    width = cmd[3];
+                    height = cmd[4];
+                    xRadius = width / 2;
+                    yRadius = height / 2;
+                    centerX = x + xRadius;
+                    centerY = y + yRadius;
+                    angleDelta = 0.7853981633974483;/*Math.PI / 4*/
+                    xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
+                    yCtrlDist = yRadius / 0.9238795325112867;
+                    angle = 0;
+                    context.moveTo(x + width, y + yRadius);
+                    for (ii = 0; ii < 8; ii++)
+                    {
+                        angle += angleDelta;
+                        rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
+                        ry = centerY + Math.sin(angle - 0.39269908169872414) * yCtrlDist;
+                        ax = centerX + Math.cos(angle) * xRadius;
+                        ay = centerY + Math.sin(angle) * yRadius;
+                        context.quadraticCurveTo(rx, ry, ax, ay);
+                    }
+                    sx = ax;
+                    sy = ay;
                     break;
                 default:
                     break;
@@ -3499,8 +3316,9 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__renderMode = params.renderMode;
         this.__mouseX = 0;
         this.__mouseY = 0;
+        //wether the mouse is over the stage rect
+        this.__mouseOverStage = false;
         //the current object under the mouse point.
-        //if this is NULL the mouse is out of the stage.
         this.__objectUnderMouse = null;
         //the object that the mouse was pressed.
         //if this is NULL the mouse is not pressed.
@@ -3681,17 +3499,10 @@ var Stage = new Class(DisplayObjectContainer, function()
         //TODO: fix the mouse position relative to canvas
         var x, y;
         var canvas = this.canvas;
-        /*
-        if (e.offsetX) {
-            x = e.offsetX - target.offsetLeft;
-            y = e.offsetY - target.offsetTop;
-        }
-        else {
-            
-
-        }*/
-            x = e.pageX - canvas.offsetLeft;
-            y = e.pageY - canvas.offsetTop;
+        
+        x = e.pageX - canvas.offsetLeft;
+        y = e.pageY - canvas.offsetTop;
+        
         /*
         if (this.__scaleX || this.__scaleY) {
             x = Math.round(x / this.__scaleX);
@@ -3705,10 +3516,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         
         //mouse move events
+        this.__mouseOverStage = false;
         if (this.__rect.contains(x, y) === true) {
             this.__mouseX = x;
             this.__mouseY = y;
             
+            this.__mouseOverStage = true;
             this.__updateObjectUnderMouse();
             
             if (this.__objectUnderMouse) {
@@ -3857,6 +3670,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__getObjectUnderPoint = function(point)
     {
         if (this.__rect.containsPoint(point) === false) { return null; }
+        if (this.mouseChildren === false) { return this; }
         
         var context = this.__hiddenContext;
         context.clearRect(point.x, point.y, 1, 1);
@@ -3870,33 +3684,15 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__enterFrame = function()
     {
-        if (this.__lockFrameEvent === true) {
-            this.__blockedFrameEvent = true;
-            return;
-        }
-        
-        this.__lockFrameEvent = true;
-        this.__blockedFrameEvent = false;
-        
         //reserve next frame
         var self = this;
         clearTimeout(this.__timer);
         this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
-        //resize
-        //this.__resize();
-        
         //run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
         this.__updateStage();
-        
-        this.__lockFrameEvent = false;
-        if (this.__blockedFrameEvent === true) {
-            //if block occurred during process, run the next frame right away
-            ///this.__enterFrame();
-            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 5);
-        }
     };
     this.__updateStage = function()
     {
@@ -3963,6 +3759,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__updateObjectUnderMouse = function()
     {
         //NOTE: do not call these events against the stage.
+        if (this.__mouseOverStage === false) { return; }
+        
         var stage = this;
         var last = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
@@ -4306,6 +4104,58 @@ var BlurFilter = new Class(BitmapFilter, function()
 BlurFilter.prototype.toString = function()
 {
     return '[object BlurFilter]';
+};
+var ColorMatrixFilter = new Class(BitmapFilter, function()
+{
+    this.__init__ = function(matrix)
+    {
+        this.matrix = matrix;
+    };
+    //override
+    this.__filter = function(displayObject)
+    {
+    };
+    //override
+    this.__filterBitmapData = function(sourceBitmapData, sourceRect, distBitmapData, distPoint)
+    {
+        var width = sourceRect.width;
+        var height = sourceRect.height;
+        var srcImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+        var dstImageData = sourceBitmapData.__context.createImageData(sourceRect.width, sourceRect.height);
+        var sourcePixels = sourceImageData.data;
+        var destPixels = destImageData.data;
+        var length = sourcePixels.length;
+        
+        var m = this.matrix;
+        
+        for (var i = 0; i < length; i += 4)
+        {
+            var srcR = sourcePixels[i];
+            var srcG = sourcePixels[i+1];
+            var srcB = sourcePixels[i+2];
+            var srcA = sourcePixels[i+3];
+            destPixels[i++] = (m[0]  * srcR) + (m[1]  * srcG) + (m[2]  * srcB) + (m[3]  * srcA) + m[4];
+            destPixels[i++] = (m[5]  * srcR) + (m[6]  * srcG) + (m[7]  * srcB) + (m[8]  * srcA) + m[9];
+            destPixels[i++] = (m[10] * srcR) + (m[11] * srcG) + (m[12] * srcB) + (m[13] * srcA) + m[14];
+            destPixels[i++] = (m[15] * srcR) + (m[16] * srcG) + (m[17] * srcB) + (m[18] * srcA) + m[19];
+        }
+        
+        distBitmapData.__context.putImageData(dstImageData, distPoint.x, distPoint.y);
+    };
+    //override
+    this.__generateRect = function(sourceRect)
+    {
+        return sourceRect.clone();
+    };
+    //override
+    this.clone = function()
+    {
+        return new ColorMatrixFilter(this.matrix);
+    };
+});
+ColorMatrixFilter.prototype.toString = function()
+{
+    return '[object ColorMatrixFilter]';
 };
 var DropShadowFilter = new Class(ContextFilter, function()
 {
@@ -5915,117 +5765,6 @@ var TextFormatAlign = {
     LEFT: 'left',
     RIGHT: 'right'
 };
-var Tween = new Class(EventDispatcher, function()
-{
-    this.__init__ = function(obj, prop, func, begin, finish, duration, useSeconds)
-    {
-        EventDispatcher.call(this);
-        this.__duration = duration;
-        this.__finish = finish;
-        this.__FPS = undefined;
-        this.__position = 0;
-        this.__time = 0;
-        this.begin = begin;
-        this.func = func;
-        this.isPlaying = false;
-        this.looping = false;
-        this.obj = obj;
-        this.prop = prop;
-        this.useSeconds = (useSeconds) ? true : false;
-    };
-    this.continueTo = function(finish, duration)
-    {
-        
-    };
-    this.fforward = function()
-    {
-        
-    };
-    this.nextFrame = function()
-    {
-        
-    };
-    this.prevFrame = function()
-    {
-        
-    };
-    this.resume = function()
-    {
-        
-    };
-    this.rewind = function()
-    {
-        
-    };
-    this.start = function()
-    {
-        
-    };
-    this.stop = function()
-    {
-        
-    };
-    this.yoyo = function()
-    {
-        
-    };
-    
-    /* getters and setters */
-    this.getDuration = function()
-    {
-        return this.__duration;
-    };
-    this.setDuration = function(v)
-    {
-        this.__duration = v;
-    };
-    this.getFinish = function()
-    {
-        return this.__finish;
-    };
-    this.setFinish = function(v)
-    {
-        this.__finish = v;
-    };
-    this.getFPS = function()
-    {
-        return this.__FPS;
-    };
-    this.setFPS = function(v)
-    {
-        this.__FPS = v;
-    };
-    this.getPosition = function()
-    {
-        return this.__position;
-    };
-    this.setPosition = function(v)
-    {
-        this.__position = v;
-    };
-    this.getTime = function()
-    {
-        return this.__time;
-    };
-    this.setTime = function(v)
-    {
-        this.__time = v;
-    };
-});
-Tween.prototype.__defineGetter__("duration", Tween.prototype.getDuration);
-Tween.prototype.__defineSetter__("duration", Tween.prototype.setDuration);
-Tween.prototype.__defineGetter__("finish", Tween.prototype.getFinish);
-Tween.prototype.__defineSetter__("finish", Tween.prototype.setFinish);
-Tween.prototype.__defineGetter__("FPS", Tween.prototype.getFPS);
-Tween.prototype.__defineSetter__("FPS", Tween.prototype.setFPS);
-Tween.prototype.__defineGetter__("position", Tween.prototype.getPosition);
-Tween.prototype.__defineSetter__("position", Tween.prototype.setPosition);
-Tween.prototype.__defineGetter__("time", Tween.prototype.getTime);
-Tween.prototype.__defineSetter__("time", Tween.prototype.setTime);
-Tween.prototype.toString = function()
-{
-    return '[object Tween]';
-};
 /**
 * CoordinateShuffler by Mario Klingemann. Dec 14, 2008
 * Visit www.quasimondo.com for documentation, updates and more free code.
@@ -6096,7 +5835,7 @@ var CoordinateShuffler = new Class(Object, function()
             y = ( y + __hLookup[ (i * __width  + x) % __lookupTableSize ] ) % __height;
             x = ( x + __vLookup[ (i * __height + y) % __lookupTableSize ] ) % __width;
         }
-        this.__currentIndex = index++;
+        this.__currentIndex = (index + 1) % __maximumIndex;
         return [x, y];
     };
     
@@ -6107,8 +5846,7 @@ var CoordinateShuffler = new Class(Object, function()
     **/
     this.getNextCoordinate = function()
     {
-        this.__currentIndex %= this.__maximumIndex;
-        return this.getCoordinate( this.__currentIndex++ );
+        return this.getCoordinate(this.__currentIndex + 1);
     };
     
     /**
@@ -6275,10 +6013,6 @@ var CoordinateShuffler = new Class(Object, function()
         for (i = __lookupTableSize - 1; i >= 0; --i)
         {
             __hLookup[i] = this.getNextInt() % __height;
-        }
-        
-        for (i = __lookupTableSize - 1; i >= 0; --i)
-        {
             __vLookup[i] = this.getNextInt() % __width;
         }
         

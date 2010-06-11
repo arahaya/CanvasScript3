@@ -66,9 +66,9 @@ var cs3 = {
             var c = cs3.core;
             var t = c.resizeTimeout;
             clearTimeout(t);
-            t = setTimeout(c.lazyResizeHandler, 10);
+            t = setTimeout(c.resizeHandlerDelay, 10);
         },
-        lazyResizeHandler: function(e)
+        resizeHandlerDelay: function(e)
         {
             var s = cs3.core.stages;
             for (var i = 0, l = s.length; i < l; ++i) {
@@ -81,7 +81,7 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
@@ -315,6 +315,13 @@ var __clearContext = (function()
         };
     }
 })();
+function __closure(scope, func, args)
+{
+    return function()
+    {
+        func.apply(scope, args);
+    };
+}
 /**
  * Fix rectangle coords from floats to integers
  */
@@ -378,8 +385,6 @@ function __noImp(name)
 {
     throw new Error(name + ' is not implemented');
 }
-
-
 var trace = (function()
 {
     if (window.console) {
@@ -414,165 +419,6 @@ var ArgumentError = function(message)
     this.message = message;
 };
 ArgumentError.prototype = new Error();
-
-
-var SimpleTween = new Class(Object, function()
-{
-    this.__init__ = function(displayObject, property, from, to, frames)
-    {
-        var range = to - from;
-        var frame = 0;
-        displayObject[property] = from;
-        displayObject.addEventListener(Event.ENTER_FRAME, function(e)
-        {
-            ++frame;
-            var ratio = SimpleTween.Elastic.easeOut(frame / frames);
-            var next = from + (range * ratio);
-            displayObject[property] = next;
-            if (frame == frames) {
-                displayObject[property] = to;
-                displayObject.removeEventListener(Event.ENTER_FRAME, arguments.callee);
-            }
-        });
-    };
-});
-SimpleTween.Back = {
-    easeIn: function(t) {
-        return 3 * t * t * t - 2 * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Bounce = {
-    DH: 1 / 22,
-    D1: 1 / 11,
-    D2: 2 / 11,
-    D3: 3 / 11,
-    D4: 4 / 11,
-    D5: 5 / 11,
-    D7: 7 / 11,
-    IH: 1 / this.DH,
-    I1: 1 / this.D1,
-    I2: 1 / this.D2,
-    I4D: 1 / this.D4 / this.D4,
-    easeIn: function(t) {
-        var s;
-        if (t < this.D1) {
-            s = t - this.DH;
-            s = this.DH - s * s * this.IH;
-        } else if (t < this.D3) {
-            s = t - this.D2;
-            s = this.D1 - s * s * this.I1;
-        } else if (t < this.D7) {
-            s = t - this.D5;
-            s = this.D2 - s * s * this.I2;
-        } else {
-            s = t - 1;
-            s = 1 - s * s * this.I4D;
-        }
-        return s;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Circ = {
-    easeIn: function(t) {
-        return 1.0 - Math.sqrt(1.0 - t * t);
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Cubic = {
-    easeIn: function(t) {
-        return t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Elastic = {
-    easeIn: function(t) {
-        return 1.0 - this.easeOut(1.0 - t);
-    },
-    easeOut: function(t) {
-        var s = 1 - t;
-        return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Linear = {
-    easeIn: function(t) {
-        return t;
-    },
-    easeOut: function(t) {
-        return t;
-    },
-    easeInOut: function(t) {
-        return t;
-    }
-};
-SimpleTween.Quad = {
-    easeIn: function(t) {
-        return t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Quart = {
-    easeIn: function(t) {
-        return t * t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Quint = {
-    easeIn: function(t) {
-        return t * t * t * t * t;
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
-SimpleTween.Sine = {
-    _HALF_PI: Math.PI / 2,
-    easeIn: function(t) {
-        return 1.0 - Math.cos(t * this._HALF_PI);
-    },
-    easeOut: function(t) {
-        return 1.0 - this.easeIn(1.0 - t);
-    },
-    easeInOut: function(t) {
-        return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
-    }
-};
 
 
 var XML = new Class(Object, function()

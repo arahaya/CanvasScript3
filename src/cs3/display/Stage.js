@@ -30,8 +30,9 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__renderMode = params.renderMode;
         this.__mouseX = 0;
         this.__mouseY = 0;
+        //wether the mouse is over the stage rect
+        this.__mouseOverStage = false;
         //the current object under the mouse point.
-        //if this is NULL the mouse is out of the stage.
         this.__objectUnderMouse = null;
         //the object that the mouse was pressed.
         //if this is NULL the mouse is not pressed.
@@ -212,17 +213,10 @@ var Stage = new Class(DisplayObjectContainer, function()
         //TODO: fix the mouse position relative to canvas
         var x, y;
         var canvas = this.canvas;
-        /*
-        if (e.offsetX) {
-            x = e.offsetX - target.offsetLeft;
-            y = e.offsetY - target.offsetTop;
-        }
-        else {
-            
-
-        }*/
-            x = e.pageX - canvas.offsetLeft;
-            y = e.pageY - canvas.offsetTop;
+        
+        x = e.pageX - canvas.offsetLeft;
+        y = e.pageY - canvas.offsetTop;
+        
         /*
         if (this.__scaleX || this.__scaleY) {
             x = Math.round(x / this.__scaleX);
@@ -236,10 +230,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         
         //mouse move events
+        this.__mouseOverStage = false;
         if (this.__rect.contains(x, y) === true) {
             this.__mouseX = x;
             this.__mouseY = y;
             
+            this.__mouseOverStage = true;
             this.__updateObjectUnderMouse();
             
             if (this.__objectUnderMouse) {
@@ -388,6 +384,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__getObjectUnderPoint = function(point)
     {
         if (this.__rect.containsPoint(point) === false) { return null; }
+        if (this.mouseChildren === false) { return this; }
         
         var context = this.__hiddenContext;
         context.clearRect(point.x, point.y, 1, 1);
@@ -401,33 +398,15 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.__enterFrame = function()
     {
-        if (this.__lockFrameEvent === true) {
-            this.__blockedFrameEvent = true;
-            return;
-        }
-        
-        this.__lockFrameEvent = true;
-        this.__blockedFrameEvent = false;
-        
         //reserve next frame
         var self = this;
         clearTimeout(this.__timer);
         this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
-        //resize
-        //this.__resize();
-        
         //run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
         this.__updateStage();
-        
-        this.__lockFrameEvent = false;
-        if (this.__blockedFrameEvent === true) {
-            //if block occurred during process, run the next frame right away
-            ///this.__enterFrame();
-            this.__timer = setTimeout(function(){ self.__enterFrame(); }, 5);
-        }
     };
     this.__updateStage = function()
     {
@@ -494,6 +473,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__updateObjectUnderMouse = function()
     {
         //NOTE: do not call these events against the stage.
+        if (this.__mouseOverStage === false) { return; }
+        
         var stage = this;
         var last = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
