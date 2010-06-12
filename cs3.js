@@ -42,6 +42,7 @@ var cs3 = {
         canvasId: 0,
         instanceId: 0,
         resizeTimeout: null,
+        startTime: 0,
         nextInstanceId: function()
         {
             ++this.instanceId;
@@ -58,6 +59,7 @@ var cs3 = {
             
             window.onresize = this.resizeHandler;
             
+            this.startTime = new Date().getTime();
             this.initialized = true;
         },
         resizeHandler: function(e)
@@ -104,6 +106,9 @@ var cs3 = {
             
             this.stages.push(stage);
         }
+    },
+    config: {
+        DEFAULT_FRAMERATE: 30
     },
     utils: {
         __events: {},
@@ -420,6 +425,22 @@ var ArgumentError = function(message)
 };
 ArgumentError.prototype = new Error();
 
+var IOError = function(message)
+{
+    Error.apply(this, arguments);
+    this.name = 'IOError';
+    this.message = message;
+};
+IOError.prototype = new Error();
+
+var EOFError = function(message)
+{
+    IOError.apply(this, arguments);
+    this.name = 'EOFError';
+    this.message = message;
+};
+EOFError.prototype = new IOError();
+
 
 var XML = new Class(Object, function()
 {
@@ -660,6 +681,55 @@ ProgressEvent.prototype.toString = function()
 {
     return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
         ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
+};
+var TimerEvent = new Class(Event, function()
+{
+    this.__init__ = function(type, bubbles, cancelable)
+    {
+        Event.call(this, type, bubbles, cancelable);
+    };
+    this.clone = function()
+    {
+        return new TimerEvent(this.type, this.bubbles, this.cancelable);
+    };
+    this.updateAfterEvent = function()
+    {
+        //todo
+    };
+});
+TimerEvent.TIMER = 'timer';
+TimerEvent.TIMER_COMPLETE = 'timerComplete';
+TimerEvent.prototype.toString = function()
+{
+    return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+};
+var TweenEvent = new Class(Event, function()
+{
+    this.__init__ = function(type, time, position, bubbles, cancelable)
+    {
+        Event.call(this, type, bubbles, cancelable);
+        this.time = time;
+        this.position = position;
+    };
+    this.clone = function()
+    {
+        return new TweenEvent(this.type, this.time, this.position,
+                        this.bubbles, this.cancelable);
+    };
+});
+TweenEvent.MOTION_CHANGE = 'motionChange';
+TweenEvent.MOTION_FINISH = 'motionFinish';
+TweenEvent.MOTION_LOOP = 'motionLoop';
+TweenEvent.MOTION_RESUME = 'motionResume';
+TweenEvent.MOTION_START = 'motionStart';
+TweenEvent.MOTION_STOP = 'motionStop';
+TweenEvent.prototype.toString = function()
+{
+    return '[TweenEvent type=' + this.type +
+                    ' time=' + this.time +
+                    ' position=' + this.position +
+                    ' bubbles=' + this.bubbles +
+                    ' cancelable=' + this.cancelable + ']';
 };
 var EventDispatcher = new Class(Object, function()
 {
@@ -1260,7 +1330,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
-        for (var i = children.length - 1, l = 0; i >= l; --i)
+        for (var i = children.length - 1; i >= 0; --i)
         {
             var child = children[i];
             if (child.__visible) {
@@ -3294,7 +3364,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         params.canvas     = params.canvas || null;
         params.width      = params.width | 0;
         params.height     = params.height | 0;
-        params.frameRate  = params.frameRate || 30;
+        params.frameRate  = params.frameRate || cs3.config.DEFAULT_FRAMERATE;
         params.align      = params.align || StageAlign.TOP_LEFT;
         params.scaleMode  = params.scaleMode || StageScaleMode.NO_SCALE;
         params.renderMode = params.renderMode || StageRenderMode.AUTO;/* all, dirty, auto */
@@ -3390,6 +3460,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //adjust stage size
         this.__resize();
+        
+        //TODO: IMPORTANT: testing required
+        //if we render all on the first frame
+        //DisplayObject.update() will not be called and it's globalBounds will not be set
+        //so we should either force not to renderAll or to force update on stage.setup()
+        this.__renderAll = false;
         
         //call children ADDED_TO_STAGE events
         __applyDown(this, function(stage, event)
@@ -5343,11 +5419,15 @@ var URLLoader = new Class(EventDispatcher, function()
         var hasStatus = false;
         this.__request = new cs3.utils.createXMLHttpRequest();
         
+        if (typeof request == 'string') {
+            request = new URLRequest(request);
+        }
+        
         if (this.dataFormat == URLLoaderDataFormat.BINARY) {
             throw new Error("URLLoaderDataFormat.BINARY is not supported");
         }
         
-        this.__request.open('GET', request.url, true);
+        this.__request.open(request.__method, request.__url, true);
         this.__request.onreadystatechange = function() {
             if (!hasStatus) {
                 try {
@@ -5765,6 +5845,849 @@ var TextFormatAlign = {
     LEFT: 'left',
     RIGHT: 'right'
 };
+var Tween;
+(function()
+{
+    var DH  = 1 / 22;
+    var D1  = 1 / 11;
+    var D2  = 2 / 11;
+    var D3  = 3 / 11;
+    var D4  = 4 / 11;
+    var D5  = 5 / 11;
+    var D7  = 7 / 11;
+    var IH  = 1 / DH;
+    var I1  = 1 / D1;
+    var I2  = 1 / D2;
+    var I4D = 1 / D4 / D4;
+    
+    Tween = new Class(EventDispatcher, function()
+    {
+        this.__init__ = function(obj, prop, func, begin, finish, duration, useSeconds)
+        {
+            EventDispatcher.call(this);
+            this.__duration = duration;
+            this.__finish = finish;
+            this.__FPS = undefined;
+            this.__position = 0;
+            this.__startTime = 0;
+            this.__time = 0;
+            this.__timer = null;
+            this.begin = begin;
+            this.func = func;
+            this.isPlaying = false;
+            this.looping = false;
+            this.obj = obj;
+            this.prop = prop;
+            this.useSeconds = (useSeconds) ? true : false;
+            
+            this.start();
+        };
+        this.__start = function()
+        {
+            this.__stop();
+            
+            var frameRate;
+            if (this.__FPS) {
+                //use user specified FPS
+                frameRate = this.__FPS;
+            }
+            else if (this.obj.__stage) {
+                //use the objects stage.frameRate
+                frameRate = this.obj.__stage.__frameRate;
+            }
+            else if (cs3.core.stages.length) {
+                //use the last created stage.frameRate
+                frameRate = cs3.core.stages[cs3.core.stages.length-1].__frameRate;
+            }
+            else {
+                //use the system's default frameRate
+                frameRate = cs3.config.DEFAULT_FRAMERATE;
+            }
+            
+            this.__timer = setInterval(__closure(this, this.__enterFrame), 1000 / frameRate);
+            this.isPlaying = true;
+        };
+        this.__stop = function()
+        {
+            clearInterval(this.__timer);
+            this.isPlaying = false;
+        };
+        this.__dispatchEvent = function(type)
+        {
+            this.dispatchEvent(new TweenEvent(type, this.__time, this.__position));
+        };
+        this.__enterFrame = function()
+        {
+            this.nextFrame();
+        };
+        this.__restart = function()
+        {
+            this.__startTime = (new Date()).getTime();
+        };
+        this.__update = function()
+        {
+            var durationRatio = this.__time / this.__duration;
+            var positionRatio = this.func(durationRatio);
+            var positionRange = this.__finish - this.begin;
+            var newPosition   = this.begin + positionRange * positionRatio;
+            this.setPosition(newPosition);
+        };
+        this.continueTo = function(finish, duration)
+        {
+            //TODO:
+        };
+        this.fforward = function()
+        {
+            this.setTime(this.__duration);
+            this.__restart();
+        };
+        this.nextFrame = function()
+        {
+            if (this.useSeconds) {
+                //update the time
+                var elapseTime = (new Date()).getTime() - this.__startTime;
+                this.setTime(elapseTime / 1000);
+            }
+            else {
+                //increase the frame
+                this.setTime(this.__time + 1);
+            }
+        };
+        this.prevFrame = function()
+        {
+            if (this.useSeconds === false) {
+                //decrease the frame
+                this.setTime(this.__time - 1);
+            }
+        };
+        this.resume = function()
+        {
+            this.__restart();
+            this.__start();
+            this.__dispatchEvent(TweenEvent.MOTION_RESUME);
+        };
+        this.rewind = function(t)
+        {
+            //set the time
+            this.__time = t | 0;
+            this.__restart();
+            this.__update();
+        };
+        this.start = function()
+        {
+            this.rewind(0);
+            this.__start();
+            this.__dispatchEvent(TweenEvent.MOTION_START);
+        };
+        this.stop = function()
+        {
+            this.__stop();
+            this.__dispatchEvent(TweenEvent.MOTION_STOP);
+        };
+        this.yoyo = function()
+        {
+            //TODO:
+        };
+        
+        /* getters and setters */
+        this.getDuration = function()
+        {
+            return this.__duration;
+        };
+        this.setDuration = function(v)
+        {
+            this.__duration = v;
+        };
+        this.getFinish = function()
+        {
+            return this.__finish;
+        };
+        this.setFinish = function(v)
+        {
+            this.__finish = v;
+        };
+        this.getFPS = function()
+        {
+            return this.__FPS;
+        };
+        this.setFPS = function(v)
+        {
+            var isPlaying = this.isPlaying;
+            this.__stop();
+            this.__FPS = v;
+            if (isPlaying) {
+                //resume with the new FPS
+                this.__start();
+            }
+        };
+        this.getPosition = function()
+        {
+            return this.__position;
+        };
+        this.setPosition = function(v)
+        {
+            this.__position = v;
+            this.obj[this.prop] = this.__position;
+            this.__dispatchEvent(TweenEvent.MOTION_CHANGE);
+        };
+        this.getTime = function()
+        {
+            return this.__time;
+        };
+        this.setTime = function(v)
+        {
+            if (v > this.__duration)
+            {
+                if (this.looping) {
+                    this.rewind(v - this.__duration);
+                    this.__update();
+                    this.__dispatchEvent(TweenEvent.MOTION_LOOP);
+                }
+                else {
+                    if (this.useSeconds) {
+                        this.__time = this.__duration;
+                        this.__update();
+                    }
+                    this.stop();
+                    this.__dispatchEvent(TweenEvent.MOTION_FINISH);
+                }
+            }
+            else if (v < 0) {
+                this.rewind(0);
+                this.__update();
+            }
+            else {
+                this.__time = v;
+                this.__update();
+            }
+        };
+    });
+    Tween.Back = {
+        easeIn: function(t) {
+            return 3 * t * t * t - 2 * t * t;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Bounce = {
+        easeIn: function(t) {
+            var s;
+            if (t < D1) {
+                s = t - DH;
+                s = DH - s * s * IH;
+            }
+            else if (t < D3) {
+                s = t - D2;
+                s = D1 - s * s * I1;
+            }
+            else if (t < D7) {
+                s = t - D5;
+                s = D2 - s * s * I2;
+            }
+            else {
+                s = t - 1;
+                s = 1 - s * s * I4D;
+            }
+            return s;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Circ = {
+        easeIn: function(t) {
+            return 1.0 - Math.sqrt(1.0 - t * t);
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Cubic = {
+        easeIn: function(t) {
+            return t * t * t;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Elastic = {
+        easeIn: function(t) {
+            return 1.0 - this.easeOut(1.0 - t);
+        },
+        easeOut: function(t) {
+            var s = 1 - t;
+            return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Linear = {
+        easeIn: function(t) {
+            return t;
+        },
+        easeOut: function(t) {
+            return t;
+        },
+        easeInOut: function(t) {
+            return t;
+        }
+    };
+    Tween.Quad = {
+        easeIn: function(t) {
+            return t * t;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Quart = {
+        easeIn: function(t) {
+            return t * t * t * t;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Quint = {
+        easeIn: function(t) {
+            return t * t * t * t * t;
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.Sine = {
+        _HALF_PI: Math.PI / 2,
+        easeIn: function(t) {
+            return 1.0 - Math.cos(t * this._HALF_PI);
+        },
+        easeOut: function(t) {
+            return 1.0 - this.easeIn(1.0 - t);
+        },
+        easeInOut: function(t) {
+            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+    };
+    Tween.prototype.__defineGetter__("duration", Tween.prototype.getDuration);
+    Tween.prototype.__defineSetter__("duration", Tween.prototype.setDuration);
+    Tween.prototype.__defineGetter__("finish", Tween.prototype.getFinish);
+    Tween.prototype.__defineSetter__("finish", Tween.prototype.setFinish);
+    Tween.prototype.__defineGetter__("FPS", Tween.prototype.getFPS);
+    Tween.prototype.__defineSetter__("FPS", Tween.prototype.setFPS);
+    Tween.prototype.__defineGetter__("position", Tween.prototype.getPosition);
+    Tween.prototype.__defineSetter__("position", Tween.prototype.setPosition);
+    Tween.prototype.__defineGetter__("time", Tween.prototype.getTime);
+    Tween.prototype.__defineSetter__("time", Tween.prototype.setTime);
+    Tween.prototype.toString = function()
+    {
+        return '[object Tween]';
+    };
+})();
+var Endian = {
+    BIG_ENDIAN: 'bigEndian',
+    LITTLE_ENDIAN: 'littleEndian'
+};
+var ByteArray = new Class(Array, function()
+{
+    var float_pbias = Math.pow(2, 126);
+    var float_psgnd = Math.pow(2, 23);
+    var FLOAT_POSITIVE_INFINITY = (2 - Math.pow(2, -23)) * Math.pow(2, 127);
+    var FLOAT_NEGATIVE_INFINITY = -FLOAT_POSITIVE_INFINITY;
+    var double_pbias = Math.pow(2, 1022);
+    var double_psgnd = Math.pow(2, 52);
+    var DOUBLE_POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
+    var DOUBLE_NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY;
+    
+    function floatToBytes(n)
+    {
+        if (isNaN(n)) {
+            return [0xff, 0xff, 0xff, 0xff];
+        }
+        if (n >= FLOAT_POSITIVE_INFINITY) {
+            return [0x7f, 0x80, 0x00, 0x00];
+        }
+        if (n <= FLOAT_NEGATIVE_INFINITY) {
+            return [0xff, 0x80, 0x00, 0x00];
+        }
+        if (Math.abs(n) === 0) {
+            return [0x00, 0x00, 0x00, 0x00];
+        }
+        
+        var s = n < 0 ? 0x80 : 0;
+        var t = Math.log(Math.abs(n)) / Math.LN2;
+        var p = Math.floor(t);
+        var e, m;
+
+        if (p < -126) {
+            e = 0;
+            m = float_psgnd * n * float_pbias;
+        }
+        else {
+            e = p + 127;
+            m = float_psgnd * (Math.pow(2, t - p) - 1);
+        }
+
+        var result = [];
+        for (var i = 0; i < 3; i++)
+        {
+            var x = Math.floor(m / 0x100);
+            result.push(m - x * 0x100);
+            m = x;
+        }
+
+        result[0] = Math.round(result[0]);
+        result[result.length - 1] += (e & 0x01) << (8 - 1);
+        result.push((e >> 1) + s);
+        return result.reverse();
+    }
+    
+    function doubleToBytes(n)
+    {
+        if (isNaN(n)) {
+            return [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        }
+        if (n >= DOUBLE_POSITIVE_INFINITY) {
+            return [0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        }
+        if (n <= DOUBLE_NEGATIVE_INFINITY) {
+            return [0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        }
+        if (Math.abs(n) === 0) {
+            return [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+        }
+        
+        var s = n < 0 ? 0x80 : 0;
+        var t = Math.log(Math.abs(n)) / Math.LN2;
+        var p = Math.floor(t);
+        var e, m;
+
+        if (p < -1022) {
+            e = 0;
+            m = double_psgnd * n * double_pbias;
+        }
+        else {
+            e = p + 1023;
+            m = double_psgnd * (Math.pow(2, t - p) - 1);
+        }
+
+        var result = [];
+        for (var i = 0; i < 7; i++)
+        {
+            var x = Math.floor(m / 0x100);
+            result.push(m - x * 0x100);
+            m = x;
+        }
+
+        result[0] = Math.round(result[0]);
+        result[result.length - 1] += (e & 0x0f) << (8 - 4);
+        result.push((e >> 4) + s);
+        return result.reverse();
+    }
+    
+    function bytesToNumber(bytes, bias, pbias, psgnd)
+    {
+        var n = bytes.length;
+        var s = bytes[0] & 0x80;
+        var e, m;
+        if (n == 4) {
+            e = ((bytes[0] & 0x7f) << 1) + (bytes[1] >> 7);
+            m = bytes[1] & 0x7f;
+        }
+        else {
+            e = ((bytes[0] & 0x7f) << 4) + (bytes[1] >> 4);
+            m = bytes[1] & 0x0f;
+        }
+
+        for (var i = 2; i < n; i++)
+        {
+            m = m * 0x100 + bytes[i];
+        }
+
+        if (e == bias * 2 + 1) {
+            if (m) { return 0 / 0; }
+            return (s ? -1 : +1) / 0;
+        }
+
+        var result = e ?
+            (m / psgnd + 1) * Math.pow(2, e - bias) :
+            m / psgnd / pbias;
+
+        return s ? -result : result;
+    }
+    
+    function bytesToFloat(bytes)
+    {
+        return bytesToNumber(bytes, 127, float_pbias, float_psgnd);
+    }
+    
+    function bytesToDouble(bytes)
+    {
+        return bytesToNumber(bytes, 1023, double_pbias, double_psgnd);
+    }
+    
+    var EOFErrorMessage = 'Error #2030: End of file was encountered.';
+    
+    this.__bigEndian = true;
+    this.__position = 0;
+    this.__init__ = function()
+    {
+    };
+    this.compress = function()
+    {
+    };
+    this.uncompress = function()
+    {
+    };
+    this.readBoolean = function()
+    {
+        return (this.readUnsignedByte() !== 0) ? true : false;
+    };
+    this.readByte = function()
+    {
+        var value = this.readUnsignedByte();
+        if (value & 0x80) { value = -((value ^ 0xFF) + 1); }
+        return value;
+    };
+    this.readUnsignedByte = function()
+    {
+        var start = this.__position;
+        var end = start + 1;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value = this[start];
+        this.__position = end;
+        return value;
+    };
+    this.readShort = function()
+    {
+        var value = this.readUnsignedShort();
+        if (value & 0x8000) { value = -((value ^ 0xFFFF) + 1); }
+        return value;
+    };
+    this.readUnsignedShort = function()
+    {
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value;
+        if (this.__bigEndian) {
+            value = this[start] << 8 | (this[start+1] & 0xFF);
+        }
+        else {
+            value = this[end] << 8 | (this[end-1] & 0xFF);
+        }
+        this.__position = end;
+        return value;
+    };
+    this.readInt = function()
+    {
+        var value = this.readUnsignedInt();
+        if (value & 0x80000000) { value = -((value ^ 0xFFFFFFFF) + 1); }
+        return value;
+    };
+    this.readUnsignedInt = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value;
+        if (this.__bigEndian) {
+            value = this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3]);
+        }
+        else {
+            value = this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3]);
+        }
+        this.__position = end;
+        return value >>> 0;
+    };
+    this.readFloat = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value;
+        if (this.__bigEndian) {
+            value = bytesToFloat(this.slice(start, end));
+        }
+        else {
+            value = bytesToFloat(this.slice(start, end).reverse());
+        }
+        this.__position = end;
+        return value;
+    };
+    this.readDouble = function()
+    {
+        var start = this.__position;
+        var end = start + 8;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value;
+        if (this.__bigEndian) {
+            value = bytesToDouble(this.slice(start, end));
+        }
+        else {
+            value = bytesToDouble(this.slice(start, end).reverse());
+        }
+        this.__position = end;
+        return value;
+    };
+    this.readMultiByte = function(length, charset)
+    {
+        //probably not going to support
+        return this.readUTFBytes(length);
+    };
+    this.readObject = function()
+    {
+        //someday
+    };
+    this.readUTF = function()
+    {
+        var length = this.readShort();
+        return this.readUTFBytes(length);
+    };
+    this.readUTFBytes = function(length)
+    {
+        var start = this.__position;
+        var end = start + length;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var chars = [];
+        for (var i = start; i < end; ++i)
+        {
+            chars.push(String.fromCharCode(this[i]));
+        }
+        this.__position = end;
+        
+        var s = chars.join("");
+        return decodeURIComponent(escape(s));
+    };
+    this.writeBoolean = function(value)
+    {
+        this.writeByte(value);
+    };
+    this.writeByte = function(value)
+    {
+        var position = this.__position;
+        if (position == this.length) {
+            this.push(value & 0xFF);
+            position++;
+        }
+        else {
+            this[position++] = value & 0xFF;
+        }
+        this.__position = position;
+    };
+    this.writeBytes = function(bytes, offset, length)
+    {
+        offset = offset | 0;
+        length = length | 0 || bytes.length - offset;
+        
+        var position = this.__position;
+        for (var i = offset; i < length; ++i)
+        {
+            this[position++] = bytes[i];
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeShort = function(value)
+    {
+        var position = this.__position;
+        if (this.__bigEndian) {
+            this[position++] = value >> 8  & 0xFF;
+            this[position++] = value       & 0xFF;
+        }
+        else {
+            this[position++] = value       & 0xFF;
+            this[position++] = value >> 8  & 0xFF;
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeInt = function(value)
+    {
+        var position = this.__position;
+        if (this.__bigEndian) {
+            this[position++] = value >> 24 & 0xFF;
+            this[position++] = value >> 16 & 0xFF;
+            this[position++] = value >> 8  & 0xFF;
+            this[position++] = value       & 0xFF;
+        }
+        else {
+            this[position++] = value       & 0xFF;
+            this[position++] = value >> 8  & 0xFF;
+            this[position++] = value >> 16 & 0xFF;
+            this[position++] = value >> 24 & 0xFF;
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeUnsignedInt = function(value)
+    {
+        this.writeInt(value >>> 0);
+    };
+    this.writeFloat = function(value)
+    {
+        var bytes = floatToBytes(+value);
+        var position = this.__position;
+        if (this.__bigEndian) {
+            this[position++] = bytes[0];
+            this[position++] = bytes[1];
+            this[position++] = bytes[2];
+            this[position++] = bytes[3];
+        }
+        else {
+            this[position++] = bytes[3];
+            this[position++] = bytes[2];
+            this[position++] = bytes[1];
+            this[position++] = bytes[0];
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeDouble = function(value)
+    {
+        var bytes = doubleToBytes(+value);
+        var position = this.__position;
+        if (this.__bigEndian) {
+            this[position++] = bytes[0];
+            this[position++] = bytes[1];
+            this[position++] = bytes[2];
+            this[position++] = bytes[3];
+            this[position++] = bytes[4];
+            this[position++] = bytes[5];
+            this[position++] = bytes[6];
+            this[position++] = bytes[7];
+        }
+        else {
+            this[position++] = bytes[7];
+            this[position++] = bytes[6];
+            this[position++] = bytes[5];
+            this[position++] = bytes[4];
+            this[position++] = bytes[3];
+            this[position++] = bytes[2];
+            this[position++] = bytes[1];
+            this[position++] = bytes[0];
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeMultiByte = function(value, charSet)
+    {
+        //probably not going to support
+        this.writeUTFBytes(value);
+    };
+    this.writeObject = function(value)
+    {
+        //someday
+    };
+    this.writeUTF = function(value)
+    {
+        var bytes = [];
+        var s = unescape(encodeURIComponent(value));
+        var length = s.length;
+        
+        if (length > 0xFFFF) {
+            throw new RangeError('Error #2006 : The supplied index is out of bounds.');
+        }
+        
+        this.writeShort(length);
+        
+        var position = this.__position;
+        for (var i = 0; i < length; ++i)
+        {
+            this[position++] = s.charCodeAt(i);
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeUTFBytes = function(value)
+    {
+        var bytes = [];
+        var s = unescape(encodeURIComponent(value));
+        var length = s.length;
+        
+        var position = this.__position;
+        for (var i = 0; i < length; ++i)
+        {
+            this[position++] = s.charCodeAt(i);
+        }
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    
+    this.getBytesAvailable = function()
+    {
+        return Math.max(this.length - this.__position, 0);
+    };
+    this.getEndian = function()
+    {
+        return (this.__bigEndian) ? Endian.BIG_ENDIAN : Endian.LITTLE_ENDIAN;
+    };
+    this.setEndian = function(v)
+    {
+        this.__bigEndian = (v == Endian.BIG_ENDIAN);
+    };
+    this.getPosition = function()
+    {
+        return this.__position;
+    };
+    this.setPosition = function(v)
+    {
+        v = Math.max(v | 0, 0);
+        if (v > this.length) {
+            //fill the array with zeros until length == position
+            var len = v - this.length;
+            for (var i = 0; i < len; ++i)
+            {
+                this.push(0);
+            }
+        }
+        this.__position = Math.max(v, 0);
+    };
+});
+ByteArray.prototype.__defineGetter__("bytesAvailable", ByteArray.prototype.getBytesAvailable);
+ByteArray.prototype.__defineGetter__("endian", ByteArray.prototype.getEndian);
+ByteArray.prototype.__defineSetter__("endian", ByteArray.prototype.setEndian);
+ByteArray.prototype.__defineGetter__("position", ByteArray.prototype.getPosition);
+ByteArray.prototype.__defineSetter__("position", ByteArray.prototype.setPosition);
+ByteArray.prototype.toString = function()
+{
+    return this.map(function(element, index, array)
+    {
+        return String.fromCharCode(element);
+    }, this).join("");
+};
+ByteArray.prototype.toArray = function()
+{
+    return this.splice(0);
+};
 /**
 * CoordinateShuffler by Mario Klingemann. Dec 14, 2008
 * Visit www.quasimondo.com for documentation, updates and more free code.
@@ -6040,3 +6963,85 @@ var CoordinateShuffler = new Class(Object, function()
         return result;
     };
 });
+var getTimer = function()
+{
+    return (cs3.core.initialized) ? (new Date()).getTime() - cs3.core.startTime : 0;
+};
+var Timer = new Class(EventDispatcher, function()
+{
+    this.__init__ = function(delay, repeatCount)
+    {
+        EventDispatcher.call(this);
+        this.__currentCount = 0;
+        this.__delay = 0;
+        this.__repeatCount = repeatCount | 0;
+        this.__running = false;
+        this.__timer = null;
+        
+        this.setDelay(delay);
+    };
+    this.reset = function()
+    {
+        this.stop();
+        this.__currentCount = 0;
+    };
+    this.start = function()
+    {
+        this.__running = true;
+        this.__timer = setInterval(__closure(this, function()
+        {
+            this.__currentCount++;
+            
+            this.dispatchEvent(new TimerEvent(TimerEvent.TIMER, false, false));
+            
+            if (this.__repeatCount && this.__repeatCount <= this.__currentCount) {
+                this.dispatchEvent(new TimerEvent(TimerEvent.TIMER_COMPLETE, false, false));
+                this.stop();
+            }
+        }), this.__delay);
+    };
+    this.stop = function()
+    {
+        clearInterval(this.__timer);
+        this.__running = false;
+    };
+    
+    this.getCurrentCount = function()
+    {
+        return this.__currentCount;
+    };
+    this.getDelay = function()
+    {
+        return this.__delay;
+    };
+    this.setDelay = function(v)
+    {
+        v = +v;
+        if (v < 0 || v == Infinity) {
+            throw new RangeError('Error #2066: The Timer delay specified is out of range.');
+        }
+        this.__delay = v;
+    };
+    this.getRepeatCount = function()
+    {
+        return this.__repeatCount;
+    };
+    this.setRepeatCount = function(v)
+    {
+        this.__repeatCount = v | 0;
+    };
+    this.getRunning = function()
+    {
+        return this.__running;
+    };
+});
+Timer.prototype.__defineGetter__("currentCount", Timer.prototype.getCurrentCount);
+Timer.prototype.__defineGetter__("delay", Timer.prototype.getDelay);
+Timer.prototype.__defineSetter__("delay", Timer.prototype.setDelay);
+Timer.prototype.__defineGetter__("repeatCount", Timer.prototype.getRepeatCount);
+Timer.prototype.__defineSetter__("repeatCount", Timer.prototype.setRepeatCount);
+Timer.prototype.__defineGetter__("running", Timer.prototype.getRunning);
+Timer.prototype.toString = function()
+{
+    return '[object Timer]';
+};

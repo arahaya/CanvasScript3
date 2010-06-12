@@ -36,7 +36,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
-        for (var i = children.length - 1, l = 0; i >= l; --i)
+        for (var i = children.length - 1; i >= 0; --i)
         {
             var child = children[i];
             if (child.__visible) {

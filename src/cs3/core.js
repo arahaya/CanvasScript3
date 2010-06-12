@@ -42,6 +42,7 @@ var cs3 = {
         canvasId: 0,
         instanceId: 0,
         resizeTimeout: null,
+        startTime: 0,
         nextInstanceId: function()
         {
             ++this.instanceId;
@@ -58,6 +59,7 @@ var cs3 = {
             
             window.onresize = this.resizeHandler;
             
+            this.startTime = new Date().getTime();
             this.initialized = true;
         },
         resizeHandler: function(e)
@@ -104,6 +106,9 @@ var cs3 = {
             
             this.stages.push(stage);
         }
+    },
+    config: {
+        DEFAULT_FRAMERATE: 30
     },
     utils: {
         __events: {},
@@ -419,6 +424,22 @@ var ArgumentError = function(message)
     this.message = message;
 };
 ArgumentError.prototype = new Error();
+
+var IOError = function(message)
+{
+    Error.apply(this, arguments);
+    this.name = 'IOError';
+    this.message = message;
+};
+IOError.prototype = new Error();
+
+var EOFError = function(message)
+{
+    IOError.apply(this, arguments);
+    this.name = 'EOFError';
+    this.message = message;
+};
+EOFError.prototype = new IOError();
 
 
 var XML = new Class(Object, function()

@@ -8,7 +8,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         params.canvas     = params.canvas || null;
         params.width      = params.width | 0;
         params.height     = params.height | 0;
-        params.frameRate  = params.frameRate || 30;
+        params.frameRate  = params.frameRate || cs3.config.DEFAULT_FRAMERATE;
         params.align      = params.align || StageAlign.TOP_LEFT;
         params.scaleMode  = params.scaleMode || StageScaleMode.NO_SCALE;
         params.renderMode = params.renderMode || StageRenderMode.AUTO;/* all, dirty, auto */
@@ -104,6 +104,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //adjust stage size
         this.__resize();
+        
+        //TODO: IMPORTANT: testing required
+        //if we render all on the first frame
+        //DisplayObject.update() will not be called and it's globalBounds will not be set
+        //so we should either force not to renderAll or to force update on stage.setup()
+        this.__renderAll = false;
         
         //call children ADDED_TO_STAGE events
         __applyDown(this, function(stage, event)

@@ -19,11 +19,15 @@ var URLLoader = new Class(EventDispatcher, function()
         var hasStatus = false;
         this.__request = new cs3.utils.createXMLHttpRequest();
         
+        if (typeof request == 'string') {
+            request = new URLRequest(request);
+        }
+        
         if (this.dataFormat == URLLoaderDataFormat.BINARY) {
             throw new Error("URLLoaderDataFormat.BINARY is not supported");
         }
         
-        this.__request.open('GET', request.url, true);
+        this.__request.open(request.__method, request.__url, true);
         this.__request.onreadystatechange = function() {
             if (!hasStatus) {
                 try {
