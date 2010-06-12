@@ -1,6 +1,6 @@
 var Sprite = new Class(DisplayObjectContainer, function()
 {
-    this.__init__ = function()
+    this.__init__ = function(property)
     {
         DisplayObjectContainer.call(this);
         this.__graphics = null;
@@ -9,6 +9,11 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.hitArea = null;
         //this.soundTransform = null;
         this.useHandCursor = true;
+        
+        for (p in property)
+        {
+            this[p] = property[p];
+        }
     };
     this.__getContentBounds = Shape.prototype.__getContentBounds;
     this.__getModified = Shape.prototype.__getModified;

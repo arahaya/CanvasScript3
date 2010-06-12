@@ -3243,10 +3243,15 @@ LoaderInfo.prototype.toString = function()
 };
 var Shape = new Class(DisplayObject, function()
 {
-    this.__init__ = function()
+    this.__init__ = function(property)
     {
         DisplayObject.call(this);
         this.__graphics = null;
+        
+        for (p in property)
+        {
+            this[p] = property[p];
+        }
     };
     //override
     this.__getContentBounds = function()
@@ -3322,7 +3327,7 @@ Shape.prototype.toString = function()
 };
 var Sprite = new Class(DisplayObjectContainer, function()
 {
-    this.__init__ = function()
+    this.__init__ = function(property)
     {
         DisplayObjectContainer.call(this);
         this.__graphics = null;
@@ -3331,6 +3336,11 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.hitArea = null;
         //this.soundTransform = null;
         this.useHandCursor = true;
+        
+        for (p in property)
+        {
+            this[p] = property[p];
+        }
     };
     this.__getContentBounds = Shape.prototype.__getContentBounds;
     this.__getModified = Shape.prototype.__getModified;
@@ -5866,7 +5876,7 @@ var Tween;
         {
             EventDispatcher.call(this);
             this.__duration = duration;
-            this.__finish = finish;
+            this.__range = finish - begin;
             this.__FPS = undefined;
             this.__position = 0;
             this.__startTime = 0;
@@ -5928,13 +5938,17 @@ var Tween;
         {
             var durationRatio = this.__time / this.__duration;
             var positionRatio = this.func(durationRatio);
-            var positionRange = this.__finish - this.begin;
-            var newPosition   = this.begin + positionRange * positionRatio;
+            var newPosition   = this.begin + this.__range * positionRatio;
             this.setPosition(newPosition);
         };
         this.continueTo = function(finish, duration)
         {
-            //TODO:
+            this.begin = this.__position;
+            this.__range = finish - this.begin;
+            if (duration !== undefined) {
+                this.__duration = duration;
+            }
+            this.start();
         };
         this.fforward = function()
         {
@@ -5986,7 +6000,7 @@ var Tween;
         };
         this.yoyo = function()
         {
-            //TODO:
+            this.continueTo(this.begin, this.__time);
         };
         
         /* getters and setters */
@@ -6000,11 +6014,11 @@ var Tween;
         };
         this.getFinish = function()
         {
-            return this.__finish;
+            return this.begin + this.__range;
         };
         this.setFinish = function(v)
         {
-            this.__finish = v;
+            this.__range = v - this.begin;
         };
         this.getFPS = function()
         {
@@ -6067,10 +6081,10 @@ var Tween;
             return 3 * t * t * t - 2 * t * t;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Back.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Back.easeIn(t * 2.0) * 0.5 : 1 - Tween.Back.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Bounce = {
@@ -6095,10 +6109,10 @@ var Tween;
             return s;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Bounce.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Bounce.easeIn(t * 2.0) * 0.5 : 1 - Tween.Bounce.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Circ = {
@@ -6106,10 +6120,10 @@ var Tween;
             return 1.0 - Math.sqrt(1.0 - t * t);
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Circ.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Circ.easeIn(t * 2.0) * 0.5 : 1 - Tween.Circ.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Cubic = {
@@ -6117,22 +6131,22 @@ var Tween;
             return t * t * t;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Cubic.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Cubic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Cubic.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Elastic = {
         easeIn: function(t) {
-            return 1.0 - this.easeOut(1.0 - t);
+            return 1.0 - Tween.Elastic.easeOut(1.0 - t);
         },
         easeOut: function(t) {
             var s = 1 - t;
             return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Elastic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Elastic.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Linear = {
@@ -6151,10 +6165,10 @@ var Tween;
             return t * t;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Quad.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Quad.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quad.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Quart = {
@@ -6162,10 +6176,10 @@ var Tween;
             return t * t * t * t;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Quart.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Quart.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quart.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Quint = {
@@ -6173,22 +6187,21 @@ var Tween;
             return t * t * t * t * t;
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Quint.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Quint.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quint.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.Sine = {
-        _HALF_PI: Math.PI / 2,
         easeIn: function(t) {
-            return 1.0 - Math.cos(t * this._HALF_PI);
+            return 1.0 - Math.cos(t * (Math.PI / 2));
         },
         easeOut: function(t) {
-            return 1.0 - this.easeIn(1.0 - t);
+            return 1.0 - Tween.Sine.easeIn(1.0 - t);
         },
         easeInOut: function(t) {
-            return (t < 0.5) ? this.easeIn(t * 2.0) * 0.5 : 1 - this.easeIn(2.0 - t * 2.0) * 0.5;
+            return (t < 0.5) ? Tween.Sine.easeIn(t * 2.0) * 0.5 : 1 - Tween.Sine.easeIn(2.0 - t * 2.0) * 0.5;
         }
     };
     Tween.prototype.__defineGetter__("duration", Tween.prototype.getDuration);
