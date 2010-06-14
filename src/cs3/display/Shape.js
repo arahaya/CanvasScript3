@@ -1,14 +1,9 @@
 var Shape = new Class(DisplayObject, function()
 {
-    this.__init__ = function(property)
+    this.__init__ = function()
     {
         DisplayObject.call(this);
         this.__graphics = null;
-        
-        for (p in property)
-        {
-            this[p] = property[p];
-        }
     };
     //override
     this.__getContentBounds = function()

@@ -18,6 +18,13 @@ var Loader = new Class(DisplayObjectContainer, function()
             return this.__content.__getAsBitmap();
         }
     };
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__content) {
+            this.__content.__render(context, matrix, colorTransform);
+        }
+    };
     this.load = function(request)
     {
         if (typeof request == 'string') {

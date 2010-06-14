@@ -151,13 +151,23 @@ var ByteArray = new Class(Array, function()
     };
     this.readBoolean = function()
     {
-        return (this.readUnsignedByte() !== 0) ? true : false;
+        var start = this.__position;
+        var end = start + 1;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value = this[start];
+        this.__position = end;
+        return (value) ? true : false;
     };
     this.readByte = function()
     {
-        var value = this.readUnsignedByte();
-        if (value & 0x80) { value = -((value ^ 0xFF) + 1); }
-        return value;
+        var start = this.__position;
+        var end = start + 1;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value = this[start];
+        this.__position = end;
+        return (value & 0x80) ? -((value ^ 0xFF) + 1) : value;
     };
     this.readUnsignedByte = function()
     {
@@ -169,82 +179,120 @@ var ByteArray = new Class(Array, function()
         this.__position = end;
         return value;
     };
-    this.readShort = function()
-    {
-        var value = this.readUnsignedShort();
-        if (value & 0x8000) { value = -((value ^ 0xFFFF) + 1); }
-        return value;
-    };
-    this.readUnsignedShort = function()
+    this.__readShortB = function()
     {
         var start = this.__position;
         var end = start + 2;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = this[start] << 8 | (this[start+1] & 0xFF);
-        }
-        else {
-            value = this[end] << 8 | (this[end-1] & 0xFF);
-        }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
+        this.__position = end;
+        return (value & 0x8000) ? -((value ^ 0xFFFF) + 1) : value;
+    };
+    this.__readShortL = function()
+    {
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[end] << 8 | (this[end-1] & 0xFF);
+        this.__position = end;
+        return (value & 0x8000) ? -((value ^ 0xFFFF) + 1) : value;
+    };
+    this.readShort = this.__readShortB;
+    this.__readUnsignedShortB = function()
+    {
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
         this.__position = end;
         return value;
     };
-    this.readInt = function()
+    this.__readUnsignedShortL = function()
     {
-        var value = this.readUnsignedInt();
-        if (value & 0x80000000) { value = -((value ^ 0xFFFFFFFF) + 1); }
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
+        this.__position = end;
         return value;
     };
-    this.readUnsignedInt = function()
+    this.readUnsignedShort = this.__readUnsignedShortB;
+    this.__readIntB = function()
     {
         var start = this.__position;
         var end = start + 4;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3]);
-        }
-        else {
-            value = this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3]);
-        }
+        var value = (this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3])) >>> 0;
         this.__position = end;
-        return value >>> 0;
+        return  (value & 0x80000000) ? -((value ^ 0xFFFFFFFF) + 1) : value;
     };
-    this.readFloat = function()
+    this.__readIntL = function()
     {
         var start = this.__position;
         var end = start + 4;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = bytesToFloat(this.slice(start, end));
-        }
-        else {
-            value = bytesToFloat(this.slice(start, end).reverse());
-        }
+        var value = (this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3])) >>> 0;
+        this.__position = end;
+        return  (value & 0x80000000) ? -((value ^ 0xFFFFFFFF) + 1) : value;
+    };
+    this.readInt = this.__readIntB;
+    this.__readUnsignedIntB = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = (this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3])) >>> 0;
         this.__position = end;
         return value;
     };
-    this.readDouble = function()
+    this.__readUnsignedIntL = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = (this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3])) >>> 0;
+        this.__position = end;
+        return value;
+    };
+    this.readUnsignedInt = this.__readUnsignedIntB;
+    this.__readFloatB = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToFloat(this.slice(start, end));
+        this.__position = end;
+        return value;
+    };
+    this.__readFloatL = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToFloat(this.slice(start, end).reverse());
+        this.__position = end;
+        return value;
+    };
+    this.readFloat = this.__readFloatB;
+    this.__readDoubleB = function()
     {
         var start = this.__position;
         var end = start + 8;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = bytesToDouble(this.slice(start, end));
-        }
-        else {
-            value = bytesToDouble(this.slice(start, end).reverse());
-        }
+        var value = bytesToDouble(this.slice(start, end));
         this.__position = end;
         return value;
     };
+    this.__readDoubleL = function()
+    {
+        var start = this.__position;
+        var end = start + 8;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToDouble(this.slice(start, end).reverse());
+        this.__position = end;
+        return value;
+    };
+    this.readDouble = this.__readDoubleB;
     this.readMultiByte = function(length, charset)
     {
         //probably not going to support
@@ -275,22 +323,14 @@ var ByteArray = new Class(Array, function()
         var s = chars.join("");
         return decodeURIComponent(escape(s));
     };
-    this.writeBoolean = function(value)
-    {
-        this.writeByte(value);
-    };
     this.writeByte = function(value)
     {
         var position = this.__position;
-        if (position == this.length) {
-            this.push(value & 0xFF);
-            position++;
-        }
-        else {
-            this[position++] = value & 0xFF;
-        }
+        this[position++] = value & 0xFF;
         this.__position = position;
+        if (position > this.length) { this.length = position; }
     };
+    this.writeBoolean = this.writeByte;
     this.writeBytes = function(bytes, offset, length)
     {
         offset = offset | 0;
@@ -304,88 +344,102 @@ var ByteArray = new Class(Array, function()
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeShort = function(value)
+    this.__writeShortB = function(value)
     {
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value       & 0xFF;
-        }
-        else {
-            this[position++] = value       & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-        }
+        this[position++] = value >> 8 & 0xFF;
+        this[position++] = value      & 0xFF;
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeInt = function(value)
+    this.__writeShortL = function(value)
     {
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = value >> 24 & 0xFF;
-            this[position++] = value >> 16 & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value       & 0xFF;
-        }
-        else {
-            this[position++] = value       & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value >> 16 & 0xFF;
-            this[position++] = value >> 24 & 0xFF;
-        }
+        this[position++] = value      & 0xFF;
+        this[position++] = value >> 8 & 0xFF;
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
+    this.writeShort = this.__writeShortB;
+    this.__writeIntB = function(value)
+    {
+        var position = this.__position;
+        this[position++] = value >> 24 & 0xFF;
+        this[position++] = value >> 16 & 0xFF;
+        this[position++] = value >> 8  & 0xFF;
+        this[position++] = value       & 0xFF;
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.__writeIntL = function(value)
+    {
+        var position = this.__position;
+        this[position++] = value       & 0xFF;
+        this[position++] = value >> 8  & 0xFF;
+        this[position++] = value >> 16 & 0xFF;
+        this[position++] = value >> 24 & 0xFF;
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeInt = this.__writeIntB;
     this.writeUnsignedInt = function(value)
     {
         this.writeInt(value >>> 0);
     };
-    this.writeFloat = function(value)
+    this.__writeFloatB = function(value)
     {
-        var bytes = floatToBytes(+value);
+        var bytes = floatToBytes(value);
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = bytes[0];
-            this[position++] = bytes[1];
-            this[position++] = bytes[2];
-            this[position++] = bytes[3];
-        }
-        else {
-            this[position++] = bytes[3];
-            this[position++] = bytes[2];
-            this[position++] = bytes[1];
-            this[position++] = bytes[0];
-        }
+        this[position++] = bytes[0];
+        this[position++] = bytes[1];
+        this[position++] = bytes[2];
+        this[position++] = bytes[3];
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeDouble = function(value)
+    this.__writeFloatL = function(value)
     {
-        var bytes = doubleToBytes(+value);
+        var bytes = floatToBytes(value);
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = bytes[0];
-            this[position++] = bytes[1];
-            this[position++] = bytes[2];
-            this[position++] = bytes[3];
-            this[position++] = bytes[4];
-            this[position++] = bytes[5];
-            this[position++] = bytes[6];
-            this[position++] = bytes[7];
-        }
-        else {
-            this[position++] = bytes[7];
-            this[position++] = bytes[6];
-            this[position++] = bytes[5];
-            this[position++] = bytes[4];
-            this[position++] = bytes[3];
-            this[position++] = bytes[2];
-            this[position++] = bytes[1];
-            this[position++] = bytes[0];
-        }
+        this[position++] = bytes[3];
+        this[position++] = bytes[2];
+        this[position++] = bytes[1];
+        this[position++] = bytes[0];
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
+    this.writeFloat = this.__writeFloatB;
+    this.__writeDoubleB = function(value)
+    {
+        var bytes = doubleToBytes(value);
+        var position = this.__position;
+        this[position++] = bytes[0];
+        this[position++] = bytes[1];
+        this[position++] = bytes[2];
+        this[position++] = bytes[3];
+        this[position++] = bytes[4];
+        this[position++] = bytes[5];
+        this[position++] = bytes[6];
+        this[position++] = bytes[7];
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.__writeDoubleL = function(value)
+    {
+        var bytes = doubleToBytes(value);
+        var position = this.__position;
+        this[position++] = bytes[7];
+        this[position++] = bytes[6];
+        this[position++] = bytes[5];
+        this[position++] = bytes[4];
+        this[position++] = bytes[3];
+        this[position++] = bytes[2];
+        this[position++] = bytes[1];
+        this[position++] = bytes[0];
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeDouble = this.__writeDoubleB;
     this.writeMultiByte = function(value, charSet)
     {
         //probably not going to support
@@ -441,6 +495,17 @@ var ByteArray = new Class(Array, function()
     this.setEndian = function(v)
     {
         this.__bigEndian = (v == Endian.BIG_ENDIAN);
+        var suffix = (this.__bigEndian) ? 'B' : 'L';
+        this.readShort = this['__readShort' + suffix];
+        this.readUnsignedShort = this['__readUnsignedShort' + suffix];
+        this.readInt = this['__readInt' + suffix];
+        this.readUnsignedInt = this['__readUnsignedInt' + suffix];
+        this.readFloat = this['__readFloat' + suffix];
+        this.readDouble = this['__readDouble' + suffix];
+        this.writeShort = this['__writeShort' + suffix];
+        this.writeInt = this['__writeInt' + suffix];
+        this.writeFloat = this['__writeFloat' + suffix];
+        this.writeDouble = this['__writeDouble' + suffix];
     };
     this.getPosition = function()
     {
@@ -457,7 +522,7 @@ var ByteArray = new Class(Array, function()
                 this.push(0);
             }
         }
-        this.__position = Math.max(v, 0);
+        this.__position = v;
     };
 });
 ByteArray.prototype.__defineGetter__("bytesAvailable", ByteArray.prototype.getBytesAvailable);

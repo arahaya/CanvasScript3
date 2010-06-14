@@ -64,13 +64,12 @@ var cs3 = {
         },
         resizeHandler: function(e)
         {
-            e = e || window.event;
             var c = cs3.core;
             var t = c.resizeTimeout;
             clearTimeout(t);
             t = setTimeout(c.resizeHandlerDelay, 10);
         },
-        resizeHandlerDelay: function(e)
+        resizeHandlerDelay: function()
         {
             var s = cs3.core.stages;
             for (var i = 0, l = s.length; i < l; ++i) {
@@ -86,9 +85,7 @@ var cs3 = {
             cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            
             //Firefox
             if (window.addEventListener) {
                 canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
@@ -280,6 +277,8 @@ var cs3 = {
         },
         createCanvas: function(width, height)
         {
+            if (!window.document) { return null; }
+            
             cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
             canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
@@ -289,6 +288,8 @@ var cs3 = {
         },
         getContext2d: function(canvas)
         {
+            if (!canvas) { return null; }
+            
             if (!canvas.getContext) {
                 try {
                     G_vmlCanvasManager.initElement(canvas);
@@ -725,11 +726,12 @@ TweenEvent.MOTION_START = 'motionStart';
 TweenEvent.MOTION_STOP = 'motionStop';
 TweenEvent.prototype.toString = function()
 {
-    return '[TweenEvent type=' + this.type +
-                    ' time=' + this.time +
-                    ' position=' + this.position +
-                    ' bubbles=' + this.bubbles +
-                    ' cancelable=' + this.cancelable + ']';
+    return '[TweenEvent' +
+                ' type='       + this.type +
+                ' time='       + this.time +
+                ' position='   + this.position +
+                ' bubbles='    + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
 };
 var EventDispatcher = new Class(Object, function()
 {
@@ -932,17 +934,23 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.d,
                 matrix.tx,
                 matrix.ty);
-            this.__renderList(context, matrix, new ColorTransform());
+            this.__render(context, matrix, new ColorTransform());
             context.restore();
         }
         
         this.__bitmap = bitmap;
         return bitmap;
     };
+    /**
+     * Bounds of your entire display list
+     */
     this.__getBounds = function()
     {
         return this.__getContentBounds();
     };
+    /**
+     * Bounds of yourself only
+     */
     this.__getContentBounds = function()
     {
         return new Rectangle();
@@ -976,42 +984,82 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__modified = v;
         this.__transform.__modified = v;
     };
-    this.__render = function(context, matrix, colorTransform)
+    this.__applyContextFilters = function(context, matrix, colorTransform)
     {
-    };
-    this.__renderList = function(context, matrix, colorTransform)
-    {
-        var i, l;
-        //apply ContextFilter's
         var filters = this.__filters;
-        for (i = 0, l = filters.length; i < l; ++i)
+        for (var i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
             }
         }
-        
-        this.__render(context, matrix, colorTransform);
+    };
+    this.__applyMask = function(context, matrix, colorTransform)
+    {
+        /*** experimental ***/
+        if (this.__mask) {
+            var selfBitmap = this.__getAsBitmap();
+            if (!selfBitmap) {
+                //child content is empty so we don't need to apply a mask
+                return;
+            }
+            var mask = this.__mask;
+            var maskBitmap = mask.__getAsBitmap();
+            if (!maskBitmap) {
+                //mask content is empty so we don't need to render the child
+                return;
+            }
+            
+            var selfBitmapData = selfBitmap.__bitmapData;
+            var maskBitmapData = maskBitmap.__bitmapData;
+            
+            //create another bitmap to apply the mask
+            if (this.__cache) {
+                //if it already exists, reuse it
+                this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
+                this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
+            }
+            else {
+                //create a new bitmap
+                this.__cache = new Bitmap(selfBitmapData.clone());
+            }
+            this.__cache.setX(selfBitmap.getX());
+            this.__cache.setY(selfBitmap.getY());
+            
+            
+            var bitmap = this.__cache;
+            var bitmapData = bitmap.__bitmapData;
+            var bitmapDataContext = bitmapData.__context;
+            
+            //create the mask's matrix
+            var maskMatrix = mask.__transform.getConcatenatedMatrix();
+            var deltaMatrix = matrix.clone();
+            deltaMatrix.invert();
+            maskMatrix.concat(deltaMatrix);
+            
+            //adjust the position to draw
+            maskMatrix.tx += maskBitmap.getX();
+            maskMatrix.ty += maskBitmap.getY();
+            
+            //apply the mask
+            bitmapDataContext.save();
+            bitmapDataContext.globalCompositeOperation = 'destination-in';
+            bitmapDataContext.setTransform(
+                maskMatrix.a,
+                maskMatrix.b,
+                maskMatrix.c,
+                maskMatrix.d,
+                maskMatrix.tx,
+                maskMatrix.ty);
+            maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+            bitmapDataContext.restore();
+        }
+    };
+    this.__render = function(context, matrix, colorTransform)
+    {
     };
     this.__update = function(matrix)
     {
-        /*
-        //clear bitmapData if self content or a child is modified
-        if (this.__mask) {
-            if (this.__mask.__bitmapData) {
-                this.__mask.__bitmapData.dispose();
-                this.__mask.__bitmapData = null;
-            }
-        }
-        this.__cache = null;
-        //clear cache if self bitmapData or mask bitmapData is cleared
-        if (this.__cache) {
-            if (this.__bitmapData === null || (this.__mask && this.__mask.__bitmapData === null)) {
-                this.__cache.dispose();
-                this.__cache = null;
-            }
-        }
-        */
     };
     this.__updateList = function(matrix)
     {
@@ -1294,7 +1342,8 @@ InteractiveObject.prototype.toString = function()
 };
 var DisplayObjectContainer = new Class(InteractiveObject, function()
 {
-    this.__init__ = function() {
+    this.__init__ = function()
+    {
         InteractiveObject.call(this);
         this.__children = [];
         this.mouseChildren = true;
@@ -1343,119 +1392,11 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             }
         }
         
-        return DisplayObject.prototype.__getObjectUnderPoint.call(this, context, matrix, point);
-    };
-    //override
-    /**
-     * NOTE: argument matrix and alpha is already applied to context
-     * NOTE: argument matrix already contains self local matrix
-     */
-    this.__renderList = function(context, matrix, colorTransform)
-    {
-        var i, l;
-        //apply ContextFilter's
-        var filters = this.__filters;
-        for (i = 0, l = filters.length; i < l; ++i)
-        {
-            if (filters[i] instanceof ContextFilter) {
-                filters[i].__filter(context, this);
-            }
+        context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        if (this.__hitTestPoint(context, matrix, point)) {
+            return this;
         }
-        
-        this.__render(context, matrix, colorTransform);
-        
-        var globalAlpha = context.globalAlpha;
-        var children = this.__children;
-        for (i = 0, l = children.length; i < l; ++i)
-        {
-            var child = children[i];
-            if (child.__visible === false) { continue; }
-            if (child.__maskee !== null) { continue; }
-            
-            var childMatrix = child.__transform.__matrix.clone();
-            childMatrix.concat(matrix);
-            var childColor = child.__transform.__colorTransform.clone();
-            childColor.concat(colorTransform);
-            
-            context.globalAlpha = globalAlpha * child.__alpha;
-            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
-            
-            /*
-            if (child.__cache) {
-                child.__cache.__render(context, childMatrix, childColor);
-                continue;
-            }
-            */
-            
-            /*** experimental ***/
-            if (child.__mask) {
-                var childBitmap = child.__getAsBitmap();
-                if (!childBitmap) {
-                    //child content is empty so we don't need to apply a mask
-                    continue;
-                }
-                var mask = child.__mask;
-                var maskBitmap = mask.__getAsBitmap();
-                if (!maskBitmap) {
-                    //mask content is empty so we don't need to render the child
-                    continue;
-                }
-                
-                var childBitmapData = childBitmap.__bitmapData;
-                var maskBitmapData = maskBitmap.__bitmapData;
-                
-                //create another bitmap to apply the mask
-                if (child.__cache) {
-                    //if it already exists, reuse it
-                    child.__cache.__bitmapData.__resize(childBitmapData.__width, childBitmapData.__height);
-                    child.__cache.__bitmapData.__context.drawImage(childBitmapData.__canvas, 0, 0);
-                    child.__cache.setX(childBitmap.getX());
-                    child.__cache.setY(childBitmap.getY());
-                }
-                else {
-                    //create a new bitmap
-                    child.__cache = new Bitmap(childBitmapData.clone());
-                    child.__cache.setX(childBitmap.getX());
-                    child.__cache.setY(childBitmap.getY());
-                }
-                
-                var bitmap = child.__cache;
-                var bitmapData = bitmap.__bitmapData;
-                var bitmapDataContext = bitmapData.__context;
-                
-                //create the mask's matrix
-                var maskMatrix = mask.__transform.getConcatenatedMatrix();
-                var deltaMatrix = childMatrix.clone();
-                deltaMatrix.invert();
-                maskMatrix.concat(deltaMatrix);
-                
-                //adjust the position to draw
-                maskMatrix.tx += maskBitmap.getX();
-                maskMatrix.ty += maskBitmap.getY();
-                
-                //apply the mask
-                bitmapDataContext.save();
-                bitmapDataContext.globalCompositeOperation = 'destination-in';
-                bitmapDataContext.setTransform(
-                    maskMatrix.a,
-                    maskMatrix.b,
-                    maskMatrix.c,
-                    maskMatrix.d,
-                    maskMatrix.tx,
-                    maskMatrix.ty);
-                maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
-                bitmapDataContext.restore();
-                
-                //render the bitmapData to the stage context
-                bitmapData.__render(context, childMatrix, childColor);
-                
-                //cache the masked bitmapData
-                //child.__cache = bitmapData;
-                continue;
-            }
-            
-            child.__renderList(context, childMatrix, childColor);
-        }
+        return null;
     };
     //override
     this.__updateList = function(matrix)
@@ -1488,6 +1429,39 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         //reset modification
         this.__setModified(false);
+    };
+    /**
+     * NOTE: argument matrix and alpha is already applied to context
+     * NOTE: argument matrix already contains self local matrix
+     */
+    this.__renderChildren = function(context, matrix, colorTransform)
+    {
+        var alpha = context.globalAlpha;
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
+        {
+            var child = children[i];
+            if (child.__visible === false) { continue; }
+            if (child.__maskee !== null) { continue; }
+            
+            var childMatrix = child.__transform.__matrix.clone();
+            childMatrix.concat(matrix);
+            var childColor = child.__transform.__colorTransform.clone();
+            childColor.concat(colorTransform);
+            
+            context.globalAlpha = alpha * child.__alpha;
+            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            
+            child.__applyContextFilters(context, matrix, colorTransform);
+            child.__applyMask(context, matrix, colorTransform);
+            
+            if (child.__cache) {
+                child.__cache.__render(context, childMatrix, childColor);
+            }
+            else {
+                child.__render(context, childMatrix, childColor);
+            }
+        }
     };
     this.__addChildAt = function(child, index)
     {
@@ -1537,9 +1511,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     this.contains = function(object)
     {
-        for (var i = 0, l = this.__children.length; i < l; ++i)
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
         {
-            var child = this.__children[i];
+            var child = children[i];
             if (child === object) {
                 return true;
             }
@@ -1970,6 +1945,10 @@ var BitmapData = new Class(Object, function()
         this.__width = width;
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
+        
+        //TODO: IMPORTANT
+        //cannot create a canvas element if document is no loaded.
+        //maybe we should limit the entire library to be used only after window.onload.
         this.__canvas = cs3.utils.createCanvas(width, height);
         this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
@@ -2194,7 +2173,7 @@ var BitmapData = new Class(Object, function()
             matrix.d,
             matrix.tx,
             matrix.ty);
-        source.__renderList(context, matrix, new ColorTransform());
+        source.__render(context, matrix, new ColorTransform());
         context.restore();
         this.__modified = true;
     };
@@ -2852,8 +2831,7 @@ var Graphics = new Class(Object, function()
         
         //a lot of declarations to avoid redeclarations
         var cmd, type, i, ii;
-        var color, alpha;
-        var thickness, pixelHinting, scaleMode, caps, joints, miterLimit;
+        var thickness, pixelHinting, scaleMode;
         var x, y, radius;
         var widht, height;
         var ellipseWidth, ellipseHeight;
@@ -3126,6 +3104,13 @@ var Loader = new Class(DisplayObjectContainer, function()
             return this.__content.__getAsBitmap();
         }
     };
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__content) {
+            this.__content.__render(context, matrix, colorTransform);
+        }
+    };
     this.load = function(request)
     {
         if (typeof request == 'string') {
@@ -3243,15 +3228,10 @@ LoaderInfo.prototype.toString = function()
 };
 var Shape = new Class(DisplayObject, function()
 {
-    this.__init__ = function(property)
+    this.__init__ = function()
     {
         DisplayObject.call(this);
         this.__graphics = null;
-        
-        for (p in property)
-        {
-            this[p] = property[p];
-        }
     };
     //override
     this.__getContentBounds = function()
@@ -3327,7 +3307,7 @@ Shape.prototype.toString = function()
 };
 var Sprite = new Class(DisplayObjectContainer, function()
 {
-    this.__init__ = function(property)
+    this.__init__ = function()
     {
         DisplayObjectContainer.call(this);
         this.__graphics = null;
@@ -3336,16 +3316,19 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.hitArea = null;
         //this.soundTransform = null;
         this.useHandCursor = true;
-        
-        for (p in property)
-        {
-            this[p] = property[p];
-        }
     };
     this.__getContentBounds = Shape.prototype.__getContentBounds;
     this.__getModified = Shape.prototype.__getModified;
     this.__setModified = Shape.prototype.__setModified;
-    this.__render = Shape.prototype.__render;
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__graphics) {
+            this.__graphics.__render(context, matrix, colorTransform);
+        }
+        
+        this.__renderChildren(context, matrix, colorTransform);
+    };
     this.__hitTestPoint = Shape.prototype.__hitTestPoint;
     this.startDrag = function(lockCenter, bounds)
     {
@@ -3462,7 +3445,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         this.canvas.style.cursor = 'default';
         this.canvas.tabIndex = 1;//enable focus events
-        this.canvas.style.outline = "none";
+        this.canvas.style.outline = "none";//remove focus rects
         //this.canvas.oncontextmenu = function() { return false; };
         
         //register stage for document events
@@ -3470,12 +3453,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //adjust stage size
         this.__resize();
-        
-        //TODO: IMPORTANT: testing required
-        //if we render all on the first frame
-        //DisplayObject.update() will not be called and it's globalBounds will not be set
-        //so we should either force not to renderAll or to force update on stage.setup()
-        this.__renderAll = false;
         
         //call children ADDED_TO_STAGE events
         __applyDown(this, function(stage, event)
@@ -3780,6 +3757,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         this.__updateStage();
     };
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        this.__renderChildren(context, matrix, colorTransform);
+    };
     this.__updateStage = function()
     {
         if (!this.__initialized) { return; }
@@ -3788,7 +3770,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //update the display list
         var redrawRegions;
-        if (this.__renderMode == 'all' || this.__renderAll) {
+        if (this.__renderMode == 'all') {
             //force to render the entire stage
             redrawRegions = [stageRect];
         }
@@ -3797,7 +3779,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__updateList(new Matrix());
             redrawRegions = this.__redrawRegions;
             
-            if (this.__renderMode == 'auto' && redrawRegions.length > 50) {
+            if (this.__renderAll || (this.__renderMode == 'auto' && redrawRegions.length > 50)) {
                 redrawRegions = [stageRect];
             }
         }
@@ -3816,7 +3798,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
             context.clip();
             
-            this.__renderList(context, new Matrix(), new ColorTransform());
+            this.__render(context, new Matrix(), new ColorTransform());
             context.restore();
             
             //catch mouse events
@@ -3955,8 +3937,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.startDrag = function(target, lockCenter, bounds)
     {
-        this.__dragOffsetX = (lockCenter) ? 0 : this.__mouseX - target.x;
-        this.__dragOffsetY = (lockCenter) ? 0 : this.__mouseY - target.y;
+        if (lockCenter) {
+            var localPoint = target.globalToLocal(new Point(this.__mouseX, this.__mouseY));
+            target.setX(target.getX() + localPoint.x);
+            target.setY(target.getY() + localPoint.y);
+        }
+        this.__dragOffsetX = this.__mouseX - target.getX();
+        this.__dragOffsetY = this.__mouseY - target.getY();
         this.__dragTarget = target;
         this.__dragBounds = bounds;
     };
@@ -5605,227 +5592,396 @@ URLVariables.prototype.toString = function()
     }
     return pairs.join('&');
 };
-var TextField = new Class(InteractiveObject, function()
+var TextField;
+(function()
 {
-    //context used for measureing text width
-    var textCanvas = cs3.utils.createCanvas(0, 0);
-    var textContext = cs3.utils.getContext2d(textCanvas);
-    
-    this.__init__ = function()
+    TextField = new Class(InteractiveObject, function()
     {
-        InteractiveObject.call(this);
-        this.__buffer = [];
-        this.__textWidth = 0;
-        this.__textHeight = 0;
-        this.__defaultTextFormat = new TextFormat();
+        //context used for measureing text width
+        var textCanvas = cs3.utils.createCanvas(0, 0);
+        var textContext = cs3.utils.getContext2d(textCanvas);
         
-        this.background = false;
-        this.backgroundColor = 0xFFFFFF;
-        this.border = false;
-        this.borderColor = 0;
-    };
-    //override
-    this.__getContentBounds = function()
-    {
-        if (this.border) {
-            //border changes the rect size
-            return new Rectangle(0, 0, this.__textWidth + 2, this.__textHeight + 2);
-        }
-        return new Rectangle(0, 0, this.__textWidth, this.__textHeight);
-    };
-    //override
-    this.__getModified = function()
-    {
-        return this.__modified || this.__transform.__modified;
-    };
-    //override
-    this.__setModified = function(v)
-    {
-        this.__modified = v;
-        this.__transform.__modified = v;
-    };
-    //override
-    this.__render = function(context, matrix, color, rects)
-    {
-        var bounds = this.__getContentBounds();
-        
-        //convert local bounds to global coords
-        var globalBounds = matrix.transformRect(bounds);
-        
-        //hit test
-        var doRender = false;
-        for (var i = 0, l = rects.length; i < l; ++i)
+        var formatToFont = function(format)
         {
-            if (globalBounds.intersects(rects[i])) {
-                doRender = true;
-                break;
+            var font = (format.italic) ? "italic " : "";
+            font += (format.bold) ? "bold " : "";
+            font += format.size + "px '" + format.font + "'";
+            return font;
+        };
+        
+        this.__init__ = function()
+        {
+            InteractiveObject.call(this);
+            this.__buffer = [];
+            this.__lines = [];
+            this.__formats = [];
+            this.__textWidth = 0;
+            this.__textHeight = 0;
+            this.__defaultTextFormat = new TextFormat();
+            
+            this.__autoSize = true;//allways true for now
+            
+            this.background = false;
+            this.backgroundColor = 0xFFFFFF;
+            this.border = false;
+            this.borderColor = 0;
+        };
+        //override
+        this.__getContentBounds = function()
+        {
+            if (this.border) {
+                //border changes the rect size
+                return new Rectangle(0, 0, this.__textWidth + 2, this.__textHeight + 2);
             }
-        }
-        if (!doRender) {
-            return;
-        }
+            return new Rectangle(0, 0, this.__textWidth, this.__textHeight);
+        };
+        //override
+        this.__getModified = function()
+        {
+            return this.__modified || this.__transform.__modified;
+        };
+        //override
+        this.__setModified = function(v)
+        {
+            this.__modified = v;
+            this.__transform.__modified = v;
+        };
         
-        //render
-        var buffer = this.__buffer;
-        var format = this.__defaultTextFormat;
-        var lineHeight = format.size + format.leading;
-        var lineWidth = this.__textWidth;
         
-        //add 1px margin on each side
-        var offsetX = 1;
-        var offsetY = 1;
-        if (this.border) {
-            //shift the margin 1px more
-            offsetX = 2;
-            offsetY = 2;
+        
+        
+        
+        this.__getBlocks = function()
+        {
+            //TODO: add word wrap
+            var buffer = this.__buffer;
+            var blocks = [];
+            var cursor = 0;
+            var index;
+            var block;
             
-            //border changes the rect size
-            context.fillStyle = __toRGB(this.borderColor);
-            context.beginPath();
-            context.rect(0, 0, bounds.width, bounds.height);
-            //do not use stroke for borders because for some reason
-            //the lines will not become solid(maybe in Chrome only)
-            context.fill();
-            
-            context.beginPath();
-            context.rect(1, 1, bounds.width - 2, bounds.height - 2);
-        }
-        else {
-            context.beginPath();
-            context.rect(0, 0, bounds.width, bounds.height);
-        }
-        
-        if (this.background) {
-            context.fillStyle = __toRGB(this.backgroundColor);
-            context.fill();
-        }
-        
-        context.clip();
-        context.beginPath();
-        context.fillStyle = __toRGB(format.color);
-        
-        var align = format.align;
-        if (align == TextFormatAlign.RIGHT) {
-            context.textAlign = 'right';
-            //with no border offsetX = lineWidth - 1 to add a 1px right margin
-            //with border it gets shifted 1px to the right and offsetX = lineWidth - 1 + 1
-            offsetX = lineWidth - 2 + offsetX;
-        }
-        else if (align == TextFormatAlign.CENTER) {
-            context.textAlign = 'center';
-            //with no border offsetX = lineWidth / 2
-            //with border offsetX = lineWidth / 2 + 1
-            offsetX = lineWidth / 2 - 1 + offsetX;
-        }
-        else {
-            //case LEFT or JUSTIFY
-            context.textAlign = 'left';
-        }
-        
-        var font = (format.italic) ? "italic " : "";
-        font += (format.bold) ? "bold " : "";
-        font += format.size + "px '" + format.font + "'";
-        
-        context.font = font;
-        context.textBaseline = 'top';
-        
-        if (align == TextFormatAlign.JUSTIFY) {
-            //TODO need a better algorithm
-            for (i = 0, l = buffer.length; i < l; ++i)
+            while (1)
             {
-                var row = buffer[i];
-                var rowLength = row.length;
-                var perChar = lineWidth / rowLength;
-                for (var ii = 0; ii < rowLength; ++ii)
+                index = buffer.indexOf("\n");
+                if (index !== -1) {
+                    blocks.push(buffer.slice(cursor, index));
+                    cursor = index + 1;
+                }
+                else {
+                    blocks.push(buffer.slice(cursor));
+                    break;
+                }
+            }
+            
+            return blocks;
+        };
+
+        
+        
+        //override
+        this.__render = function(context, matrix, colorTransform)
+        {
+            var bounds = this.__getContentBounds();
+            var buffer = this.__buffer;
+            var lines  = this.__lines;
+            var defaultFormat = this.__defaultTextFormat;
+            var lineHeight = defaultFormat.size + defaultFormat.leading;
+            var lineWidth = this.__textWidth;
+            
+            //add 1px margin on each side
+            var offsetX = 1;
+            var offsetY = 1;
+            if (this.border) {
+                var borderColor = (colorTransform) ?
+                        colorTransform.transformColor(this.borderColor) :
+                        this.borderColor;
+                
+                //shift the margin 1px more
+                offsetX = 2;
+                offsetY = 2;
+                
+                //border changes the rect size
+                context.fillStyle = __toRGB(borderColor);
+                context.beginPath();
+                context.rect(0, 0, bounds.width, bounds.height);
+                context.stroke();
+                
+                context.beginPath();
+                context.rect(1, 1, bounds.width - 2, bounds.height - 2);
+            }
+            else {
+                context.beginPath();
+                context.rect(0, 0, bounds.width, bounds.height);
+            }
+            
+            if (this.background) {
+                var backgroundColor = (colorTransform) ?
+                        colorTransform.transformColor(this.backgroundColor) :
+                        this.backgroundColor;
+                context.fillStyle = __toRGB(backgroundColor);
+                context.fill();
+            }
+            
+            context.save();
+            context.clip();
+            context.beginPath();
+            
+            var align = defaultFormat.align;
+            if (align == TextFormatAlign.RIGHT) {
+                context.textAlign = 'right';
+                //with no border offsetX = lineWidth - 1 to add a 1px right margin
+                //with border it gets shifted 1px to the right and offsetX = lineWidth - 1 + 1
+                offsetX = lineWidth - 2 + offsetX;
+            }
+            else if (align == TextFormatAlign.CENTER) {
+                context.textAlign = 'center';
+                //with no border offsetX = lineWidth / 2
+                //with border offsetX = lineWidth / 2 + 1
+                offsetX = lineWidth / 2 - 1 + offsetX;
+            }
+            else {
+                //case LEFT or JUSTIFY
+                context.textAlign = 'left';
+            }
+            
+            context.textBaseline = 'top';
+            
+            if (align == TextFormatAlign.JUSTIFY) {
+                //TODO
+                return;
+            }
+            else {
+                for (i = 0, l = lines.length; i < l; ++i)
                 {
-                    context.fillText(row[ii], offsetX + perChar * ii, offsetY + i * lineHeight);
+                    var line = lines[i];
+                    var blocks = line.blocks;
+                    for (var ii = 0, ll = blocks.length; ii < ll; ++ii)
+                    {
+                        var block = blocks[ii];
+                        var str = buffer.slice(block.start, block.end + 1).join("");
+                        var format = block.format;
+                        context.font = formatToFont(format);
+                        context.fillStyle = (colorTransform) ?
+                                __toRGB(colorTransform.transformColor(format.color)) :
+                                __toRGB(format.color);
+                        context.fillText(str, offsetX + block.x, offsetY + block.y + (line.height - block.height));
+                    }
+                }
+            }
+            
+            context.restore();
+        };
+        //override
+        this.__hitTestPoint = function(context, matrix, point)
+        {
+            var bounds = this.__getContentBounds();
+            
+            //convert point to local coords
+            var invertedMatrix = matrix.clone();
+            invertedMatrix.invert();
+            var localPoint = invertedMatrix.transformPoint(point);
+            
+            if (bounds.containsPoint(localPoint)) {
+                return true;
+            }
+            
+            return false;
+        };
+        
+        
+        this.__setTextFormat = function(format, beginIndex, endIndex)
+        {
+            var formats = this.__formats;
+            for (var i = beginIndex; i < endIndex; ++i)
+            {
+                formats[i] = format;
+            }
+        };
+        /**
+         * update the visual lines and blocks.
+         * TODO: add word wrap
+         */
+        this.__updateBlocks = function()
+        {
+            var context = textContext;
+            var buffer = this.__buffer;
+            var defaultFormat = this.__defaultTextFormat;
+            var formats = this.__formats;
+            var lines = [];
+            
+            //calculate the width and height of each line(block)
+            var temp = [];
+            var format = defaultFormat;
+            var width = 0;
+            var height = 0;
+            
+            //start the first line
+            var line = new Line(0, 0, 0, 0, 0, format.size);
+            //start the first block
+            var block = new Block(format, 0, 0, 0, 0, 0, format.size);
+            context.font = formatToFont(format);
+            
+            for (var i = 0, l = buffer.length; i < l; ++i)
+            {
+                var chr = buffer[i];
+                
+                if (formats[i] !== format) {
+                    //textFormat has changed
+                    if (temp.length) {
+                        //update the block width
+                        block.width = context.measureText(temp.join("")).width;
+                        //update the line width
+                        line.width += block.width;
+                    }
+                    
+                    //close the block
+                    block.end = i - 1;
+                    line.blocks.push(block);
+                    
+                    //start the new format
+                    format = formats[i];
+                    context.font = formatToFont(format);
+                    
+                    //start a new block
+                    block = new Block(format, i, 0, line.width, line.y, 0, format.size);
+                    
+                    //update the line height
+                    line.height = Math.max(line.height, block.height);
+                    
+                    temp = [];
                 }
                 
+                if (chr === "\n" || i == (l - 1)) {
+                    //EOL or EOF
+                    if (temp.length) {
+                        //update the block width
+                        block.width = context.measureText(temp.join("")).width;
+                        //update the line width
+                        line.width += block.width;
+                    }
+                    
+                    //close the block
+                    block.end = i - 1;
+                    line.blocks.push(block);
+                    
+                    //close the line
+                    line.end = i;
+                    lines.push(line);
+                    
+                    //update the total width and height
+                    width  = (line.width > width) ? line.width : width;
+                    height = line.y + line.height;
+                    
+                    //start a new line
+                    line = new Line(i + 1, 0, 0, height + format.leading, 0, format.size);
+                    
+                    //start a new block
+                    block = new Block(format, i + 1, 0, 0, line.y, 0, format.size);
+                    
+                    temp = [];
+                }
+                else {
+                    temp.push(chr);
+                }
             }
-        }
-        else {
-            for (i = 0, l = buffer.length; i < l; ++i)
-            {
-                context.fillText(buffer[i], offsetX, offsetY + i * lineHeight);
-            }
-        }
-    };
-    //override
-    this.__hitTestPoint = function(context, matrix, point)
-    {
-        var bounds = this.__getContentBounds();
+            
+            this.__lines  = lines;
+            this.__textWidth = width + 2;//add 1px margin on each side
+            this.__textHeight = height + 2;
+            this.__modified = true;
+        };
         
-        //convert point to local coords
-        var invertedMatrix = matrix.clone();
-        invertedMatrix.invert();
-        var localPoint = invertedMatrix.transformPoint(point);
-        
-        if (bounds.containsPoint(localPoint)) {
-            return true;
-        }
-        
-        return false;
-    };
-    /**
-     * update width and height and set modified flag to TRUE
-     */
-    this.__updateRect = function()
-    {
-        var context = textContext;
-        var width = 0;
-        var height = 0;
-        var buffer = this.__buffer;
-        var format = this.__defaultTextFormat;
-        var lineHeight = format.size + format.leading;
-        
-        var font = (format.italic) ? "italic " : "";
-        font += (format.bold) ? "bold " : "";
-        font += format.size + "px '" + format.font + "'";
-        
-        context.font = font;
-        for (var i = 0, l = buffer.length; i < l; ++i)
+        this.appendText = function(newText)
         {
-            var textWidth = context.measureText(buffer[i]).width;
-            width = (textWidth > width) ? textWidth : width;
-            height += lineHeight;
-        }
+            var buffer = this.__buffer;
+            this.replaceText(buffer.length, buffer.length, newText);
+        };
+        this.replaceText = function(beginIndex, endIndex, newText)
+        {
+            newText = newText.replace(/\r\n/gim, "\n");
+            newText = newText.replace(/\r/gim, "\n");
+            
+            var buffer = this.__buffer;
+            Array.prototype.splice.apply(buffer, [beginIndex, endIndex - beginIndex].concat(newText.split("")));
+            
+            this.__setTextFormat(this.__defaultTextFormat, beginIndex, beginIndex + newText.length);
+            this.__updateBlocks();
+        };
+        this.setTextFormat = function(format, beginIndex, endIndex)
+        {
+            this.__setTextFormat(format, beginIndex, endIndex);
+            this.__updateBlocks();
+        };
         
-        this.__textWidth = width + 2;//add 1px margin on each side
-        this.__textHeight = height + 2;
-        this.__modified = true;
+        /* getters and setters */
+        this.getLength = function()
+        {
+            return this.__buffer.length;
+        };
+        this.getNumLines = function()
+        {
+            return this.__lines.length;
+        };
+        this.getText = function()
+        {
+            return this.__buffer.join("");
+        };
+        this.setText = function(v)
+        {
+            this.__buffer = [];
+            this.__formats = [];
+            this.appendText(v);
+        };
+        this.getDefaultTextFormat = function()
+        {
+            //TODO clone it
+            return this.__defaultTextFormat;
+        };
+        this.setDefaultTextFormat = function(v)
+        {
+            this.__defaultTextFormat = v;
+            this.__updateBlocks();
+        };
+    });
+    TextField.prototype.__defineGetter__("length", TextField.prototype.getLength);
+    TextField.prototype.__defineGetter__("numLines", TextField.prototype.getNumLines);
+    TextField.prototype.__defineGetter__("text", TextField.prototype.getText);
+    TextField.prototype.__defineSetter__("text", TextField.prototype.setText);
+    TextField.prototype.__defineGetter__("defaultTextFormat", TextField.prototype.getDefaultTextFormat);
+    TextField.prototype.__defineSetter__("defaultTextFormat", TextField.prototype.setDefaultTextFormat);
+    TextField.prototype.toString = function()
+    {
+        return '[object TextField]';
     };
     
-    /* getters and setters */
-    this.getText = function()
+    var Line = new Class(Object, function()
     {
-        return this.__buffer.join("\n");
-    };
-    this.setText = function(v)
+        this.__init__ = function(start, end, x, y, width, height)
+        {
+            this.start = start;
+            this.end = end;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.blocks = [];
+        };
+    });
+    
+    var Block = new Class(Object, function()
     {
-        v = v.replace(/\r\n/gim, "\n");
-        v = v.replace(/\r/gim, "\n");
-        this.__buffer = v.split("\n");
-        this.__updateRect();
-    };
-    this.getDefaultTextFormat = function()
-    {
-        //TODO clone it
-        return this.__defaultTextFormat;
-    };
-    this.setDefaultTextFormat = function(v)
-    {
-        this.__defaultTextFormat = v;
-        this.__updateRect();
-    };
-});
-TextField.prototype.__defineGetter__("text", TextField.prototype.getText);
-TextField.prototype.__defineSetter__("text", TextField.prototype.setText);
-TextField.prototype.__defineGetter__("defaultTextFormat", TextField.prototype.getDefaultTextFormat);
-TextField.prototype.__defineSetter__("defaultTextFormat", TextField.prototype.setDefaultTextFormat);
-TextField.prototype.toString = function()
-{
-    return '[object TextField]';
-};
+        this.__init__ = function(format, start, end, x, y, width, height)
+        {
+            this.format = format;
+            this.start = start;
+            this.end = end;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        };
+    });
+})();
 var TextFormat = new Class(Object, function()
 {
     this.__init__ = function(font, size, color, bold, italic, underline, url, target, align, leftMargin, rightMargin, indent, leading)
@@ -6376,13 +6532,23 @@ var ByteArray = new Class(Array, function()
     };
     this.readBoolean = function()
     {
-        return (this.readUnsignedByte() !== 0) ? true : false;
+        var start = this.__position;
+        var end = start + 1;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value = this[start];
+        this.__position = end;
+        return (value) ? true : false;
     };
     this.readByte = function()
     {
-        var value = this.readUnsignedByte();
-        if (value & 0x80) { value = -((value ^ 0xFF) + 1); }
-        return value;
+        var start = this.__position;
+        var end = start + 1;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        
+        var value = this[start];
+        this.__position = end;
+        return (value & 0x80) ? -((value ^ 0xFF) + 1) : value;
     };
     this.readUnsignedByte = function()
     {
@@ -6394,82 +6560,120 @@ var ByteArray = new Class(Array, function()
         this.__position = end;
         return value;
     };
-    this.readShort = function()
-    {
-        var value = this.readUnsignedShort();
-        if (value & 0x8000) { value = -((value ^ 0xFFFF) + 1); }
-        return value;
-    };
-    this.readUnsignedShort = function()
+    this.__readShortB = function()
     {
         var start = this.__position;
         var end = start + 2;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = this[start] << 8 | (this[start+1] & 0xFF);
-        }
-        else {
-            value = this[end] << 8 | (this[end-1] & 0xFF);
-        }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
+        this.__position = end;
+        return (value & 0x8000) ? -((value ^ 0xFFFF) + 1) : value;
+    };
+    this.__readShortL = function()
+    {
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[end] << 8 | (this[end-1] & 0xFF);
+        this.__position = end;
+        return (value & 0x8000) ? -((value ^ 0xFFFF) + 1) : value;
+    };
+    this.readShort = this.__readShortB;
+    this.__readUnsignedShortB = function()
+    {
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
         this.__position = end;
         return value;
     };
-    this.readInt = function()
+    this.__readUnsignedShortL = function()
     {
-        var value = this.readUnsignedInt();
-        if (value & 0x80000000) { value = -((value ^ 0xFFFFFFFF) + 1); }
+        var start = this.__position;
+        var end = start + 2;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = this[start] << 8 | (this[start+1] & 0xFF);
+        this.__position = end;
         return value;
     };
-    this.readUnsignedInt = function()
+    this.readUnsignedShort = this.__readUnsignedShortB;
+    this.__readIntB = function()
     {
         var start = this.__position;
         var end = start + 4;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3]);
-        }
-        else {
-            value = this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3]);
-        }
+        var value = (this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3])) >>> 0;
         this.__position = end;
-        return value >>> 0;
+        return  (value & 0x80000000) ? -((value ^ 0xFFFFFFFF) + 1) : value;
     };
-    this.readFloat = function()
+    this.__readIntL = function()
     {
         var start = this.__position;
         var end = start + 4;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = bytesToFloat(this.slice(start, end));
-        }
-        else {
-            value = bytesToFloat(this.slice(start, end).reverse());
-        }
+        var value = (this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3])) >>> 0;
+        this.__position = end;
+        return  (value & 0x80000000) ? -((value ^ 0xFFFFFFFF) + 1) : value;
+    };
+    this.readInt = this.__readIntB;
+    this.__readUnsignedIntB = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = (this[start] << 24 | (0xFF & this[start+1]) << 16 | (0xFF & this[start+2]) << 8 | (0xFF & this[start+3])) >>> 0;
         this.__position = end;
         return value;
     };
-    this.readDouble = function()
+    this.__readUnsignedIntL = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = (this[end] << 24 | (0xFF & this[end-1]) << 16 | (0xFF & this[end-2]) << 8 | (0xFF & this[end-3])) >>> 0;
+        this.__position = end;
+        return value;
+    };
+    this.readUnsignedInt = this.__readUnsignedIntB;
+    this.__readFloatB = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToFloat(this.slice(start, end));
+        this.__position = end;
+        return value;
+    };
+    this.__readFloatL = function()
+    {
+        var start = this.__position;
+        var end = start + 4;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToFloat(this.slice(start, end).reverse());
+        this.__position = end;
+        return value;
+    };
+    this.readFloat = this.__readFloatB;
+    this.__readDoubleB = function()
     {
         var start = this.__position;
         var end = start + 8;
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
-        
-        var value;
-        if (this.__bigEndian) {
-            value = bytesToDouble(this.slice(start, end));
-        }
-        else {
-            value = bytesToDouble(this.slice(start, end).reverse());
-        }
+        var value = bytesToDouble(this.slice(start, end));
         this.__position = end;
         return value;
     };
+    this.__readDoubleL = function()
+    {
+        var start = this.__position;
+        var end = start + 8;
+        if (end > this.length) { throw new EOFError(EOFErrorMessage); }
+        var value = bytesToDouble(this.slice(start, end).reverse());
+        this.__position = end;
+        return value;
+    };
+    this.readDouble = this.__readDoubleB;
     this.readMultiByte = function(length, charset)
     {
         //probably not going to support
@@ -6500,22 +6704,14 @@ var ByteArray = new Class(Array, function()
         var s = chars.join("");
         return decodeURIComponent(escape(s));
     };
-    this.writeBoolean = function(value)
-    {
-        this.writeByte(value);
-    };
     this.writeByte = function(value)
     {
         var position = this.__position;
-        if (position == this.length) {
-            this.push(value & 0xFF);
-            position++;
-        }
-        else {
-            this[position++] = value & 0xFF;
-        }
+        this[position++] = value & 0xFF;
         this.__position = position;
+        if (position > this.length) { this.length = position; }
     };
+    this.writeBoolean = this.writeByte;
     this.writeBytes = function(bytes, offset, length)
     {
         offset = offset | 0;
@@ -6529,88 +6725,102 @@ var ByteArray = new Class(Array, function()
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeShort = function(value)
+    this.__writeShortB = function(value)
     {
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value       & 0xFF;
-        }
-        else {
-            this[position++] = value       & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-        }
+        this[position++] = value >> 8 & 0xFF;
+        this[position++] = value      & 0xFF;
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeInt = function(value)
+    this.__writeShortL = function(value)
     {
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = value >> 24 & 0xFF;
-            this[position++] = value >> 16 & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value       & 0xFF;
-        }
-        else {
-            this[position++] = value       & 0xFF;
-            this[position++] = value >> 8  & 0xFF;
-            this[position++] = value >> 16 & 0xFF;
-            this[position++] = value >> 24 & 0xFF;
-        }
+        this[position++] = value      & 0xFF;
+        this[position++] = value >> 8 & 0xFF;
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
+    this.writeShort = this.__writeShortB;
+    this.__writeIntB = function(value)
+    {
+        var position = this.__position;
+        this[position++] = value >> 24 & 0xFF;
+        this[position++] = value >> 16 & 0xFF;
+        this[position++] = value >> 8  & 0xFF;
+        this[position++] = value       & 0xFF;
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.__writeIntL = function(value)
+    {
+        var position = this.__position;
+        this[position++] = value       & 0xFF;
+        this[position++] = value >> 8  & 0xFF;
+        this[position++] = value >> 16 & 0xFF;
+        this[position++] = value >> 24 & 0xFF;
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeInt = this.__writeIntB;
     this.writeUnsignedInt = function(value)
     {
         this.writeInt(value >>> 0);
     };
-    this.writeFloat = function(value)
+    this.__writeFloatB = function(value)
     {
-        var bytes = floatToBytes(+value);
+        var bytes = floatToBytes(value);
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = bytes[0];
-            this[position++] = bytes[1];
-            this[position++] = bytes[2];
-            this[position++] = bytes[3];
-        }
-        else {
-            this[position++] = bytes[3];
-            this[position++] = bytes[2];
-            this[position++] = bytes[1];
-            this[position++] = bytes[0];
-        }
+        this[position++] = bytes[0];
+        this[position++] = bytes[1];
+        this[position++] = bytes[2];
+        this[position++] = bytes[3];
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
-    this.writeDouble = function(value)
+    this.__writeFloatL = function(value)
     {
-        var bytes = doubleToBytes(+value);
+        var bytes = floatToBytes(value);
         var position = this.__position;
-        if (this.__bigEndian) {
-            this[position++] = bytes[0];
-            this[position++] = bytes[1];
-            this[position++] = bytes[2];
-            this[position++] = bytes[3];
-            this[position++] = bytes[4];
-            this[position++] = bytes[5];
-            this[position++] = bytes[6];
-            this[position++] = bytes[7];
-        }
-        else {
-            this[position++] = bytes[7];
-            this[position++] = bytes[6];
-            this[position++] = bytes[5];
-            this[position++] = bytes[4];
-            this[position++] = bytes[3];
-            this[position++] = bytes[2];
-            this[position++] = bytes[1];
-            this[position++] = bytes[0];
-        }
+        this[position++] = bytes[3];
+        this[position++] = bytes[2];
+        this[position++] = bytes[1];
+        this[position++] = bytes[0];
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
+    this.writeFloat = this.__writeFloatB;
+    this.__writeDoubleB = function(value)
+    {
+        var bytes = doubleToBytes(value);
+        var position = this.__position;
+        this[position++] = bytes[0];
+        this[position++] = bytes[1];
+        this[position++] = bytes[2];
+        this[position++] = bytes[3];
+        this[position++] = bytes[4];
+        this[position++] = bytes[5];
+        this[position++] = bytes[6];
+        this[position++] = bytes[7];
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.__writeDoubleL = function(value)
+    {
+        var bytes = doubleToBytes(value);
+        var position = this.__position;
+        this[position++] = bytes[7];
+        this[position++] = bytes[6];
+        this[position++] = bytes[5];
+        this[position++] = bytes[4];
+        this[position++] = bytes[3];
+        this[position++] = bytes[2];
+        this[position++] = bytes[1];
+        this[position++] = bytes[0];
+        this.__position = position;
+        if (position > this.length) { this.length = position; }
+    };
+    this.writeDouble = this.__writeDoubleB;
     this.writeMultiByte = function(value, charSet)
     {
         //probably not going to support
@@ -6666,6 +6876,17 @@ var ByteArray = new Class(Array, function()
     this.setEndian = function(v)
     {
         this.__bigEndian = (v == Endian.BIG_ENDIAN);
+        var suffix = (this.__bigEndian) ? 'B' : 'L';
+        this.readShort = this['__readShort' + suffix];
+        this.readUnsignedShort = this['__readUnsignedShort' + suffix];
+        this.readInt = this['__readInt' + suffix];
+        this.readUnsignedInt = this['__readUnsignedInt' + suffix];
+        this.readFloat = this['__readFloat' + suffix];
+        this.readDouble = this['__readDouble' + suffix];
+        this.writeShort = this['__writeShort' + suffix];
+        this.writeInt = this['__writeInt' + suffix];
+        this.writeFloat = this['__writeFloat' + suffix];
+        this.writeDouble = this['__writeDouble' + suffix];
     };
     this.getPosition = function()
     {
@@ -6682,7 +6903,7 @@ var ByteArray = new Class(Array, function()
                 this.push(0);
             }
         }
-        this.__position = Math.max(v, 0);
+        this.__position = v;
     };
 });
 ByteArray.prototype.__defineGetter__("bytesAvailable", ByteArray.prototype.getBytesAvailable);

@@ -20,9 +20,10 @@ TweenEvent.MOTION_START = 'motionStart';
 TweenEvent.MOTION_STOP = 'motionStop';
 TweenEvent.prototype.toString = function()
 {
-    return '[TweenEvent type=' + this.type +
-                    ' time=' + this.time +
-                    ' position=' + this.position +
-                    ' bubbles=' + this.bubbles +
-                    ' cancelable=' + this.cancelable + ']';
+    return '[TweenEvent' +
+                ' type='       + this.type +
+                ' time='       + this.time +
+                ' position='   + this.position +
+                ' bubbles='    + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
 };

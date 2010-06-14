@@ -64,13 +64,12 @@ var cs3 = {
         },
         resizeHandler: function(e)
         {
-            e = e || window.event;
             var c = cs3.core;
             var t = c.resizeTimeout;
             clearTimeout(t);
             t = setTimeout(c.resizeHandlerDelay, 10);
         },
-        resizeHandlerDelay: function(e)
+        resizeHandlerDelay: function()
         {
             var s = cs3.core.stages;
             for (var i = 0, l = s.length; i < l; ++i) {
@@ -86,9 +85,7 @@ var cs3 = {
             cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mousemove', function(e) { stage.__mouseMoveHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            //cs3.utils.addEventListener(canvas, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
+            
             //Firefox
             if (window.addEventListener) {
                 canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
@@ -280,6 +277,8 @@ var cs3 = {
         },
         createCanvas: function(width, height)
         {
+            if (!window.document) { return null; }
+            
             cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
             canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
@@ -289,6 +288,8 @@ var cs3 = {
         },
         getContext2d: function(canvas)
         {
+            if (!canvas) { return null; }
+            
             if (!canvas.getContext) {
                 try {
                     G_vmlCanvasManager.initElement(canvas);

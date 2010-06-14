@@ -1,6 +1,7 @@
 var DisplayObjectContainer = new Class(InteractiveObject, function()
 {
-    this.__init__ = function() {
+    this.__init__ = function()
+    {
         InteractiveObject.call(this);
         this.__children = [];
         this.mouseChildren = true;
@@ -49,119 +50,11 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             }
         }
         
-        return DisplayObject.prototype.__getObjectUnderPoint.call(this, context, matrix, point);
-    };
-    //override
-    /**
-     * NOTE: argument matrix and alpha is already applied to context
-     * NOTE: argument matrix already contains self local matrix
-     */
-    this.__renderList = function(context, matrix, colorTransform)
-    {
-        var i, l;
-        //apply ContextFilter's
-        var filters = this.__filters;
-        for (i = 0, l = filters.length; i < l; ++i)
-        {
-            if (filters[i] instanceof ContextFilter) {
-                filters[i].__filter(context, this);
-            }
+        context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
+        if (this.__hitTestPoint(context, matrix, point)) {
+            return this;
         }
-        
-        this.__render(context, matrix, colorTransform);
-        
-        var globalAlpha = context.globalAlpha;
-        var children = this.__children;
-        for (i = 0, l = children.length; i < l; ++i)
-        {
-            var child = children[i];
-            if (child.__visible === false) { continue; }
-            if (child.__maskee !== null) { continue; }
-            
-            var childMatrix = child.__transform.__matrix.clone();
-            childMatrix.concat(matrix);
-            var childColor = child.__transform.__colorTransform.clone();
-            childColor.concat(colorTransform);
-            
-            context.globalAlpha = globalAlpha * child.__alpha;
-            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
-            
-            /*
-            if (child.__cache) {
-                child.__cache.__render(context, childMatrix, childColor);
-                continue;
-            }
-            */
-            
-            /*** experimental ***/
-            if (child.__mask) {
-                var childBitmap = child.__getAsBitmap();
-                if (!childBitmap) {
-                    //child content is empty so we don't need to apply a mask
-                    continue;
-                }
-                var mask = child.__mask;
-                var maskBitmap = mask.__getAsBitmap();
-                if (!maskBitmap) {
-                    //mask content is empty so we don't need to render the child
-                    continue;
-                }
-                
-                var childBitmapData = childBitmap.__bitmapData;
-                var maskBitmapData = maskBitmap.__bitmapData;
-                
-                //create another bitmap to apply the mask
-                if (child.__cache) {
-                    //if it already exists, reuse it
-                    child.__cache.__bitmapData.__resize(childBitmapData.__width, childBitmapData.__height);
-                    child.__cache.__bitmapData.__context.drawImage(childBitmapData.__canvas, 0, 0);
-                    child.__cache.setX(childBitmap.getX());
-                    child.__cache.setY(childBitmap.getY());
-                }
-                else {
-                    //create a new bitmap
-                    child.__cache = new Bitmap(childBitmapData.clone());
-                    child.__cache.setX(childBitmap.getX());
-                    child.__cache.setY(childBitmap.getY());
-                }
-                
-                var bitmap = child.__cache;
-                var bitmapData = bitmap.__bitmapData;
-                var bitmapDataContext = bitmapData.__context;
-                
-                //create the mask's matrix
-                var maskMatrix = mask.__transform.getConcatenatedMatrix();
-                var deltaMatrix = childMatrix.clone();
-                deltaMatrix.invert();
-                maskMatrix.concat(deltaMatrix);
-                
-                //adjust the position to draw
-                maskMatrix.tx += maskBitmap.getX();
-                maskMatrix.ty += maskBitmap.getY();
-                
-                //apply the mask
-                bitmapDataContext.save();
-                bitmapDataContext.globalCompositeOperation = 'destination-in';
-                bitmapDataContext.setTransform(
-                    maskMatrix.a,
-                    maskMatrix.b,
-                    maskMatrix.c,
-                    maskMatrix.d,
-                    maskMatrix.tx,
-                    maskMatrix.ty);
-                maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
-                bitmapDataContext.restore();
-                
-                //render the bitmapData to the stage context
-                bitmapData.__render(context, childMatrix, childColor);
-                
-                //cache the masked bitmapData
-                //child.__cache = bitmapData;
-                continue;
-            }
-            
-            child.__renderList(context, childMatrix, childColor);
-        }
+        return null;
     };
     //override
     this.__updateList = function(matrix)
@@ -194,6 +87,39 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         //reset modification
         this.__setModified(false);
+    };
+    /**
+     * NOTE: argument matrix and alpha is already applied to context
+     * NOTE: argument matrix already contains self local matrix
+     */
+    this.__renderChildren = function(context, matrix, colorTransform)
+    {
+        var alpha = context.globalAlpha;
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
+        {
+            var child = children[i];
+            if (child.__visible === false) { continue; }
+            if (child.__maskee !== null) { continue; }
+            
+            var childMatrix = child.__transform.__matrix.clone();
+            childMatrix.concat(matrix);
+            var childColor = child.__transform.__colorTransform.clone();
+            childColor.concat(colorTransform);
+            
+            context.globalAlpha = alpha * child.__alpha;
+            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            
+            child.__applyContextFilters(context, matrix, colorTransform);
+            child.__applyMask(context, matrix, colorTransform);
+            
+            if (child.__cache) {
+                child.__cache.__render(context, childMatrix, childColor);
+            }
+            else {
+                child.__render(context, childMatrix, childColor);
+            }
+        }
     };
     this.__addChildAt = function(child, index)
     {
@@ -243,9 +169,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     this.contains = function(object)
     {
-        for (var i = 0, l = this.__children.length; i < l; ++i)
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
         {
-            var child = this.__children[i];
+            var child = children[i];
             if (child === object) {
                 return true;
             }

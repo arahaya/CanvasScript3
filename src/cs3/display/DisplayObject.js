@@ -70,17 +70,23 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.d,
                 matrix.tx,
                 matrix.ty);
-            this.__renderList(context, matrix, new ColorTransform());
+            this.__render(context, matrix, new ColorTransform());
             context.restore();
         }
         
         this.__bitmap = bitmap;
         return bitmap;
     };
+    /**
+     * Bounds of your entire display list
+     */
     this.__getBounds = function()
     {
         return this.__getContentBounds();
     };
+    /**
+     * Bounds of yourself only
+     */
     this.__getContentBounds = function()
     {
         return new Rectangle();
@@ -114,42 +120,82 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__modified = v;
         this.__transform.__modified = v;
     };
-    this.__render = function(context, matrix, colorTransform)
+    this.__applyContextFilters = function(context, matrix, colorTransform)
     {
-    };
-    this.__renderList = function(context, matrix, colorTransform)
-    {
-        var i, l;
-        //apply ContextFilter's
         var filters = this.__filters;
-        for (i = 0, l = filters.length; i < l; ++i)
+        for (var i = 0, l = filters.length; i < l; ++i)
         {
             if (filters[i] instanceof ContextFilter) {
                 filters[i].__filter(context, this);
             }
         }
-        
-        this.__render(context, matrix, colorTransform);
+    };
+    this.__applyMask = function(context, matrix, colorTransform)
+    {
+        /*** experimental ***/
+        if (this.__mask) {
+            var selfBitmap = this.__getAsBitmap();
+            if (!selfBitmap) {
+                //child content is empty so we don't need to apply a mask
+                return;
+            }
+            var mask = this.__mask;
+            var maskBitmap = mask.__getAsBitmap();
+            if (!maskBitmap) {
+                //mask content is empty so we don't need to render the child
+                return;
+            }
+            
+            var selfBitmapData = selfBitmap.__bitmapData;
+            var maskBitmapData = maskBitmap.__bitmapData;
+            
+            //create another bitmap to apply the mask
+            if (this.__cache) {
+                //if it already exists, reuse it
+                this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
+                this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
+            }
+            else {
+                //create a new bitmap
+                this.__cache = new Bitmap(selfBitmapData.clone());
+            }
+            this.__cache.setX(selfBitmap.getX());
+            this.__cache.setY(selfBitmap.getY());
+            
+            
+            var bitmap = this.__cache;
+            var bitmapData = bitmap.__bitmapData;
+            var bitmapDataContext = bitmapData.__context;
+            
+            //create the mask's matrix
+            var maskMatrix = mask.__transform.getConcatenatedMatrix();
+            var deltaMatrix = matrix.clone();
+            deltaMatrix.invert();
+            maskMatrix.concat(deltaMatrix);
+            
+            //adjust the position to draw
+            maskMatrix.tx += maskBitmap.getX();
+            maskMatrix.ty += maskBitmap.getY();
+            
+            //apply the mask
+            bitmapDataContext.save();
+            bitmapDataContext.globalCompositeOperation = 'destination-in';
+            bitmapDataContext.setTransform(
+                maskMatrix.a,
+                maskMatrix.b,
+                maskMatrix.c,
+                maskMatrix.d,
+                maskMatrix.tx,
+                maskMatrix.ty);
+            maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+            bitmapDataContext.restore();
+        }
+    };
+    this.__render = function(context, matrix, colorTransform)
+    {
     };
     this.__update = function(matrix)
     {
-        /*
-        //clear bitmapData if self content or a child is modified
-        if (this.__mask) {
-            if (this.__mask.__bitmapData) {
-                this.__mask.__bitmapData.dispose();
-                this.__mask.__bitmapData = null;
-            }
-        }
-        this.__cache = null;
-        //clear cache if self bitmapData or mask bitmapData is cleared
-        if (this.__cache) {
-            if (this.__bitmapData === null || (this.__mask && this.__mask.__bitmapData === null)) {
-                this.__cache.dispose();
-                this.__cache = null;
-            }
-        }
-        */
     };
     this.__updateList = function(matrix)
     {

@@ -44,8 +44,8 @@ var Main = new Class(Sprite, function()
         
         //draw a rectangle with alpha fill
         shape = new Shape();
-        shape.x = 500;
-        shape.y = 50;
+        shape.x = 50;
+        shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000);
         shape.graphics.beginFill(0x0000FF, 0.5);
         shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
@@ -53,8 +53,8 @@ var Main = new Class(Sprite, function()
         
         //draw a rectangle with alpha stroke
         shape = new Shape();
-        shape.x = 650;
-        shape.y = 50;
+        shape.x = 200;
+        shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000, 0.5);
         shape.graphics.beginFill(0x0000FF);
         shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
@@ -62,8 +62,8 @@ var Main = new Class(Sprite, function()
         
         //draw a rectangle with alpha fill and stroke
         shape = new Shape();
-        shape.x = 800;
-        shape.y = 50;
+        shape.x = 350;
+        shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000, 0.5);
         shape.graphics.beginFill(0x0000FF, 0.5);
         shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);

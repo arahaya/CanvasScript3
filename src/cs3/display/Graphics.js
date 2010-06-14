@@ -178,8 +178,7 @@ var Graphics = new Class(Object, function()
         
         //a lot of declarations to avoid redeclarations
         var cmd, type, i, ii;
-        var color, alpha;
-        var thickness, pixelHinting, scaleMode, caps, joints, miterLimit;
+        var thickness, pixelHinting, scaleMode;
         var x, y, radius;
         var widht, height;
         var ellipseWidth, ellipseHeight;

@@ -1,6 +1,6 @@
 var Sprite = new Class(DisplayObjectContainer, function()
 {
-    this.__init__ = function(property)
+    this.__init__ = function()
     {
         DisplayObjectContainer.call(this);
         this.__graphics = null;
@@ -9,16 +9,19 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.hitArea = null;
         //this.soundTransform = null;
         this.useHandCursor = true;
-        
-        for (p in property)
-        {
-            this[p] = property[p];
-        }
     };
     this.__getContentBounds = Shape.prototype.__getContentBounds;
     this.__getModified = Shape.prototype.__getModified;
     this.__setModified = Shape.prototype.__setModified;
-    this.__render = Shape.prototype.__render;
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__graphics) {
+            this.__graphics.__render(context, matrix, colorTransform);
+        }
+        
+        this.__renderChildren(context, matrix, colorTransform);
+    };
     this.__hitTestPoint = Shape.prototype.__hitTestPoint;
     this.startDrag = function(lockCenter, bounds)
     {

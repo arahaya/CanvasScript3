@@ -96,7 +96,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         this.canvas.style.cursor = 'default';
         this.canvas.tabIndex = 1;//enable focus events
-        this.canvas.style.outline = "none";
+        this.canvas.style.outline = "none";//remove focus rects
         //this.canvas.oncontextmenu = function() { return false; };
         
         //register stage for document events
@@ -104,12 +104,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //adjust stage size
         this.__resize();
-        
-        //TODO: IMPORTANT: testing required
-        //if we render all on the first frame
-        //DisplayObject.update() will not be called and it's globalBounds will not be set
-        //so we should either force not to renderAll or to force update on stage.setup()
-        this.__renderAll = false;
         
         //call children ADDED_TO_STAGE events
         __applyDown(this, function(stage, event)
@@ -414,6 +408,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         this.__updateStage();
     };
+    //override
+    this.__render = function(context, matrix, colorTransform)
+    {
+        this.__renderChildren(context, matrix, colorTransform);
+    };
     this.__updateStage = function()
     {
         if (!this.__initialized) { return; }
@@ -422,7 +421,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //update the display list
         var redrawRegions;
-        if (this.__renderMode == 'all' || this.__renderAll) {
+        if (this.__renderMode == 'all') {
             //force to render the entire stage
             redrawRegions = [stageRect];
         }
@@ -431,7 +430,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__updateList(new Matrix());
             redrawRegions = this.__redrawRegions;
             
-            if (this.__renderMode == 'auto' && redrawRegions.length > 50) {
+            if (this.__renderAll || (this.__renderMode == 'auto' && redrawRegions.length > 50)) {
                 redrawRegions = [stageRect];
             }
         }
@@ -450,7 +449,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
             context.clip();
             
-            this.__renderList(context, new Matrix(), new ColorTransform());
+            this.__render(context, new Matrix(), new ColorTransform());
             context.restore();
             
             //catch mouse events
@@ -589,8 +588,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     this.startDrag = function(target, lockCenter, bounds)
     {
-        this.__dragOffsetX = (lockCenter) ? 0 : this.__mouseX - target.x;
-        this.__dragOffsetY = (lockCenter) ? 0 : this.__mouseY - target.y;
+        if (lockCenter) {
+            var localPoint = target.globalToLocal(new Point(this.__mouseX, this.__mouseY));
+            target.setX(target.getX() + localPoint.x);
+            target.setY(target.getY() + localPoint.y);
+        }
+        this.__dragOffsetX = this.__mouseX - target.getX();
+        this.__dragOffsetY = this.__mouseY - target.getY();
         this.__dragTarget = target;
         this.__dragBounds = bounds;
     };

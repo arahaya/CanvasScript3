@@ -187,6 +187,10 @@ var BitmapData = new Class(Object, function()
         this.__width = width;
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
+        
+        //TODO: IMPORTANT
+        //cannot create a canvas element if document is no loaded.
+        //maybe we should limit the entire library to be used only after window.onload.
         this.__canvas = cs3.utils.createCanvas(width, height);
         this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
@@ -411,7 +415,7 @@ var BitmapData = new Class(Object, function()
             matrix.d,
             matrix.tx,
             matrix.ty);
-        source.__renderList(context, matrix, new ColorTransform());
+        source.__render(context, matrix, new ColorTransform());
         context.restore();
         this.__modified = true;
     };

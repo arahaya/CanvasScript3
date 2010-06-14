@@ -21,9 +21,9 @@ var Main = new Class(Sprite, function()
     
     var colors = [0xcc0000, 0xffcc00, 0xaaff00, 0x0099cc, 0x194c99, 0x661999];
     
-    var createBox = function(property)
+    var createBox = function()
     {
-        var box = new Shape(property);
+        var box = new Shape();
         box.graphics.beginFill(colors[Math.floor(Math.random() * colors.length)]);
         box.graphics.drawRect(0, 0, 20, 20);
         box.graphics.endFill();
@@ -44,15 +44,18 @@ var Main = new Class(Sprite, function()
         var funcs = ['Linear', 'Back', 'Bounce', 'Circ', 'Cubic', 'Elastic', 'Quad', 'Quart', 'Quint', 'Sine'];
         
         for (n in funcs) {
-            box = createBox({y: cnt++ * 20});
+            box = createBox();
+            box.y = cnt++ * 20;
             tween = createTween(box, Tween[funcs[n]].easeIn);
             this.addChild(box);
             
-            box = createBox({y: cnt++ * 20});
+            box = createBox();
+            box.y = cnt++ * 20;
             tween = createTween(box, Tween[funcs[n]].easeOut);
             this.addChild(box);
             
-            box = createBox({y: cnt++ * 20});
+            box = createBox();
+            box.y = cnt++ * 20;
             tween = createTween(box, Tween[funcs[n]].easeInOut);
             this.addChild(box);
         }
