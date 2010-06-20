@@ -3,13 +3,13 @@ var MouseEvent = new Class(Event, function()
     this.__init__ = function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
     {
         Event.call(this, type, bubbles, cancelable);
-        this.altKey = (altKey) ? true : false;//not possible?
+        this.altKey = (altKey) ? true : false;
         this.ctrlKey = (ctrlKey) ? true : false;
         this.shiftKey = (shiftKey) ? true : false;
         this.buttonDown = (buttonDown) ? true : false;//when does this become true?
         this.delta = delta | 0;
-        this.__localX = localX | 0;
-        this.__localY = localY | 0;
+        this.__localX = (localX !== undefined) ? localX : null;
+        this.__localY = (localY !== undefined) ? localY : null;
         this.relatedObject = relatedObject || null;
     };
     this.clone = function()
@@ -22,39 +22,40 @@ var MouseEvent = new Class(Event, function()
         //todo
     };
     
-    this.getLocalX = function()
+    this.__get__localX = function()
     {
         if (this.__localX !== null) {
             return this.__localX;
         }
-        return this.currentTarget.getMouseX();
+        return this.currentTarget.__get__mouseX();
     };
-    this.getLocalY = function()
+    this.__get__localY = function()
     {
         if (this.__localY !== null) {
             return this.__localY;
         }
-        return this.currentTarget.getMouseY();
+        return this.currentTarget.__get__mouseY();
     };
-    this.getStageX = function()
+    this.__get__stageX = function()
     {
         if (this.__localX !== null) {
             return this.currentTarget.localToGlobal(new Point(this.__localX, 0)).x;
         }
         return this.target.__stage.__mouseX;
     };
-    this.getStageY = function()
+    this.__get__stageY = function()
     {
         if (this.__localY !== null) {
             return this.currentTarget.localToGlobal(new Point(this.__localY, 0)).y;
         }
         return this.currentTarget.__stage.__mouseY;
     };
+    
+    this.toString = function()
+    {
+        return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
-MouseEvent.prototype.__defineGetter__("localX", MouseEvent.prototype.getLocalX);
-MouseEvent.prototype.__defineGetter__("localY", MouseEvent.prototype.getLocalY);
-MouseEvent.prototype.__defineGetter__("stageX", MouseEvent.prototype.getStageX);
-MouseEvent.prototype.__defineGetter__("stageY", MouseEvent.prototype.getStageY);
 MouseEvent.CLICK = 'click';
 MouseEvent.DOUBLE_CLICK = 'doubleClick';
 MouseEvent.MOUSE_DOWN = 'mouseDown';
@@ -65,7 +66,3 @@ MouseEvent.MOUSE_UP = 'mouseUp';
 MouseEvent.MOUSE_WHEEL = 'mouseWheel';
 MouseEvent.ROLL_OUT = 'rollOut';
 MouseEvent.ROLL_OVER = 'rollOver';
-MouseEvent.prototype.toString = function()
-{
-    return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};

@@ -13,14 +13,8 @@ var Main = new Class(Sprite, function()
     this.__init__ = function()
     {
         Sprite.call(this);
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
-    }
-    
-    this.init = function()
-    {
+        
+        
         //add a bitmap
         var maskee = new Loader();
         maskee.load(new URLRequest("./img/photo01.jpg"));
@@ -86,7 +80,8 @@ var Main = new Class(Sprite, function()
     }
 });
 
-new Stage({canvas:"stage", frameRate:30}).addChild(new Main());
+var stage = new Stage("stage", 640, 480, 30);
+stage.addChild(new Main());
 </script>
 </head>
 <body>

@@ -1,24 +1,41 @@
 var EventDispatcher = new Class(Object, function()
 {
+    var sortByPriority = function(a, b)
+    {
+        var p = 'priority';
+        if (a[p] < b[p]) { return 1; }
+        else if (a[p] > b[p]){ return -1; }
+        else { return 0; }
+    };
+    
     this.__init__ = function()
     {
         this.__events = {};
     };
+    /**
+     * obj.addEventListener(type, listener, useCapture, priority);
+     * obj.addEventListener(type, [scope, listener], useCapture, priority);
+     * obj.addEventListener(type, new EventListener(scope, listener, useCapture, priority));
+     */
     this.addEventListener = function(type, listener, useCapture, priority)
     {
-        //TODO useCapture, priority
-        if (this.__events[type] === undefined) {
-            this.__events[type] = [];
-        }
+        //TODO useCapture
+        var events = this.__events;
         
-        if (typeof(listener) === 'function') {
-            listener = new EventListener(this, listener);
+        if (listener instanceof Function) {
+            listener = new EventListener(this, listener, useCapture, priority);
         }
         else if (listener instanceof Array) {
-            listener = new EventListener(listener[0], listener[1]);
+            listener = new EventListener(listener[0], listener[1], useCapture, priority);
         }
         
-        this.__events[type].push(listener);
+        if (events[type] === undefined) {
+            events[type] = [];
+        }
+        
+        var listeners = events[type];
+        listeners.push(listener);
+        listeners.sort(sortByPriority);
     };
     this.dispatchEvent = function(event)
     {
@@ -55,17 +72,23 @@ var EventDispatcher = new Class(Object, function()
     {
         return (this.__events[type] !== undefined);
     };
+    
+    /**
+     * obj.removeEventListener(type, listener, useCapture);
+     * obj.removeEventListener(type, [scope, listener], useCapture);
+     * obj.removeEventListener(type, new EventListener(scope, listener, useCapture));
+     */
     this.removeEventListener = function(type, listener, useCapture)
     {
         //TODO useCapture
         var listeners = this.__events[type];
         if (listeners === undefined) { return; }
         
-        if (typeof(listener) === 'function') {
-            listener = new EventListener(this, listener);
+        if (listener instanceof Function) {
+            listener = new EventListener(this, listener, useCapture);
         }
         else if (listener instanceof Array) {
-            listener = new EventListener(listener[0], listener[1]);
+            listener = new EventListener(listener[0], listener[1], useCapture);
         }
         
         for (var i = 0, l = listeners.length; i < l; ++i)
@@ -88,8 +111,9 @@ var EventDispatcher = new Class(Object, function()
         }
         return false;
     };
+    
+    this.toString = function()
+    {
+        return '[object EventDispatcher]';
+    };
 });
-EventDispatcher.prototype.toString = function()
-{
-    return '[object EventDispatcher]';
-};

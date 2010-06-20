@@ -7,7 +7,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.mouseChildren = true;
         //this.tabChildren = true;
     };
-    //override
+    
+    /* @override DisplayObject.__getBounds */
     this.__getBounds = function()
     {
         var bounds = this.__getContentBounds();
@@ -20,7 +21,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return bounds;
     };
-    //override
+    
+    /* @override DisplayObject.__getRect */
     this.__getRect = function()
     {
         var rect = this.__getContentRect();
@@ -33,7 +35,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return rect;
     };
-    //override
+    
+    /* @override DisplayObject.__getObjectUnderPoint */
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
@@ -56,71 +59,75 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return null;
     };
-    //override
-    this.__updateList = function(matrix)
+    
+    /* @override DisplayObject.__update */
+    this.__update = function(matrix, forceUpdate)
     {
-        //this.__update();
-        var modified = this.__getModified();
-        if (modified) {
-            var globalBounds = matrix.transformRect(this.__getContentBounds());
-            
-            //collect redraw regions
-            this.__stage.__addRedrawRegion(globalBounds);
-            if (this.__globalBounds) {
-                this.__stage.__addRedrawRegion(this.__globalBounds);
-            }
-            this.__globalBounds = globalBounds;
-        }
+        var update = forceUpdate || this.__getModified();
         
+        // update children first
         var children = this.__children;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
-            if (modified) {
-                //if parent is modified child is to
-                child.__setModified(true);
-            }
-            child.__updateList(childMatrix);
+            child.__update(childMatrix, update);
         }
         
-        //reset modification
-        this.__setModified(false);
+        // update your self
+        if (update) {
+            var stage = this.__stage;
+            var globalBounds = matrix.transformRect(this.__getContentBounds());
+            var lastGlobalBounds = this.__globalBounds;
+            
+            // collect redraw regions
+            if (!lastGlobalBounds) {
+                stage.__addRedrawRegion(globalBounds);
+            }
+            else {
+                if (globalBounds.intersects(lastGlobalBounds)) {
+                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
+                }
+                else {
+                    stage.__addRedrawRegion(globalBounds);
+                    stage.__addRedrawRegion(lastGlobalBounds);
+                }
+            }
+            
+            // save the global bounds for the next update
+            this.__globalBounds = globalBounds;
+            
+            // reset modification
+            this.__setModified(false);
+        }
     };
-    /**
-     * NOTE: argument matrix and alpha is already applied to context
-     * NOTE: argument matrix already contains self local matrix
-     */
+    
     this.__renderChildren = function(context, matrix, colorTransform)
     {
         var alpha = context.globalAlpha;
         var children = this.__children;
+        var render = DisplayObject.prototype.__render;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
+            
             if (child.__visible === false) { continue; }
             if (child.__maskee !== null) { continue; }
             
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
+            
             var childColor = child.__transform.__colorTransform.clone();
             childColor.concat(colorTransform);
             
             context.globalAlpha = alpha * child.__alpha;
             context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            child.__applyContextFilters(context, matrix, colorTransform);
-            child.__applyMask(context, matrix, colorTransform);
-            
-            if (child.__cache) {
-                child.__cache.__render(context, childMatrix, childColor);
-            }
-            else {
-                child.__render(context, childMatrix, childColor);
-            }
+            render.call(child, context, childMatrix, childColor);
         }
     };
+    
     this.__addChildAt = function(child, index)
     {
         if (!(child instanceof DisplayObject)) {
@@ -146,13 +153,13 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         child.__setModified(true);
     };
+    
     this.__removeChildAt = function(index)
     {
         var child = this.__children[index];
         
-        //add redraw regions
-        child.__setModified(true);
-        child.__updateList(child.__transform.getConcatenatedMatrix());
+        // add redraw regions
+        child.__update(child.__transform.__get__concatenatedMatrix(), true);
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -182,10 +189,12 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return false;
     };
+    
     this.addChild = function(child)
     {
         this.__addChildAt(child, this.__children.length);
     };
+    
     this.addChildAt = function(child, index)
     {
         if (index < 0 || index > this.__children.length) {
@@ -194,6 +203,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         this.__addChildAt(child, index);
     };
+    
     this.getChildAt = function(index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -202,6 +212,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return this.__children[index];
     };
+    
     this.getChildByName = function(name)
     {
         var children = this.__children;
@@ -212,6 +223,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return null;
     };
+    
     this.getChildIndex = function(child)
     {
         var children = this.__children;
@@ -223,6 +235,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         throw new ArgumentError('The supplied DisplayObject must be a child of the caller.');
     };
+    
     this.removeChild = function(child)
     {
         var index;
@@ -234,6 +247,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return this.__removeChildAt(index);
     };
+    
     this.removeChildAt = function(index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -242,6 +256,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return this.__removeChildAt(index);
     };
+    
     this.setChildIndex = function(child, index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -260,6 +275,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.__children.splice(index, 0, child);
         this.__modified = true;
     };
+    
     this.swapChildren = function(child1, child2)
     {
         var index1, index2;
@@ -275,6 +291,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.__children[index1] = child2;
         this.__modified = true;
     };
+    
     this.swapChildrenAt = function(index1, index2)
     {
         var children = this.__children;
@@ -289,19 +306,20 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         children[index2] = temp;
         this.__modified = true;
     };
+    
     this.getObjectsUnderPoint = function(point)
     {
         //TODO
     };
     
     /* getters and setters */
-    this.getNumChildren = function()
+    this.__get__numChildren = function()
     {
         return this.__children.length;
     };
+    
+    this.toString = function()
+    {
+        return '[object DisplayObjectContainer]';
+    };
 });
-DisplayObjectContainer.prototype.__defineGetter__("numChildren", DisplayObjectContainer.prototype.getNumChildren);
-DisplayObjectContainer.prototype.toString = function()
-{
-    return '[object DisplayObjectContainer]';
-};

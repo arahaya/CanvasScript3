@@ -13,8 +13,9 @@ var BitmapFilter = new Class(Object, function()
     {
         return new BitmapFilter();
     };
+    
+    this.toString = function()
+    {
+        return '[object BitmapFilter]';
+    };
 });
-BitmapFilter.prototype.toString = function()
-{
-    return '[object BitmapFilter]';
-};

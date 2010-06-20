@@ -9,7 +9,7 @@ var Timer = new Class(EventDispatcher, function()
         this.__running = false;
         this.__timer = null;
         
-        this.setDelay(delay);
+        this.__set__delay(delay);
     };
     this.reset = function()
     {
@@ -19,7 +19,7 @@ var Timer = new Class(EventDispatcher, function()
     this.start = function()
     {
         this.__running = true;
-        this.__timer = setInterval(__closure(this, function()
+        this.__timer = setInterval(cs3.utils.closure(this, function()
         {
             this.__currentCount++;
             
@@ -37,15 +37,15 @@ var Timer = new Class(EventDispatcher, function()
         this.__running = false;
     };
     
-    this.getCurrentCount = function()
+    this.__get__currentCount = function()
     {
         return this.__currentCount;
     };
-    this.getDelay = function()
+    this.__get__delay = function()
     {
         return this.__delay;
     };
-    this.setDelay = function(v)
+    this.__set__delay = function(v)
     {
         v = +v;
         if (v < 0 || v == Infinity) {
@@ -53,26 +53,21 @@ var Timer = new Class(EventDispatcher, function()
         }
         this.__delay = v;
     };
-    this.getRepeatCount = function()
+    this.__get__repeatCount = function()
     {
         return this.__repeatCount;
     };
-    this.setRepeatCount = function(v)
+    this.__set__repeatCount = function(v)
     {
         this.__repeatCount = v | 0;
     };
-    this.getRunning = function()
+    this.__get__running = function()
     {
         return this.__running;
     };
+    
+    this.toString = function()
+    {
+        return '[object Timer]';
+    };
 });
-Timer.prototype.__defineGetter__("currentCount", Timer.prototype.getCurrentCount);
-Timer.prototype.__defineGetter__("delay", Timer.prototype.getDelay);
-Timer.prototype.__defineSetter__("delay", Timer.prototype.setDelay);
-Timer.prototype.__defineGetter__("repeatCount", Timer.prototype.getRepeatCount);
-Timer.prototype.__defineSetter__("repeatCount", Timer.prototype.setRepeatCount);
-Timer.prototype.__defineGetter__("running", Timer.prototype.getRunning);
-Timer.prototype.toString = function()
-{
-    return '[object Timer]';
-};

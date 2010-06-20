@@ -97,8 +97,8 @@ var CoordinateShuffler = new Class(Object, function()
         var __lookupTableSize = this.__lookupTableSize;
         var list = [];
         
-        if ( count < 1 ) { return []; }
-        count = Math.min(count, __maximumIndex);
+        if (count < 1) { return []; }
+        if (count > __maximumIndex) { count = __maximumIndex; }
         
         index %= __maximumIndex;
         var xx = index % __width;
@@ -141,7 +141,7 @@ var CoordinateShuffler = new Class(Object, function()
     };
     this.setShuffleDepth = function(v)
     {
-        this.__shuffleDepth = Math.max(1, v);
+        this.__shuffleDepth = (v > 1) ? v : 1;
         this.setSeed(this.__seed);
     };
     
@@ -158,7 +158,7 @@ var CoordinateShuffler = new Class(Object, function()
     };
     this.setLookupTableSize = function(v)
     {
-        this.__lookupTableSize = Math.max(1, v);
+        this.__lookupTableSize = (v > 1) ? v : 1;
         this.setSeed(this.__seed);
     };
     

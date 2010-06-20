@@ -39,16 +39,16 @@ var Point = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         return Math.sqrt(this._x * this._x + this._y * this._y);
     };
+    
+    this.toString = function()
+    {
+        return '(x=' + this.x + ', y=' + this.y + ')';
+    };
 });
-Point.prototype.__defineGetter__("length", Point.prototype.getLength);
-Point.prototype.toString = function()
-{
-    return '(x=' + this.x + ', y=' + this.y + ')';
-};
 Point.distance = function(pt1, pt2)
 {
     var dx = pt2.x - pt1.x;

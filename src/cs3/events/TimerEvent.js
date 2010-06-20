@@ -12,10 +12,11 @@ var TimerEvent = new Class(Event, function()
     {
         //todo
     };
+    
+    this.toString = function()
+    {
+        return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
 TimerEvent.TIMER = 'timer';
 TimerEvent.TIMER_COMPLETE = 'timerComplete';
-TimerEvent.prototype.toString = function()
-{
-    return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};

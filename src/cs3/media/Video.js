@@ -15,6 +15,7 @@ var Video = new Class(DisplayObject, function()
             this.load.apply(this, arguments);
         }
     };
+    
     //override
     this.__getContentBounds = function()
     {
@@ -24,6 +25,7 @@ var Video = new Class(DisplayObject, function()
         }
         return new Rectangle();
     };
+    
     //override
     this.__getModified = function()
     {
@@ -31,13 +33,15 @@ var Video = new Class(DisplayObject, function()
         if (this.__media && this.__media.paused === false) {
             return true;
         }
-        return this.__modified || this.__transform.__modified;
+        return this.__transform.__modified || this.__modified;
     };
+    
     //override
     this.__setModified = function(v)
     {
-        this.__modified = v;
+        this.__transform.__modified = this.__modified = v;
     };
+    
     //override
     this.__render = function(context, matrix, colorTransform)
     {
@@ -45,6 +49,7 @@ var Video = new Class(DisplayObject, function()
             context.drawImage(this.__media, 0, 0);
         }
     };
+    
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
@@ -62,6 +67,7 @@ var Video = new Class(DisplayObject, function()
         }
         return false;
     };
+    
     this.__onCanPlay = function()
     {
         this.__canPlay = true;
@@ -70,6 +76,7 @@ var Video = new Class(DisplayObject, function()
             this.__media.play();
         }
     };
+    
     this.__onEnded = function()
     {
         if (this.__loops === -1 || this.__loops > this.__loopCount) {
@@ -78,6 +85,7 @@ var Video = new Class(DisplayObject, function()
             this.__media.play();
         }
     };
+    
     this.close = function()
     {
         this.__url = null;
@@ -90,6 +98,7 @@ var Video = new Class(DisplayObject, function()
         cs3.utils.removeAllEventListeners(this.__media);
         this.__media = null;
     };
+    
     this.load = function(/* source1, source2.. */)
     {
         if (arguments.length === 0) {
@@ -129,6 +138,7 @@ var Video = new Class(DisplayObject, function()
         this.__media = media;
         this.__url = media.currentSrc;
     };
+    
     this.play = function(startTime, loops)
     {
         if (this.__media === null) {
@@ -147,6 +157,7 @@ var Video = new Class(DisplayObject, function()
             media.play();
         }
     };
+    
     this.pause = function()
     {
         if (this.__media === null) {
@@ -157,42 +168,42 @@ var Video = new Class(DisplayObject, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         if (this.__media) {
             return this.__media.duration;
         }
         return 0;
     };
-    this.getPosition = function()
+    
+    this.__get__position = function()
     {
         if (this.__media) {
             return this.__media.currentTime;
         }
         return 0;
     };
-    this.getUrl = function()
+    
+    this.__get__url = function()
     {
         return this.__url;
     };
-    this.getVolume = function()
+    
+    this.__get__volume = function()
     {
         return this.__volume;
     };
-    this.setVolume = function(v)
+    
+    this.__set__volume = function(v)
     {
         this.__volume = v;
         if (this.__media) {
             this.__media.volume = v;
         }
     };
+    
+    this.toString = function()
+    {
+        return '[object Video]';
+    };
 });
-Video.prototype.__defineGetter__("length", Video.prototype.getLength);
-Video.prototype.__defineGetter__("position", Video.prototype.getPosition);
-Video.prototype.__defineGetter__("volume", Video.prototype.getVolume);
-Video.prototype.__defineSetter__("volume", Video.prototype.setVolume);
-Video.prototype.__defineGetter__("url", Video.prototype.getUrl);
-Video.prototype.toString = function()
-{
-    return '[object Video]';
-};

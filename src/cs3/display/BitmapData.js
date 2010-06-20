@@ -5,110 +5,7 @@ var BitmapData = new Class(Object, function()
         throw new ArgumentError("Invalid BitmapData.");
     };
     
-    var __alphaBlend = function(context, src, dx, dy)
-    {
-        var dst = context.getImageData(dx, dy, src.width, src.height);
-        __alphaBlendImageData(dst, src);
-        context.putImageData(dst, dx, dy);
-    };
-    var __alphaBlendImageData = function(dst, src)
-    {
-        __alphaBlendArray(dst.data, src.data);
-    };
-    var __alphaBlendArray = function(dst, src)
-    {
-        var srcLength = src.length;
-        var ri, gi, bi, ai;
-        var sa, da, na, ma;
-        for (var i = 0; i < srcLength;)
-        {
-            ri = i++;
-            gi = i++;
-            bi = i++;
-            ai = i++;
-            
-            if (src[ai] === 0) {
-                //src is transparent, dst keeps its color
-                continue;
-            }
-            else if (src[ai] === 255 || dst[ai] === 0) {
-                //src is solid OR dst is transparent, overwrite dst
-                dst[ri] = src[ri];
-                dst[gi] = src[gi];
-                dst[bi] = src[bi];
-                dst[ai] = src[ai];
-            }
-            else if (dst[ai] !== 255) {
-                //merge
-                sa = src[ai] / 255;
-                da = dst[ai] / 255;
-                na = da + sa - sa * da;
-                ma = 1 - sa;
-                dst[ri] = (src[ri] * sa + dst[ri] * da * ma) / na;
-                dst[gi] = (src[gi] * sa + dst[gi] * da * ma) / na;
-                dst[bi] = (src[bi] * sa + dst[bi] * da * ma) / na;
-                dst[ai] = na * 255;
-            }
-            else {
-                //add
-                sa = src[ai] / 255;
-                ma = 1 - sa;
-                dst[ri] = src[ri] * sa + dst[ri] * ma;
-                dst[gi] = src[gi] * sa + dst[gi] * ma;
-                dst[bi] = src[bi] * sa + dst[bi] * ma;
-            }
-        }
-    };
-    var __floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
-    {
-        var T0 = targetColor[0];
-        var T1 = targetColor[1];
-        var T2 = targetColor[2];
-        var T3 = targetColor[3];
-        var R0 = replacementColor[0];
-        var R1 = replacementColor[1];
-        var R2 = replacementColor[2];
-        var R3 = replacementColor[3];
-        
-        var stack = [];
-        var pop = [x, y, 0];
-        var ignore;
-        while (pop)
-        {
-            x = pop[0];
-            y = pop[1];
-            ignore = pop[2];//make sure it doesn't go back the way it just came from
-            
-            if (x < 0 || x > width || y < 0 || y > height) {
-                //out of rect
-                pop = stack.pop();
-                continue;
-            }
-            
-            //get the array index
-            var p = ((y * width) + x) * 4;
-            
-            if (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3) {
-                //node color doesn't equal target color
-                pop = stack.pop();
-                continue;
-            }
-            
-            //replace node color
-            data[p]   = R0;
-            data[p+1] = R1;
-            data[p+2] = R2;
-            data[p+3] = R3;
-            
-            if (ignore !== 1) { stack.push([x-1, y, 2]); }//west
-            if (ignore !== 2) { stack.push([x+1, y, 1]); }//east
-            if (ignore !== 3) { stack.push([x, y-1, 4]); }//north
-            if (ignore !== 4) { stack.push([x, y+1, 3]); }//south
-            
-            pop = stack.pop();
-        }
-    };
-    var __floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
+    var floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -123,6 +20,7 @@ var BitmapData = new Class(Object, function()
         var WIDTH_M1 = width - 1;
         
         var stack = [];
+        var stackLength;
         var pop = [x, y];
         var spanLeft, spanRight, p;
         while (pop)
@@ -130,6 +28,7 @@ var BitmapData = new Class(Object, function()
             x = pop[0];
             y = pop[1];
             p = (y * LINESIZE) + (x * 4);
+            stackLength = stack.length;
             
             while (y >= 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3))
             {
@@ -150,7 +49,7 @@ var BitmapData = new Class(Object, function()
                 
                 p -= 4;//x - 1
                 if (!spanLeft && x > 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
-                    stack.push([x - 1, y]);
+                    stack[stackLength++] = [x - 1, y];
                     spanLeft = 1;
                 }
                 else if (spanLeft && x > 0 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
@@ -159,7 +58,7 @@ var BitmapData = new Class(Object, function()
                 
                 p += 8;//x + 1
                 if (!spanRight && x < WIDTH_M1 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
-                    stack.push([x + 1, y]);
+                    stack[stackLength++] = [x + 1, y];
                     spanRight = 1;
                 }
                 else if (spanRight && x < WIDTH_M1 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
@@ -180,7 +79,7 @@ var BitmapData = new Class(Object, function()
         //transparent=false doesn't work
         width  = width  | 0;
         height = height | 0;
-        if (!width || !height) {
+        if (!width || !height || width > 2880 || height > 2880) {
             throw new ArgumentError("Invalid BitmapData.");
         }
         
@@ -188,9 +87,6 @@ var BitmapData = new Class(Object, function()
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
         
-        //TODO: IMPORTANT
-        //cannot create a canvas element if document is no loaded.
-        //maybe we should limit the entire library to be used only after window.onload.
         this.__canvas = cs3.utils.createCanvas(width, height);
         this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
@@ -201,13 +97,14 @@ var BitmapData = new Class(Object, function()
         if (fillColor === null) { fillColor = 0xFFFFFFFF; }
         if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
+    
     this.__render = function(context, matrix, colorTransform)
     {
         if (this.__canvas) {
-            var rect = this.__rect;
             context.drawImage(this.__canvas, 0, 0);
         }
     };
+    
     this.__resize = function(width, height)
     {
         this.__width = width;
@@ -217,11 +114,13 @@ var BitmapData = new Class(Object, function()
         this.__canvas.width = width;
         this.__canvas.height = height;
     };
+    
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
     {
         filter.__filterBitmapData(sourceBitmapData, sourceRect, this, destPoint);
         this.__modified = true;
     };
+    
     this.clone = function()
     {
         var clone = new BitmapData(this.__width, this.__height, true, 0);
@@ -229,6 +128,7 @@ var BitmapData = new Class(Object, function()
         clone.__rect = this.__rect.clone();
         return clone;
     };
+    
     this.colorTransform = function(rect, colorTransform)
     {
         var rm = colorTransform.redMultiplier;
@@ -240,8 +140,8 @@ var BitmapData = new Class(Object, function()
         var bo = colorTransform.blueOffset;
         var ao = colorTransform.alphaOffset;
         
-        var image = this.__context.getImageData(rect.x, rect.y, rect.width, rect.height);
-        var data = image.data;
+        var imageData = this.__context.getImageData(rect.x, rect.y, rect.width, rect.height);
+        var data = imageData.data;
         var length = data.length;
         var i;
         
@@ -249,10 +149,14 @@ var BitmapData = new Class(Object, function()
             //I think opera does something like (color & 0xFF)
             for (i = 0; i < length;)
             {
-                data[i] = Math.min(data[i++] * rm + ro, 255);
-                data[i] = Math.min(data[i++] * gm + go, 255);
-                data[i] = Math.min(data[i++] * bm + bo, 255);
-                data[i] = Math.min(data[i++] * am + ao, 255);
+                var r = data[i]   * rm + ro;
+                var g = data[i+1] * gm + go;
+                var b = data[i+2] * bm + bo;
+                var a = data[i+3] * am + ao;
+                data[i++] = (r < 255) ? r : 255;
+                data[i++] = (g < 255) ? g : 255;
+                data[i++] = (b < 255) ? b : 255;
+                data[i++] = (a < 255) ? a : 255;
             }
         }
         else {
@@ -265,9 +169,10 @@ var BitmapData = new Class(Object, function()
             }
         }
         
-        this.__context.putImageData(image, rect.x, rect.y);
+        this.__context.putImageData(imageData, rect.x, rect.y);
         this.__modified = true;
     };
+    
     this.compare = function(otherBitmapData)
     {
         //TODO not tested
@@ -283,38 +188,36 @@ var BitmapData = new Class(Object, function()
             return -4;
         }
         
-        var sourceImageData = sourceBitmapData.__context.getImageData(0, 0, width, height);
-        var otherImageData = otherBitmapData.__context.getImageData(0, 0, width, height);
+        var sourceData   = sourceBitmapData.__context.getImageData(0, 0, width, height).data;
+        var otherData    = otherBitmapData.__context.getImageData(0, 0, width, height).data;
         var newImageData = sourceBitmapData.__context.createImageData(width, height);
-        var sourcePixels = sourceImageData.data;
-        var otherPixels = otherImageData.data;
-        var newPixels = newImageData.data;
-        var length = sourceImageData.length;
-        var isDifferent = false;
+        var newData      = newImageData.data;
+        var length       = newData.length;
+        var isDifferent  = false;
         
         for (var i = 0; i < length;)
         {
-            var sr = sourcePixels[i];
-            var sg = sourcePixels[i+1];
-            var sb = sourcePixels[i+2];
-            var sa = sourcePixels[i+3];
-            var or = otherPixels[i];
-            var og = otherPixels[i+1];
-            var ob = otherPixels[i+2];
-            var oa = otherPixels[i+3];
+            var sr = sourceData[i];
+            var sg = sourceData[i+1];
+            var sb = sourceData[i+2];
+            var sa = sourceData[i+3];
+            var or = otherData[i];
+            var og = otherData[i+1];
+            var ob = otherData[i+2];
+            var oa = otherData[i+3];
             
             if ((sr !== or) || (sg !== og) || (sb !== ob)) {
-                newPixels[i++] = sr - or;
-                newPixels[i++] = sg - og;
-                newPixels[i++] = sb - ob;
-                newPixels[i++] = 0xFF;
+                newData[i++] = sr - or;
+                newData[i++] = sg - og;
+                newData[i++] = sb - ob;
+                newData[i++] = 0xFF;
                 isDifferent = true;
             }
             else if (sa !== oa) {
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = sa - oa;
+                newData[i++] = 0xFF;
+                newData[i++] = 0xFF;
+                newData[i++] = 0xFF;
+                newData[i++] = sa - oa;
                 isDifferent = true;
             }
         }
@@ -327,14 +230,14 @@ var BitmapData = new Class(Object, function()
         newBitmapData.__context.putImageData(newImageData, 0, 0);
         return newBitmapData;
     };
+    
     this.copyChannel = function(sourceBitmapData, sourceRect, destPoint, sourceChannel, destChannel)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         var sourceChannelIndex, destChannelIndex;
         if (sourceChannel == BitmapDataChannel.RED) { sourceChannelIndex = 0; }
@@ -350,7 +253,7 @@ var BitmapData = new Class(Object, function()
         
         for (var i = 0; i < length; i += 4)
         {
-            destPixels[i + destChannelIndex] = sourcePixels[i + sourceChannelIndex];
+            destData[i + destChannelIndex] = sourceData[i + sourceChannelIndex];
         }
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
@@ -369,10 +272,12 @@ var BitmapData = new Class(Object, function()
                         destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
         this.__modified = true;
     };
+    
     this.createImageData = function()
     {
         return this.__context.createImageData.apply(this.__context, arguments);
     };
+    
     this.dispose = function()
     {
         this.__width = 0;
@@ -401,6 +306,7 @@ var BitmapData = new Class(Object, function()
         this.__modified = true;
         this.__disposed = true;
     };
+    
     this.draw = function(source, matrix)
     {
         //TODO a lot to fix..
@@ -419,6 +325,7 @@ var BitmapData = new Class(Object, function()
         context.restore();
         this.__modified = true;
     };
+    
     this.fillRect = function(rect, color)
     {
         var context = this.__context;
@@ -431,12 +338,13 @@ var BitmapData = new Class(Object, function()
         context.restore();
         this.__modified = true;
     };
+    
     this.floodFill = function(x, y, color)
     {
         var width = this.__width;
         var height = this.__height;
-        var pixels = this.__context.getImageData(0, 0, width, height);
-        var data = pixels.data;
+        var imageData = this.__context.getImageData(0, 0, width, height);
+        var data = imageData.data;
         
         //get the array index
         var p = ((y * width) + x) * 4;
@@ -454,23 +362,25 @@ var BitmapData = new Class(Object, function()
         }
         
         //start the search
-        __floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
+        floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
         
-        this.__context.putImageData(pixels, 0, 0);
+        this.__context.putImageData(imageData, 0, 0);
         this.__modified = true;
     };
+    
     this.generateFilterRect = function(sourceRect, filter)
     {
         return filter.__generateRect(sourceRect);
     };
+    
     this.getColorBoundsRect = function(mask, color, findColor)
     {
         if (mask === undefined || color === undefined) { return null; }
         findColor = (findColor) ? true : false;
         
-        var width = this.__width;
+        var width  = this.__width;
         var height = this.__height;
-        var data = this.__context.getImageData(0, 0, width, height).data;
+        var data   = this.__context.getImageData(0, 0, width, height).data;
         
         var minX = width;
         var minY = height;
@@ -488,10 +398,10 @@ var BitmapData = new Class(Object, function()
                     p = ((y * width) + x) * 4;
                     value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
                     if ((value & mask) === color) {
-                        minX = (x < minX) ? x : minX;
-                        minY = (y < minY) ? y : minY;
-                        maxX = (x > maxX) ? x : maxX;
-                        maxY = (y > maxY) ? y : maxY;
+                        if (x < minX) { minX = x; }
+                        if (x > maxX) { maxX = x; }
+                        if (y < minY) { minY = y; }
+                        if (y > maxY) { maxY = y; }
                     }
                 }
             }
@@ -504,10 +414,10 @@ var BitmapData = new Class(Object, function()
                     p = ((y * width) + x) * 4;
                     value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
                     if ((value & mask) !== color) {
-                        minX = (x < minX) ? x : minX;
-                        minY = (y < minY) ? y : minY;
-                        maxX = (x > maxX) ? x : maxX;
-                        maxY = (y > maxY) ? y : maxY;
+                        if (x < minX) { minX = x; }
+                        if (x > maxX) { maxX = x; }
+                        if (y < minY) { minY = y; }
+                        if (y > maxY) { maxY = y; }
                     }
                 }
             }
@@ -519,10 +429,12 @@ var BitmapData = new Class(Object, function()
         }
         return rect;
     };
+    
     this.getImageData = function()
     {
         return this.__context.getImageData.apply(this.__context, arguments);
     };
+    
     this.getPixel = function(x, y)
     {
         if (!this.__rect.contains(x, y)) { return 0; }
@@ -530,6 +442,7 @@ var BitmapData = new Class(Object, function()
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return (data[0] << 16) | (data[1] << 8) | data[2];
     };
+    
     this.getPixel32 = function(x, y)
     {
         if (!this.__rect.contains(x, y)) { return 0; }
@@ -537,60 +450,66 @@ var BitmapData = new Class(Object, function()
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return ((data[3] << 24) | (data[0] << 16) | (data[1] << 8) | data[2]) >>> 0;
     };
+    
     this.getPixels = function(rect)
     {
         return this.__context.getImageData(rect.x, rect.y, rect.width, rect.height).data;
     };
+    
     this.hitTest = function(firstPoint, firstAlphaThreshold, secondObject, secondBitmapDataPoint, secondAlphaThreshold)
     {
         secondAlphaThreshold = secondAlphaThreshold || 1;
         //TODO
         return false;
     };
+    
     this.lock = function()
     {
         //use getImageData and putImageData
         __noImp('BitmapData.lock()');
     };
+    
     this.unlock = function()
     {
         //use getImageData and putImageData
         __noImp('BitmapData.unlock()');
     };
+    
     this.merge = function(sourceBitmapData, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         for (var i = 0; i < length;)
         {
-            destPixels[i]   = (sourcePixels[i] * redMultiplier   + destPixels[i] * (256 - redMultiplier))   / 256;
-            destPixels[++i] = (sourcePixels[i] * greenMultiplier + destPixels[i] * (256 - greenMultiplier)) / 256;
-            destPixels[++i] = (sourcePixels[i] * blueMultiplier  + destPixels[i] * (256 - blueMultiplier))  / 256;
-            destPixels[++i] = (sourcePixels[i] * alphaMultiplier + destPixels[i] * (256 - alphaMultiplier)) / 256;
+            destData[i]   = (sourceData[i] * redMultiplier   + destData[i] * (256 - redMultiplier))   / 256;
+            destData[++i] = (sourceData[i] * greenMultiplier + destData[i] * (256 - greenMultiplier)) / 256;
+            destData[++i] = (sourceData[i] * blueMultiplier  + destData[i] * (256 - blueMultiplier))  / 256;
+            destData[++i] = (sourceData[i] * alphaMultiplier + destData[i] * (256 - alphaMultiplier)) / 256;
             ++i;
         }
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
     };
+    
     this.noise = function()
     {
         //alert("HELP!");
     };
+    
     this.paletteMap = function(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         //var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
         //var destImageData = this.__context.createImageData(destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        //var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var sourceData = sourceImageData.data;
+        //var destData = destImageData.data;
+        var length = sourceData.length;
         
         if (!(redArray   instanceof Array)) { redArray   = []; }
         if (!(greenArray instanceof Array)) { greenArray = []; }
@@ -609,30 +528,32 @@ var BitmapData = new Class(Object, function()
         for (i = 0; i < length;)
         {
             
-            newColor = redArray[sourcePixels[i]] | greenArray[sourcePixels[i+1]] | blueArray[sourcePixels[i+2]] | alphaArray[sourcePixels[i+3]];
+            newColor = redArray[sourceData[i]] | greenArray[sourceData[i+1]] | blueArray[sourceData[i+2]] | alphaArray[sourceData[i+3]];
             newAlpha = newColor >> 24 & 0xFF;
             newRed   = newColor >> 16 & 0xFF;
-            newGreen = newColor >> 8  & 0xFF;
-            newBlue  = newColor & 0xFF;
+            newGreen = newColor >>  8 & 0xFF;
+            newBlue  = newColor       & 0xFF;
             
-            sourcePixels[i++] = newRed;
-            sourcePixels[i++] = newGreen;
-            sourcePixels[i++] = newBlue;
-            sourcePixels[i++] = newAlpha;
+            sourceData[i++] = newRed;
+            sourceData[i++] = newGreen;
+            sourceData[i++] = newBlue;
+            sourceData[i++] = newAlpha;
         }
         
         this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
         this.__modified = true;
     };
+    
     this.perlinNoise = function(baseX, baseY, numOctaves, randomSeed, stitch, fractalNoise, channelOptions, grayScale, offsets)
     {
         //alert("HELP!");
     };
+    
     this.pixelDissolve = function(sourceBitmapData, sourceRect, destPoint, randomSeed, numPixels, fillColor)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var destPixels = destImageData.data;
+        var destData = destImageData.data;
         var width = destImageData.width;
         var height = destImageData.height;
         var size = width * height;
@@ -661,24 +582,24 @@ var BitmapData = new Class(Object, function()
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destPixels[p]   = fillRed;
-                destPixels[p+1] = fillGreen;
-                destPixels[p+2] = fillBlue;
-                destPixels[p+3] = fillAlpha;
+                destData[p]   = fillRed;
+                destData[++p] = fillGreen;
+                destData[++p] = fillBlue;
+                destData[++p] = fillAlpha;
             }
         }
         else {
             //TODO: make sure the sourceRect and destRect are the same size
-            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
-            var sourcePixels = sourceImageData.data;
+            var sourceData = sourceBitmapData.__context.getImageData(
+                                sourceRect.x,sourceRect.y, width, height).data;
             for (i = 0; i < numPixels; ++i)
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destPixels[p]   = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
+                destData[p]   = sourceData[p];
+                destData[++p] = sourceData[p];
+                destData[++p] = sourceData[p];
+                destData[++p] = sourceData[p];
             }
         }
         
@@ -688,10 +609,12 @@ var BitmapData = new Class(Object, function()
         //return the new seed
         return ((coordinateShuffler.getIndex() << 8) | seed) >>> 0;
     };
+    
     this.putImageData = function()
     {
         this.__context.putImageData.apply(this.__context, arguments);
     };
+    
     this.scroll = function(x, y)
     {
         var sourceX, sourceY, sourceWidth, sourceHeight;
@@ -715,6 +638,7 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(imageData, x, y);
         this.__modified = true;
     };
+    
     this.setPixel = function(x, y, color)
     {
         var a = 255;
@@ -731,6 +655,7 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(pixel, x, y);
         this.__modified = true;
     };
+    
     this.setPixel32 = function(x, y, color)
     {
         var a = color >> 24 & 0xFF;
@@ -747,21 +672,23 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(pixel, x, y);
         this.__modified = true;
     };
+    
     this.setPixels = function(rect, inputArray)
     {
         var rectLength = rect.width * rect.height * 4;
         var arrayLength = inputArray.length;
         var length = (rectLength > arrayLength) ? arrayLength : rectLength;
         
-        var pixels = this.__context.createImageData(rect.width, rect.height);
-        var data = pixels.data;
+        var imageData = this.__context.createImageData(rect.width, rect.height);
+        var data = imageData.data;
         for (var i = 0; i < length; ++i)
         {
             data[i] = inputArray[i];
         }
-        this.__context.putImageData(pixels, rect.x, rect.y);
+        this.__context.putImageData(imageData, rect.x, rect.y);
         this.__modified = true;
     };
+    
     this.threshold = function(sourceBitmapData, sourceRect, destPoint, operation, threshold, color, mask, copySource)
     {
         if (color === undefined) { color = 0x00000000; }
@@ -769,11 +696,10 @@ var BitmapData = new Class(Object, function()
         if (copySource === undefined) { copySource = false; }
         
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         threshold = threshold & mask;
         var colors = [color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF];
@@ -784,73 +710,73 @@ var BitmapData = new Class(Object, function()
         
         if (operation == '<') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) < threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '<=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) <= threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '>') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) > threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '>=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) >= threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '==') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) == threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '!=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) != threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
@@ -861,29 +787,29 @@ var BitmapData = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getWidth = function()
+    this.__get__width = function()
     {
         return this.__width;
     };
-    this.getHeight = function()
+    
+    this.__get__height = function()
     {
         return this.__height;
     };
-    this.getRect = function()
+    
+    this.__get__rect = function()
     {
         return this.__rect.clone();
     };
-    this.getTransparent = function()
+    
+    this.__get__transparent = function()
     {
         //return this.__transparent;
         return true;
     };
+    
+    this.toString = function()
+    {
+        return '[object BitmapData]';
+    };
 });
-BitmapData.prototype.__defineGetter__("width", BitmapData.prototype.getWidth);
-BitmapData.prototype.__defineGetter__("height", BitmapData.prototype.getHeight);
-BitmapData.prototype.__defineGetter__("rect", BitmapData.prototype.getRect);
-BitmapData.prototype.__defineGetter__("transparent", BitmapData.prototype.getTransparent);
-BitmapData.prototype.toString = function()
-{
-    return '[object BitmapData]';
-};

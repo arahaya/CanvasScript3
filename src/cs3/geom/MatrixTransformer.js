@@ -1,10 +1,10 @@
 var MatrixTransformer = new Class(Object, function()
 {
+    this.toString = function()
+    {
+        return '[object MatrixTransformer]';
+    };
 });
-MatrixTransformer.prototype.toString = function()
-{
-    return '[object MatrixTransformer]';
-};
 MatrixTransformer.getScaleX = function(m)
 {
     return Math.sqrt(m.a * m.a + m.b * m.b);

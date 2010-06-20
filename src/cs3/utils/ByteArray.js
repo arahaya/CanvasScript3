@@ -138,10 +138,10 @@ var ByteArray = new Class(Array, function()
     
     var EOFErrorMessage = 'Error #2030: End of file was encountered.';
     
-    this.__bigEndian = true;
-    this.__position = 0;
     this.__init__ = function()
     {
+        this.__bigEndian = true;
+        this.__position = 0;
     };
     this.compress = function()
     {
@@ -314,9 +314,9 @@ var ByteArray = new Class(Array, function()
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
         
         var chars = [];
-        for (var i = start; i < end; ++i)
+        for (var i = start, c = 0; i < end;)
         {
-            chars.push(String.fromCharCode(this[i]));
+            chars[c++] = String.fromCharCode(this[i++]);
         }
         this.__position = end;
         
@@ -451,9 +451,8 @@ var ByteArray = new Class(Array, function()
     };
     this.writeUTF = function(value)
     {
-        var bytes = [];
-        var s = unescape(encodeURIComponent(value));
-        var length = s.length;
+        var str = unescape(encodeURIComponent(value));
+        var length = str.length;
         
         if (length > 0xFFFF) {
             throw new RangeError('Error #2006 : The supplied index is out of bounds.');
@@ -464,35 +463,34 @@ var ByteArray = new Class(Array, function()
         var position = this.__position;
         for (var i = 0; i < length; ++i)
         {
-            this[position++] = s.charCodeAt(i);
+            this[position++] = str.charCodeAt(i);
         }
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
     this.writeUTFBytes = function(value)
     {
-        var bytes = [];
-        var s = unescape(encodeURIComponent(value));
-        var length = s.length;
+        var str = unescape(encodeURIComponent(value));
+        var length = str.length;
         
         var position = this.__position;
         for (var i = 0; i < length; ++i)
         {
-            this[position++] = s.charCodeAt(i);
+            this[position++] = str.charCodeAt(i);
         }
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
     
-    this.getBytesAvailable = function()
+    this.__get__bytesAvailable = function()
     {
-        return Math.max(this.length - this.__position, 0);
+        return this.length - this.__position;
     };
-    this.getEndian = function()
+    this.__get__endian = function()
     {
         return (this.__bigEndian) ? Endian.BIG_ENDIAN : Endian.LITTLE_ENDIAN;
     };
-    this.setEndian = function(v)
+    this.__set__endian = function(v)
     {
         this.__bigEndian = (v == Endian.BIG_ENDIAN);
         var suffix = (this.__bigEndian) ? 'B' : 'L';
@@ -507,13 +505,12 @@ var ByteArray = new Class(Array, function()
         this.writeFloat = this['__writeFloat' + suffix];
         this.writeDouble = this['__writeDouble' + suffix];
     };
-    this.getPosition = function()
+    this.__get__position = function()
     {
         return this.__position;
     };
-    this.setPosition = function(v)
+    this.__set__position = function(v)
     {
-        v = Math.max(v | 0, 0);
         if (v > this.length) {
             //fill the array with zeros until length == position
             var len = v - this.length;
@@ -522,22 +519,19 @@ var ByteArray = new Class(Array, function()
                 this.push(0);
             }
         }
-        this.__position = v;
+        this.__position = v | 0;
+    };
+    
+    this.toString = function()
+    {
+        return this.map(function(element, index, array)
+        {
+            return String.fromCharCode(element);
+        }, this).join("");
+    };
+    
+    this.toArray = function()
+    {
+        return this.splice(0);
     };
 });
-ByteArray.prototype.__defineGetter__("bytesAvailable", ByteArray.prototype.getBytesAvailable);
-ByteArray.prototype.__defineGetter__("endian", ByteArray.prototype.getEndian);
-ByteArray.prototype.__defineSetter__("endian", ByteArray.prototype.setEndian);
-ByteArray.prototype.__defineGetter__("position", ByteArray.prototype.getPosition);
-ByteArray.prototype.__defineSetter__("position", ByteArray.prototype.setPosition);
-ByteArray.prototype.toString = function()
-{
-    return this.map(function(element, index, array)
-    {
-        return String.fromCharCode(element);
-    }, this).join("");
-};
-ByteArray.prototype.toArray = function()
-{
-    return this.splice(0);
-};

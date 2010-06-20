@@ -9,8 +9,9 @@ var InteractiveObject = new Class(DisplayObject, function()
         //this.tabIndex = 0;
         //this.focusRect = null;
     };
+    
+    this.toString = function()
+    {
+        return '[object InteractiveObject]';
+    };
 });
-InteractiveObject.prototype.toString = function()
-{
-    return '[object InteractiveObject]';
-};

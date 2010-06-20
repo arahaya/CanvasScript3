@@ -25,13 +25,18 @@
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 */
+
+//Opera Fix
 if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.createImageData && window.ImageData) {
     CanvasRenderingContext2D.prototype.createImageData = function(w, h) { return new ImageData(w, h); };
 }
+
+//IE Fix
 if (Object.prototype.__defineGetter__ == undefined) {
     Object.prototype.__defineGetter__ = function(){};
     Object.prototype.__defineSetter__ = function(){};
 }
+
 var cs3 = {
     core: {
         initialized: false,
@@ -51,11 +56,6 @@ var cs3 = {
         init: function()
         {
             if (this.initialized) { return; }
-            
-            if (!document.body) {
-                alert('document not loaded');
-                return;
-            }
             
             window.onresize = this.resizeHandler;
             
@@ -82,7 +82,7 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(cs3.utils.closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             
@@ -277,8 +277,6 @@ var cs3 = {
         },
         createCanvas: function(width, height)
         {
-            if (!window.document) { return null; }
-            
             cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
             canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
@@ -305,6 +303,13 @@ var cs3 = {
             var s = (new Date()).getTime();
             func.apply(scope, args);
             trace((new Date()).getTime() - s);
+        },
+        closure: function(scope, func, args)
+        {
+            return function()
+            {
+                func.apply(scope, args);
+            };
         }
     }
 };
@@ -321,13 +326,6 @@ var __clearContext = (function()
         };
     }
 })();
-function __closure(scope, func, args)
-{
-    return function()
-    {
-        func.apply(scope, args);
-    };
-}
 /**
  * Fix rectangle coords from floats to integers
  */
@@ -402,19 +400,69 @@ var trace = (function()
         return function(msg){};
     }
 })();
-function Class(e, o)
+
+
+function Class(superClass, object)
 {
-    if (e === undefined) { e = {}; }
-    if (o === undefined) { o = e; e = Object; }
-    if (typeof(o) === 'function') { o = new o(); }
-    if (o.__init__ === undefined) { o.__init__ = function(){}; }
-    var c = o.__init__;
-    var f = function(){};
-    f.prototype = e.prototype;
-    c.prototype = new f();
-    c.prototype.constructor = c;
-    for (var p in o) { if (p != '__init__') { c.prototype[p] = o[p]; } }
-    return c;
+    if (superClass === undefined) {
+        superClass = {};
+    }
+    if (object === undefined) {
+        object = superClass;
+        superClass = Object;
+    }
+    if (typeof(object) === 'function') {
+        object = new object();
+    }
+    if (object.__init__ === undefined) {
+        object.__init__ = function(){};
+    }
+    var subClass = object.__init__;
+    var copy = function(){};
+    copy.prototype = superClass.prototype;
+    subClass.prototype = new copy();
+    subClass.prototype.constructor = subClass;
+    
+    //copy properties
+    var preffix, name, method;
+    for (var property in object)
+    {
+        if (property == '__init__') {
+            //do not copy the constructor
+            continue;
+        }
+        
+        preffix = property.substr(0, 7);
+        if (preffix == '__get__') {
+            //define getters
+            name = property.substr(7);
+            subClass.prototype.__defineGetter__(name, object[property]);
+            
+            //also copy as a public method for IE
+            //eg: obj.__get__methodName will become obj.getMethodName()
+            method = 'get' + name.charAt(0).toUpperCase() + name.slice(1);
+            if (!subClass.hasOwnProperty(method)) {
+                //do not override if a method or property with the same name exists
+                subClass.prototype[method] = object[property];
+            }
+        }
+        else if (preffix == '__set__') {
+            //define setters
+            name = property.substr(7);
+            subClass.prototype.__defineSetter__(name, object[property]);
+            
+            //also copy as a public method for IE
+            //eg: obj.__set__methodName will become obj.setMethodName()
+            method = 'set' + name.charAt(0).toUpperCase() + name.slice(1);
+            if (!subClass.hasOwnProperty(method)) {
+                //do not override if a method or property with the same name exists
+                subClass.prototype[method] = object[property];
+            }
+        }
+        
+        subClass.prototype[property] = object[property];
+    }
+    return subClass;
 }
 
 
@@ -496,6 +544,11 @@ var Event = new Class(Object, function()
     {
         this.__stopPropagation = true;
     };
+    
+    this.toString = function()
+    {
+        return '[Event type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
 Event.ACTIVATE = 'activate';
 Event.ADDED = 'added';
@@ -523,10 +576,6 @@ Event.TAB_CHILDREN_CHANGE = 'tabChildrenChange';
 Event.TAB_ENABLED_CHANGE = 'tabEnabledChange';
 Event.TAB_INDEX_CHANGE = 'tabIndexChange';
 Event.UNLOAD = 'unload';
-Event.prototype.toString = function()
-{
-    return '[Event type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};
 var HTTPStatusEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable, status)
@@ -538,13 +587,14 @@ var HTTPStatusEvent = new Class(Event, function()
     {
         return new HTTPStatusEvent(this.type, this.bubbles, this.cancelable, this.status);
     };
+    
+    this.toString = function()
+    {
+        return '[HTTPStatusEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
+            ' status=' + this.status + ']';
+    };
 });
 HTTPStatusEvent.HTTP_STATUS = 'httpStatus';
-HTTPStatusEvent.prototype.toString = function()
-{
-    return '[HTTPStatusEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-        ' status=' + this.status + ']';
-};
 var IOErrorEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable, text)
@@ -556,19 +606,20 @@ var IOErrorEvent = new Class(Event, function()
     {
         return new IOErrorEvent(this.type, this.bubbles, this.cancelable, this.text);
     };
+    
+    this.toString = function()
+    {
+        return '[IOErrorEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
+            ' text=' + this.text + ']';
+    };
 });
 IOErrorEvent.IO_ERROR = 'ioError';
-IOErrorEvent.prototype.toString = function()
-{
-    return '[IOErrorEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-        ' text=' + this.text + ']';
-};
 var KeyboardEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable, charCode, keyCode, keyLocation, ctrlKey, altKey, shiftKey)
     {
         Event.call(this, type, bubbles, cancelable);
-        this.altKey = (altKey) ? true : false;//not possible?
+        this.altKey = (altKey) ? true : false;
         this.charCode = charCode | 0;
         this.ctrlKey = (ctrlKey) ? true : false;
         this.keyCode = keyCode | 0;
@@ -584,27 +635,28 @@ var KeyboardEvent = new Class(Event, function()
     {
         //todo
     };
+    
+    this.toString = function()
+    {
+        return '[KeyboardEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
+            ' charCode=' + this.charCode + ' keyCode=' + this.keyCode + ' keyLocation=' + this.keyLocation +
+            ' ctrlKey=' + this.ctrlKey + ' altKey=' + this.altKey + ' shiftKey=' + this.shiftKey + ']';
+    };
 });
 KeyboardEvent.KEY_DOWN = 'keyDown';
 KeyboardEvent.KEY_UP = 'keyUp';
-KeyboardEvent.prototype.toString = function()
-{
-    return '[KeyboardEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-        ' charCode=' + this.charCode + ' keyCode=' + this.keyCode + ' keyLocation=' + this.keyLocation +
-        ' ctrlKey=' + this.ctrlKey + ' altKey=' + this.altKey + ' shiftKey=' + this.shiftKey + ']';
-};
 var MouseEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
     {
         Event.call(this, type, bubbles, cancelable);
-        this.altKey = (altKey) ? true : false;//not possible?
+        this.altKey = (altKey) ? true : false;
         this.ctrlKey = (ctrlKey) ? true : false;
         this.shiftKey = (shiftKey) ? true : false;
         this.buttonDown = (buttonDown) ? true : false;//when does this become true?
         this.delta = delta | 0;
-        this.__localX = localX | 0;
-        this.__localY = localY | 0;
+        this.__localX = (localX !== undefined) ? localX : null;
+        this.__localY = (localY !== undefined) ? localY : null;
         this.relatedObject = relatedObject || null;
     };
     this.clone = function()
@@ -617,39 +669,40 @@ var MouseEvent = new Class(Event, function()
         //todo
     };
     
-    this.getLocalX = function()
+    this.__get__localX = function()
     {
         if (this.__localX !== null) {
             return this.__localX;
         }
-        return this.currentTarget.getMouseX();
+        return this.currentTarget.__get__mouseX();
     };
-    this.getLocalY = function()
+    this.__get__localY = function()
     {
         if (this.__localY !== null) {
             return this.__localY;
         }
-        return this.currentTarget.getMouseY();
+        return this.currentTarget.__get__mouseY();
     };
-    this.getStageX = function()
+    this.__get__stageX = function()
     {
         if (this.__localX !== null) {
             return this.currentTarget.localToGlobal(new Point(this.__localX, 0)).x;
         }
         return this.target.__stage.__mouseX;
     };
-    this.getStageY = function()
+    this.__get__stageY = function()
     {
         if (this.__localY !== null) {
             return this.currentTarget.localToGlobal(new Point(this.__localY, 0)).y;
         }
         return this.currentTarget.__stage.__mouseY;
     };
+    
+    this.toString = function()
+    {
+        return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
-MouseEvent.prototype.__defineGetter__("localX", MouseEvent.prototype.getLocalX);
-MouseEvent.prototype.__defineGetter__("localY", MouseEvent.prototype.getLocalY);
-MouseEvent.prototype.__defineGetter__("stageX", MouseEvent.prototype.getStageX);
-MouseEvent.prototype.__defineGetter__("stageY", MouseEvent.prototype.getStageY);
 MouseEvent.CLICK = 'click';
 MouseEvent.DOUBLE_CLICK = 'doubleClick';
 MouseEvent.MOUSE_DOWN = 'mouseDown';
@@ -660,10 +713,6 @@ MouseEvent.MOUSE_UP = 'mouseUp';
 MouseEvent.MOUSE_WHEEL = 'mouseWheel';
 MouseEvent.ROLL_OUT = 'rollOut';
 MouseEvent.ROLL_OVER = 'rollOver';
-MouseEvent.prototype.toString = function()
-{
-    return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};
 var ProgressEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable, bytesLoaded, bytesTotal)
@@ -676,13 +725,14 @@ var ProgressEvent = new Class(Event, function()
     {
         return new ProgressEvent(this.type, this.bubbles, this.cancelable, this.bytesLoaded, this.bytesTotal);
     };
+    
+    this.toString = function()
+    {
+        return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
+            ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
+    };
 });
 ProgressEvent.PROGRESS = 'progress';
-ProgressEvent.prototype.toString = function()
-{
-    return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-        ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
-};
 var TimerEvent = new Class(Event, function()
 {
     this.__init__ = function(type, bubbles, cancelable)
@@ -697,13 +747,14 @@ var TimerEvent = new Class(Event, function()
     {
         //todo
     };
+    
+    this.toString = function()
+    {
+        return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
 TimerEvent.TIMER = 'timer';
 TimerEvent.TIMER_COMPLETE = 'timerComplete';
-TimerEvent.prototype.toString = function()
-{
-    return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};
 var TweenEvent = new Class(Event, function()
 {
     this.__init__ = function(type, time, position, bubbles, cancelable)
@@ -717,6 +768,16 @@ var TweenEvent = new Class(Event, function()
         return new TweenEvent(this.type, this.time, this.position,
                         this.bubbles, this.cancelable);
     };
+    
+    this.toString = function()
+    {
+        return '[TweenEvent' +
+                ' type='       + this.type +
+                ' time='       + this.time +
+                ' position='   + this.position +
+                ' bubbles='    + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
+    };
 });
 TweenEvent.MOTION_CHANGE = 'motionChange';
 TweenEvent.MOTION_FINISH = 'motionFinish';
@@ -724,36 +785,44 @@ TweenEvent.MOTION_LOOP = 'motionLoop';
 TweenEvent.MOTION_RESUME = 'motionResume';
 TweenEvent.MOTION_START = 'motionStart';
 TweenEvent.MOTION_STOP = 'motionStop';
-TweenEvent.prototype.toString = function()
-{
-    return '[TweenEvent' +
-                ' type='       + this.type +
-                ' time='       + this.time +
-                ' position='   + this.position +
-                ' bubbles='    + this.bubbles +
-                ' cancelable=' + this.cancelable + ']';
-};
 var EventDispatcher = new Class(Object, function()
 {
+    var sortByPriority = function(a, b)
+    {
+        var p = 'priority';
+        if (a[p] < b[p]) { return 1; }
+        else if (a[p] > b[p]){ return -1; }
+        else { return 0; }
+    };
+    
     this.__init__ = function()
     {
         this.__events = {};
     };
+    /**
+     * obj.addEventListener(type, listener, useCapture, priority);
+     * obj.addEventListener(type, [scope, listener], useCapture, priority);
+     * obj.addEventListener(type, new EventListener(scope, listener, useCapture, priority));
+     */
     this.addEventListener = function(type, listener, useCapture, priority)
     {
-        //TODO useCapture, priority
-        if (this.__events[type] === undefined) {
-            this.__events[type] = [];
-        }
+        //TODO useCapture
+        var events = this.__events;
         
-        if (typeof(listener) === 'function') {
-            listener = new EventListener(this, listener);
+        if (listener instanceof Function) {
+            listener = new EventListener(this, listener, useCapture, priority);
         }
         else if (listener instanceof Array) {
-            listener = new EventListener(listener[0], listener[1]);
+            listener = new EventListener(listener[0], listener[1], useCapture, priority);
         }
         
-        this.__events[type].push(listener);
+        if (events[type] === undefined) {
+            events[type] = [];
+        }
+        
+        var listeners = events[type];
+        listeners.push(listener);
+        listeners.sort(sortByPriority);
     };
     this.dispatchEvent = function(event)
     {
@@ -790,17 +859,23 @@ var EventDispatcher = new Class(Object, function()
     {
         return (this.__events[type] !== undefined);
     };
+    
+    /**
+     * obj.removeEventListener(type, listener, useCapture);
+     * obj.removeEventListener(type, [scope, listener], useCapture);
+     * obj.removeEventListener(type, new EventListener(scope, listener, useCapture));
+     */
     this.removeEventListener = function(type, listener, useCapture)
     {
         //TODO useCapture
         var listeners = this.__events[type];
         if (listeners === undefined) { return; }
         
-        if (typeof(listener) === 'function') {
-            listener = new EventListener(this, listener);
+        if (listener instanceof Function) {
+            listener = new EventListener(this, listener, useCapture);
         }
         else if (listener instanceof Array) {
-            listener = new EventListener(listener[0], listener[1]);
+            listener = new EventListener(listener[0], listener[1], useCapture);
         }
         
         for (var i = 0, l = listeners.length; i < l; ++i)
@@ -823,19 +898,20 @@ var EventDispatcher = new Class(Object, function()
         }
         return false;
     };
+    
+    this.toString = function()
+    {
+        return '[object EventDispatcher]';
+    };
 });
-EventDispatcher.prototype.toString = function()
-{
-    return '[object EventDispatcher]';
-};
 var EventListener = new Class(Object, function()
 {
-    this.__init__ = function(scope, callback)
+    this.__init__ = function(scope, callback, useCapture, priority)
     {
         this.scope = scope;
         this.callback = callback;
-        //this.useCapture = (useCapture) ? true : false;
-        //this.priority = priority | 0;
+        this.useCapture = (useCapture) ? true : false;
+        this.priority = priority | 0;
     };
     this.call = function()
     {
@@ -843,15 +919,16 @@ var EventListener = new Class(Object, function()
     };
     this.equals = function(toCompare)
     {
-        return (
-            toCompare.scope === this.scope &&
-            toCompare.callback === this.callback) ? true : false;
+        return (toCompare.scope      === this.scope &&
+                toCompare.callback   === this.callback &&
+                toCompare.useCapture === this.useCapture) ? true : false;
+    };
+    
+    this.toString = function()
+    {
+        return '[object EventListener]';
     };
 });
-EventListener.prototype.toString = function()
-{
-    return '[object EventListener]';
-};
 CapsStyle = {
     NONE: 'butt',
     ROUND: 'round',
@@ -873,7 +950,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__transform.__target = this;
         this.__visible = true;
         this.__alpha = 1;
-        this.__modified = true;
+        this.__modified = false;
         this.__parent = null;
         this.__stage = null;
         this.__root = null;
@@ -888,6 +965,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__cache = null;//cached result for mask and filters
         //this.opaqueBackground = null;
     };
+    
     this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
@@ -900,8 +978,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         var bitmapData;
         if (bitmap === null) {
             bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
-            bitmap.setX(bounds.x);
-            bitmap.setY(bounds.y);
+            bitmap.__set__x(bounds.x);
+            bitmap.__set__y(bounds.y);
         }
         
         //TODO: check if the bitmap needs to be rendered
@@ -913,8 +991,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         
         if (render) {
             //update the position
-            bitmap.setX(bounds.x);
-            bitmap.setY(bounds.y);
+            bitmap.__set__x(bounds.x);
+            bitmap.__set__y(bounds.y);
             
             //update the size(this also clears the contents)
             bitmap.__bitmapData.__resize(bounds.width, bounds.height);
@@ -941,28 +1019,33 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__bitmap = bitmap;
         return bitmap;
     };
+    
     /**
-     * Bounds of your entire display list
+     * Bounds of the DisplayObject
      */
     this.__getBounds = function()
     {
         return this.__getContentBounds();
     };
+    
     /**
-     * Bounds of yourself only
+     * Bounds of the inner content
      */
     this.__getContentBounds = function()
     {
         return new Rectangle();
     };
+    
     this.__getRect = function()
     {
         return this.__getContentRect();
     };
+    
     this.__getContentRect = function()
     {
         return this.__getContentBounds();
     };
+    
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
@@ -971,19 +1054,20 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
         return null;
     };
+    
     this.__hitTestPoint = function(context, matrix, point)
     {
         return false;
     };
+    
     this.__getModified = function()
     {
-        return this.__modified || this.__transform.__modified;
     };
+    
     this.__setModified = function(v)
     {
-        this.__modified = v;
-        this.__transform.__modified = v;
     };
+    
     this.__applyContextFilters = function(context, matrix, colorTransform)
     {
         var filters = this.__filters;
@@ -994,91 +1078,113 @@ var DisplayObject = new Class(EventDispatcher, function()
             }
         }
     };
+    
     this.__applyMask = function(context, matrix, colorTransform)
     {
         /*** experimental ***/
-        if (this.__mask) {
-            var selfBitmap = this.__getAsBitmap();
-            if (!selfBitmap) {
-                //child content is empty so we don't need to apply a mask
-                return;
-            }
-            var mask = this.__mask;
-            var maskBitmap = mask.__getAsBitmap();
-            if (!maskBitmap) {
-                //mask content is empty so we don't need to render the child
-                return;
-            }
-            
-            var selfBitmapData = selfBitmap.__bitmapData;
-            var maskBitmapData = maskBitmap.__bitmapData;
-            
-            //create another bitmap to apply the mask
-            if (this.__cache) {
-                //if it already exists, reuse it
-                this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
-                this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
-            }
-            else {
-                //create a new bitmap
-                this.__cache = new Bitmap(selfBitmapData.clone());
-            }
-            this.__cache.setX(selfBitmap.getX());
-            this.__cache.setY(selfBitmap.getY());
-            
-            
-            var bitmap = this.__cache;
-            var bitmapData = bitmap.__bitmapData;
-            var bitmapDataContext = bitmapData.__context;
-            
-            //create the mask's matrix
-            var maskMatrix = mask.__transform.getConcatenatedMatrix();
-            var deltaMatrix = matrix.clone();
-            deltaMatrix.invert();
-            maskMatrix.concat(deltaMatrix);
-            
-            //adjust the position to draw
-            maskMatrix.tx += maskBitmap.getX();
-            maskMatrix.ty += maskBitmap.getY();
-            
-            //apply the mask
-            bitmapDataContext.save();
-            bitmapDataContext.globalCompositeOperation = 'destination-in';
-            bitmapDataContext.setTransform(
-                maskMatrix.a,
-                maskMatrix.b,
-                maskMatrix.c,
-                maskMatrix.d,
-                maskMatrix.tx,
-                maskMatrix.ty);
-            maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
-            bitmapDataContext.restore();
+        var selfBitmap = this.__getAsBitmap();
+        if (!selfBitmap) {
+            //child content is empty so we don't need to apply a mask
+            return;
         }
-    };
-    this.__render = function(context, matrix, colorTransform)
-    {
-    };
-    this.__update = function(matrix)
-    {
-    };
-    this.__updateList = function(matrix)
-    {
-        //this.__update();
-        var modified = this.__getModified();
-        if (modified) {
-            var globalBounds = matrix.transformRect(this.__getContentBounds());
-            
-            //collect redraw regions
-            this.__stage.__addRedrawRegion(globalBounds);
-            if (this.__globalBounds) {
-                this.__stage.__addRedrawRegion(this.__globalBounds);
-            }
-            this.__globalBounds = globalBounds;
+        var mask = this.__mask;
+        var maskBitmap = mask.__getAsBitmap();
+        if (!maskBitmap) {
+            //mask content is empty so we don't need to render the child
+            return;
         }
         
-        //reset modification
-        this.__setModified(false);
+        var selfBitmapData = selfBitmap.__bitmapData;
+        var maskBitmapData = maskBitmap.__bitmapData;
+        
+        //create another bitmap to apply the mask
+        if (this.__cache) {
+            //if it already exists, reuse it
+            this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
+            this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
+        }
+        else {
+            //create a new bitmap
+            this.__cache = new Bitmap(selfBitmapData.clone());
+        }
+        this.__cache.setX(selfBitmap.getX());
+        this.__cache.setY(selfBitmap.getY());
+        
+        
+        var bitmap = this.__cache;
+        var bitmapData = bitmap.__bitmapData;
+        var bitmapDataContext = bitmapData.__context;
+        
+        //create the mask's matrix
+        var maskMatrix = mask.__transform.__get__concatenatedMatrix();
+        var deltaMatrix = matrix.clone();
+        deltaMatrix.invert();
+        maskMatrix.concat(deltaMatrix);
+        
+        //adjust the position to draw
+        maskMatrix.tx += maskBitmap.getX();
+        maskMatrix.ty += maskBitmap.getY();
+        
+        //apply the mask
+        bitmapDataContext.save();
+        bitmapDataContext.globalCompositeOperation = 'destination-in';
+        bitmapDataContext.setTransform(
+            maskMatrix.a,
+            maskMatrix.b,
+            maskMatrix.c,
+            maskMatrix.d,
+            maskMatrix.tx,
+            maskMatrix.ty);
+        maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+        bitmapDataContext.restore();
     };
+    
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__filters.length) {
+            this.__applyContextFilters(context, matrix, colorTransform);
+        }
+        if (this.__mask) {
+            this.__applyMask(context, matrix, colorTransform);
+        }
+        
+        if (this.__cache) {
+            this.__cache.__render(context, matrix, colorTransform);
+        }
+        else {
+            this.__render(context, matrix, colorTransform);
+        }
+    };
+    
+    this.__update = function(matrix, forceUpdate)
+    {
+        if (forceUpdate || this.__getModified()) {
+            var stage = this.__stage;
+            var globalBounds = matrix.transformRect(this.__getContentBounds());
+            var lastGlobalBounds = this.__globalBounds;
+            
+            // collect redraw regions
+            if (!lastGlobalBounds) {
+                stage.__addRedrawRegion(globalBounds);
+            }
+            else {
+                if (globalBounds.intersects(lastGlobalBounds)) {
+                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
+                }
+                else {
+                    stage.__addRedrawRegion(globalBounds);
+                    stage.__addRedrawRegion(lastGlobalBounds);
+                }
+            }
+            
+            // save the global bounds for the next update
+            this.__globalBounds = globalBounds;
+            
+            // reset modification
+            this.__setModified(false);
+        }
+    };
+    
     this.getBounds = function(targetCoordinateSpace)
     {
         var bounds = this.__getBounds();
@@ -1090,37 +1196,41 @@ var DisplayObject = new Class(EventDispatcher, function()
             return this.__transform.__matrix.transformRect(bounds);
         }
         
-        var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(bounds);
+        var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(bounds);
         if (targetCoordinateSpace === this.__root) {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
         
         //tansform your global bounds to targets local bounds
-        var targetMatrix = targetCoordinateSpace.__transform.getConcatenatedMatrix();
+        var targetMatrix = targetCoordinateSpace.__transform.__get__concatenatedMatrix();
         targetMatrix.invert();
         return targetMatrix.transformRect(globalBounds);
     };
+    
     this.getRect = function(targetCoordinateSpace)
     {
         return this.getBounds(targetCoordinateSpace);
     };
+    
     this.globalToLocal = function(point)
     {
-        var matrix = this.__transform.getConcatenatedMatrix();
+        var matrix = this.__transform.__get__concatenatedMatrix();
         matrix.invert();
         return matrix.transformPoint(point);
     };
+    
     this.hitTestObject = function(obj)
     {
-        var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
-        var targetGlobalBounds = obj.__transform.getConcatenatedMatrix().transformRect(obj.__getBounds());
+        var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
+        var targetGlobalBounds = obj.__transform.__get__concatenatedMatrix().transformRect(obj.__getBounds());
         return globalBounds.intersects(targetGlobalBounds);
     };
+    
     this.hitTestPoint = function(x, y, shapeFlag)
     {
         if (shapeFlag === false) {
-            var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
+            var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);
         }
         else {
@@ -1131,7 +1241,7 @@ var DisplayObject = new Class(EventDispatcher, function()
             }
             
             var context = this.__stage.__hiddenContext;
-            var matrix = this.__transform.getConcatenatedMatrix();
+            var matrix = this.__transform.__get__concatenatedMatrix();
             var point = new Point(x, y);
             
             context.clearRect(x, y, 1, 1);
@@ -1144,114 +1254,139 @@ var DisplayObject = new Class(EventDispatcher, function()
             return result;
         }
     };
+    
     this.localToGlobal = function(point)
     {
-        return this.__transform.getConcatenatedMatrix().transformPoint(point);
+        return this.__transform.__get__concatenatedMatrix().transformPoint(point);
     };
     
     /* getters and setters */
-    this.getName = function()
+    this.__get__name = function()
     {
         if (this.__name === null) {
             return "instance" + this.__id;
         }
         return this.__name;
     };
-    this.setName = function(name)
+    
+    this.__set__name = function(name)
     {
         this.__name = name;
     };
-    this.getStage = function()
+    
+    this.__get__stage = function()
     {
         return this.__stage;
     };
-    this.getRoot = function()
+    
+    this.__get__root = function()
     {
         return this.__root;
     };
-    this.getParent = function()
+    
+    this.__get__parent = function()
     {
         return this.__parent;
     };
-    this.getWidth = function()
+    
+    this.__get__width = function()
     {
         return this.__transform.__matrix.transformRect(this.__getBounds()).width;
     };
-    this.getHeight = function()
+    
+    this.__get__height = function()
     {
         return this.__transform.__matrix.transformRect(this.__getBounds()).height;
     };
-    this.getX = function()
+    
+    this.__get__x = function()
     {
         return this.__transform.__getX();
     };
-    this.setX = function(v)
+    
+    this.__set__x = function(v)
     {
         this.__transform.__setX(v);
     };
-    this.getY = function()
+    
+    this.__get__y = function()
     {
         return this.__transform.__getY();
     };
-    this.setY = function(v)
+    
+    this.__set__y = function(v)
     {
         this.__transform.__setY(v);
     };
-    this.getRotation = function()
+    
+    this.__get__rotation = function()
     {
         return this.__transform.__getRotation();
     };
-    this.setRotation = function(v)
+    
+    this.__set__rotation = function(v)
     {
         this.__transform.__setRotation(v);
     };
-    this.getScaleX = function()
+    
+    this.__get__scaleX = function()
     {
         return this.__transform.__getScaleX();
     };
-    this.setScaleX = function(v)
+    
+    this.__set__scaleX = function(v)
     {
         this.__transform.__setScaleX(v);
     };
-    this.getScaleY = function()
+    
+    this.__get__scaleY = function()
     {
         return this.__transform.__getScaleY();
     };
-    this.setScaleY = function(v)
+    
+    this.__set__scaleY = function(v)
     {
         this.__transform.__setScaleY(v);
     };
-    this.getAlpha = function()
+    
+    this.__get__alpha = function()
     {
         return this.__alpha;
     };
-    this.setAlpha = function(v)
+    
+    this.__set__alpha = function(v)
     {
         this.__alpha = v;
         this.__modified = true;
     };
-    this.getVisible = function()
+    
+    this.__get__visible = function()
     {
         return this.__visible;
     };
-    this.setVisible = function(v)
+    
+    this.__set__visible = function(v)
     {
         this.__visible = (v) ? true : false;
         this.__modified = true;
     };
-    this.getMouseX = function()
+    
+    this.__get__mouseX = function()
     {
         return this.globalToLocal(new Point(this.__stage.__mouseX, this.__stage.__mouseY)).x;
     };
-    this.getMouseY = function()
+    
+    this.__get__mouseY = function()
     {
         return this.globalToLocal(new Point(this.__stage.__mouseX, this.__stage.__mouseY)).y;
     };
-    this.getMask = function()
+    
+    this.__get__mask = function()
     {
         return this.__mask;
     };
-    this.setMask = function(v)
+    
+    this.__set__mask = function(v)
     {
         //if the mask object is allready a mask of a different object remove it
         if (v.__maskee) {
@@ -1264,11 +1399,13 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__mask = v;
         v.__maskee = this;
     };
-    this.getFilters = function()
+    
+    this.__get__filters = function()
     {
         return this.__filters.slice(0);
     };
-    this.setFilters = function(v)
+    
+    this.__set__filters = function(v)
     {
         this.__cache = null;
         for (var i = 0, l = v.length; i < l; ++i)
@@ -1281,49 +1418,23 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__filters = v.slice(0);
         this.__modified = true;
     };
-    this.getTransform = function()
+    
+    this.__get__transform = function()
     {
         return this.__transform;
     };
-    this.setTransform = function(v)
+    
+    this.__set__transform = function(v)
     {
         this.__transform = v;
         this.__transform.__modified = true;
     };
+    
+    this.toString = function()
+    {
+        return '[object DisplayObject]';
+    };
 });
-DisplayObject.prototype.__defineGetter__("name", DisplayObject.prototype.getName);
-DisplayObject.prototype.__defineSetter__("name", DisplayObject.prototype.setName);
-DisplayObject.prototype.__defineGetter__("parent", DisplayObject.prototype.getParent);
-DisplayObject.prototype.__defineGetter__("stage", DisplayObject.prototype.getStage);
-DisplayObject.prototype.__defineGetter__("root", DisplayObject.prototype.getRoot);
-DisplayObject.prototype.__defineGetter__("width", DisplayObject.prototype.getWidth);
-DisplayObject.prototype.__defineGetter__("height", DisplayObject.prototype.getHeight);
-DisplayObject.prototype.__defineGetter__("x", DisplayObject.prototype.getX);
-DisplayObject.prototype.__defineSetter__("x", DisplayObject.prototype.setX);
-DisplayObject.prototype.__defineGetter__("y", DisplayObject.prototype.getY);
-DisplayObject.prototype.__defineSetter__("y", DisplayObject.prototype.setY);
-DisplayObject.prototype.__defineGetter__("rotation", DisplayObject.prototype.getRotation);
-DisplayObject.prototype.__defineSetter__("rotation", DisplayObject.prototype.setRotation);
-DisplayObject.prototype.__defineGetter__("scaleX", DisplayObject.prototype.getScaleX);
-DisplayObject.prototype.__defineSetter__("scaleX", DisplayObject.prototype.setScaleX);
-DisplayObject.prototype.__defineGetter__("scaleY", DisplayObject.prototype.getScaleY);
-DisplayObject.prototype.__defineSetter__("scaleY", DisplayObject.prototype.setScaleY);
-DisplayObject.prototype.__defineGetter__("alpha", DisplayObject.prototype.getAlpha);
-DisplayObject.prototype.__defineSetter__("alpha", DisplayObject.prototype.setAlpha);
-DisplayObject.prototype.__defineGetter__("visible", DisplayObject.prototype.getVisible);
-DisplayObject.prototype.__defineSetter__("visible", DisplayObject.prototype.setVisible);
-DisplayObject.prototype.__defineGetter__("mask", DisplayObject.prototype.getMask);
-DisplayObject.prototype.__defineSetter__("mask", DisplayObject.prototype.setMask);
-DisplayObject.prototype.__defineGetter__("filters", DisplayObject.prototype.getFilters);
-DisplayObject.prototype.__defineSetter__("filters", DisplayObject.prototype.setFilters);
-DisplayObject.prototype.__defineGetter__("transform", DisplayObject.prototype.getTransform);
-DisplayObject.prototype.__defineSetter__("transform", DisplayObject.prototype.setTransform);
-DisplayObject.prototype.__defineGetter__("mouseX", DisplayObject.prototype.getMouseX);
-DisplayObject.prototype.__defineGetter__("mouseY", DisplayObject.prototype.getMouseY);
-DisplayObject.prototype.toString = function()
-{
-    return '[object DisplayObject]';
-};
 var InteractiveObject = new Class(DisplayObject, function()
 {
     this.__init__ = function()
@@ -1335,11 +1446,12 @@ var InteractiveObject = new Class(DisplayObject, function()
         //this.tabIndex = 0;
         //this.focusRect = null;
     };
+    
+    this.toString = function()
+    {
+        return '[object InteractiveObject]';
+    };
 });
-InteractiveObject.prototype.toString = function()
-{
-    return '[object InteractiveObject]';
-};
 var DisplayObjectContainer = new Class(InteractiveObject, function()
 {
     this.__init__ = function()
@@ -1349,7 +1461,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.mouseChildren = true;
         //this.tabChildren = true;
     };
-    //override
+    
+    /* @override DisplayObject.__getBounds */
     this.__getBounds = function()
     {
         var bounds = this.__getContentBounds();
@@ -1362,7 +1475,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return bounds;
     };
-    //override
+    
+    /* @override DisplayObject.__getRect */
     this.__getRect = function()
     {
         var rect = this.__getContentRect();
@@ -1375,7 +1489,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return rect;
     };
-    //override
+    
+    /* @override DisplayObject.__getObjectUnderPoint */
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
@@ -1398,71 +1513,75 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return null;
     };
-    //override
-    this.__updateList = function(matrix)
+    
+    /* @override DisplayObject.__update */
+    this.__update = function(matrix, forceUpdate)
     {
-        //this.__update();
-        var modified = this.__getModified();
-        if (modified) {
-            var globalBounds = matrix.transformRect(this.__getContentBounds());
-            
-            //collect redraw regions
-            this.__stage.__addRedrawRegion(globalBounds);
-            if (this.__globalBounds) {
-                this.__stage.__addRedrawRegion(this.__globalBounds);
-            }
-            this.__globalBounds = globalBounds;
-        }
+        var update = forceUpdate || this.__getModified();
         
+        // update children first
         var children = this.__children;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
-            if (modified) {
-                //if parent is modified child is to
-                child.__setModified(true);
-            }
-            child.__updateList(childMatrix);
+            child.__update(childMatrix, update);
         }
         
-        //reset modification
-        this.__setModified(false);
+        // update your self
+        if (update) {
+            var stage = this.__stage;
+            var globalBounds = matrix.transformRect(this.__getContentBounds());
+            var lastGlobalBounds = this.__globalBounds;
+            
+            // collect redraw regions
+            if (!lastGlobalBounds) {
+                stage.__addRedrawRegion(globalBounds);
+            }
+            else {
+                if (globalBounds.intersects(lastGlobalBounds)) {
+                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
+                }
+                else {
+                    stage.__addRedrawRegion(globalBounds);
+                    stage.__addRedrawRegion(lastGlobalBounds);
+                }
+            }
+            
+            // save the global bounds for the next update
+            this.__globalBounds = globalBounds;
+            
+            // reset modification
+            this.__setModified(false);
+        }
     };
-    /**
-     * NOTE: argument matrix and alpha is already applied to context
-     * NOTE: argument matrix already contains self local matrix
-     */
+    
     this.__renderChildren = function(context, matrix, colorTransform)
     {
         var alpha = context.globalAlpha;
         var children = this.__children;
+        var render = DisplayObject.prototype.__render;
         for (var i = 0, l = children.length; i < l; ++i)
         {
             var child = children[i];
+            
             if (child.__visible === false) { continue; }
             if (child.__maskee !== null) { continue; }
             
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
+            
             var childColor = child.__transform.__colorTransform.clone();
             childColor.concat(colorTransform);
             
             context.globalAlpha = alpha * child.__alpha;
             context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            child.__applyContextFilters(context, matrix, colorTransform);
-            child.__applyMask(context, matrix, colorTransform);
-            
-            if (child.__cache) {
-                child.__cache.__render(context, childMatrix, childColor);
-            }
-            else {
-                child.__render(context, childMatrix, childColor);
-            }
+            render.call(child, context, childMatrix, childColor);
         }
     };
+    
     this.__addChildAt = function(child, index)
     {
         if (!(child instanceof DisplayObject)) {
@@ -1488,13 +1607,13 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         child.__setModified(true);
     };
+    
     this.__removeChildAt = function(index)
     {
         var child = this.__children[index];
         
-        //add redraw regions
-        child.__setModified(true);
-        child.__updateList(child.__transform.getConcatenatedMatrix());
+        // add redraw regions
+        child.__update(child.__transform.__get__concatenatedMatrix(), true);
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -1524,10 +1643,12 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return false;
     };
+    
     this.addChild = function(child)
     {
         this.__addChildAt(child, this.__children.length);
     };
+    
     this.addChildAt = function(child, index)
     {
         if (index < 0 || index > this.__children.length) {
@@ -1536,6 +1657,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         this.__addChildAt(child, index);
     };
+    
     this.getChildAt = function(index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -1544,6 +1666,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return this.__children[index];
     };
+    
     this.getChildByName = function(name)
     {
         var children = this.__children;
@@ -1554,6 +1677,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return null;
     };
+    
     this.getChildIndex = function(child)
     {
         var children = this.__children;
@@ -1565,6 +1689,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         throw new ArgumentError('The supplied DisplayObject must be a child of the caller.');
     };
+    
     this.removeChild = function(child)
     {
         var index;
@@ -1576,6 +1701,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         return this.__removeChildAt(index);
     };
+    
     this.removeChildAt = function(index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -1584,6 +1710,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return this.__removeChildAt(index);
     };
+    
     this.setChildIndex = function(child, index)
     {
         if (index < 0 || index >= this.__children.length) {
@@ -1602,6 +1729,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.__children.splice(index, 0, child);
         this.__modified = true;
     };
+    
     this.swapChildren = function(child1, child2)
     {
         var index1, index2;
@@ -1617,6 +1745,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         this.__children[index1] = child2;
         this.__modified = true;
     };
+    
     this.swapChildrenAt = function(index1, index2)
     {
         var children = this.__children;
@@ -1631,29 +1760,36 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         children[index2] = temp;
         this.__modified = true;
     };
+    
     this.getObjectsUnderPoint = function(point)
     {
         //TODO
     };
     
     /* getters and setters */
-    this.getNumChildren = function()
+    this.__get__numChildren = function()
     {
         return this.__children.length;
     };
+    
+    this.toString = function()
+    {
+        return '[object DisplayObjectContainer]';
+    };
 });
-DisplayObjectContainer.prototype.__defineGetter__("numChildren", DisplayObjectContainer.prototype.getNumChildren);
-DisplayObjectContainer.prototype.toString = function()
-{
-    return '[object DisplayObjectContainer]';
-};
 var Bitmap = new Class(DisplayObject, function()
 {
     this.__init__ = function(bitmapData)
     {
         DisplayObject.call(this);
-        this.__bitmapData = bitmapData ? bitmapData : null;
+        
+        this.__bitmapData = null;
+        
+        if (bitmapData) {
+            this.__set__bitmapData(bitmapData);
+        }
     };
+    
     //override
     this.__getContentBounds = function()
     {
@@ -1662,6 +1798,7 @@ var Bitmap = new Class(DisplayObject, function()
         }
         return new Rectangle();
     };
+    
     //override
     this.__getAsBitmap = function()
     {
@@ -1670,6 +1807,7 @@ var Bitmap = new Class(DisplayObject, function()
         }
         return null;
     };
+    
     //override
     this.__getModified = function()
     {
@@ -1677,6 +1815,7 @@ var Bitmap = new Class(DisplayObject, function()
                 this.__transform.__modified ||
                 (this.__bitmapData && this.__bitmapData.__modified));
     };
+    
     //override
     this.__setModified = function(v)
     {
@@ -1686,6 +1825,7 @@ var Bitmap = new Class(DisplayObject, function()
             this.__bitmapData.__modified = v;
         }
     };
+    
     //override
     this.__render = function(context, matrix, colorTransform)
     {
@@ -1693,6 +1833,7 @@ var Bitmap = new Class(DisplayObject, function()
             this.__bitmapData.__render(context, matrix, colorTransform);
         }
     };
+    
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
@@ -1708,54 +1849,58 @@ var Bitmap = new Class(DisplayObject, function()
                 //fix the points back to ints
                 localPoint.x = localPoint.x | 0;
                 localPoint.y = localPoint.y | 0;
-                var imageData = this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1);
-                var pixel = imageData.data;
-                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
-                if (pixel[3] !== 0) {
+                try {
+                    return (this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1).data[3] !== 0);
+                }
+                catch (e) {
+                    // if the bitmap source is on a different domain and we cant call getImageData
+                    // return true as if it was a hitTest with shapeflag=false
                     return true;
                 }
             }
         }
         return false;
     };
+    
     /* getters and setters */
-    this.getBitmapData = function()
+    this.__get__bitmapData = function()
     {
         return this.__bitmapData;
     };
-    this.setBitmapData = function(v)
+    
+    this.__set__bitmapData = function(v)
     {
         this.__bitmapData = v;
-        this.__setModified(true);
+        this.__modified = true;
     };
-    this.getPixelSnapping = function()
+    
+    this.__get__pixelSnapping = function()
     {
         //not supported
         return false;
     };
-    this.setPixelSnapping = function(v)
+    
+    this.__set__pixelSnapping = function(v)
     {
         //not supported
     };
-    this.getSmoothing = function()
+    
+    this.__get__smoothing = function()
     {
         //not supported
         return false;
     };
-    this.setSmoothing = function(v)
+    
+    this.__set__smoothing = function(v)
     {
         //not supported
+    };
+    
+    this.toString = function()
+    {
+        return '[object Bitmap]';
     };
 });
-Bitmap.prototype.__defineGetter__("bitmapData", Bitmap.prototype.getBitmapData);
-Bitmap.prototype.__defineGetter__("pixelSnapping", Bitmap.prototype.getPixelSnapping);
-Bitmap.prototype.__defineSetter__("pixelSnapping", Bitmap.prototype.setPixelSnapping);
-Bitmap.prototype.__defineGetter__("smoothing", Bitmap.prototype.getSmoothing);
-Bitmap.prototype.__defineSetter__("smoothing", Bitmap.prototype.setSmoothing);
-Bitmap.prototype.toString = function()
-{
-    return '[object Bitmap]';
-};
 var BitmapData = new Class(Object, function()
 {
     var invalidBitmapData = function()
@@ -1763,110 +1908,7 @@ var BitmapData = new Class(Object, function()
         throw new ArgumentError("Invalid BitmapData.");
     };
     
-    var __alphaBlend = function(context, src, dx, dy)
-    {
-        var dst = context.getImageData(dx, dy, src.width, src.height);
-        __alphaBlendImageData(dst, src);
-        context.putImageData(dst, dx, dy);
-    };
-    var __alphaBlendImageData = function(dst, src)
-    {
-        __alphaBlendArray(dst.data, src.data);
-    };
-    var __alphaBlendArray = function(dst, src)
-    {
-        var srcLength = src.length;
-        var ri, gi, bi, ai;
-        var sa, da, na, ma;
-        for (var i = 0; i < srcLength;)
-        {
-            ri = i++;
-            gi = i++;
-            bi = i++;
-            ai = i++;
-            
-            if (src[ai] === 0) {
-                //src is transparent, dst keeps its color
-                continue;
-            }
-            else if (src[ai] === 255 || dst[ai] === 0) {
-                //src is solid OR dst is transparent, overwrite dst
-                dst[ri] = src[ri];
-                dst[gi] = src[gi];
-                dst[bi] = src[bi];
-                dst[ai] = src[ai];
-            }
-            else if (dst[ai] !== 255) {
-                //merge
-                sa = src[ai] / 255;
-                da = dst[ai] / 255;
-                na = da + sa - sa * da;
-                ma = 1 - sa;
-                dst[ri] = (src[ri] * sa + dst[ri] * da * ma) / na;
-                dst[gi] = (src[gi] * sa + dst[gi] * da * ma) / na;
-                dst[bi] = (src[bi] * sa + dst[bi] * da * ma) / na;
-                dst[ai] = na * 255;
-            }
-            else {
-                //add
-                sa = src[ai] / 255;
-                ma = 1 - sa;
-                dst[ri] = src[ri] * sa + dst[ri] * ma;
-                dst[gi] = src[gi] * sa + dst[gi] * ma;
-                dst[bi] = src[bi] * sa + dst[bi] * ma;
-            }
-        }
-    };
-    var __floodFill4Stack = function(data, x, y, width, height, targetColor, replacementColor)
-    {
-        var T0 = targetColor[0];
-        var T1 = targetColor[1];
-        var T2 = targetColor[2];
-        var T3 = targetColor[3];
-        var R0 = replacementColor[0];
-        var R1 = replacementColor[1];
-        var R2 = replacementColor[2];
-        var R3 = replacementColor[3];
-        
-        var stack = [];
-        var pop = [x, y, 0];
-        var ignore;
-        while (pop)
-        {
-            x = pop[0];
-            y = pop[1];
-            ignore = pop[2];//make sure it doesn't go back the way it just came from
-            
-            if (x < 0 || x > width || y < 0 || y > height) {
-                //out of rect
-                pop = stack.pop();
-                continue;
-            }
-            
-            //get the array index
-            var p = ((y * width) + x) * 4;
-            
-            if (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3) {
-                //node color doesn't equal target color
-                pop = stack.pop();
-                continue;
-            }
-            
-            //replace node color
-            data[p]   = R0;
-            data[p+1] = R1;
-            data[p+2] = R2;
-            data[p+3] = R3;
-            
-            if (ignore !== 1) { stack.push([x-1, y, 2]); }//west
-            if (ignore !== 2) { stack.push([x+1, y, 1]); }//east
-            if (ignore !== 3) { stack.push([x, y-1, 4]); }//north
-            if (ignore !== 4) { stack.push([x, y+1, 3]); }//south
-            
-            pop = stack.pop();
-        }
-    };
-    var __floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
+    var floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
         var T1 = targetColor[1];
@@ -1881,6 +1923,7 @@ var BitmapData = new Class(Object, function()
         var WIDTH_M1 = width - 1;
         
         var stack = [];
+        var stackLength;
         var pop = [x, y];
         var spanLeft, spanRight, p;
         while (pop)
@@ -1888,6 +1931,7 @@ var BitmapData = new Class(Object, function()
             x = pop[0];
             y = pop[1];
             p = (y * LINESIZE) + (x * 4);
+            stackLength = stack.length;
             
             while (y >= 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3))
             {
@@ -1908,7 +1952,7 @@ var BitmapData = new Class(Object, function()
                 
                 p -= 4;//x - 1
                 if (!spanLeft && x > 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
-                    stack.push([x - 1, y]);
+                    stack[stackLength++] = [x - 1, y];
                     spanLeft = 1;
                 }
                 else if (spanLeft && x > 0 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
@@ -1917,7 +1961,7 @@ var BitmapData = new Class(Object, function()
                 
                 p += 8;//x + 1
                 if (!spanRight && x < WIDTH_M1 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
-                    stack.push([x + 1, y]);
+                    stack[stackLength++] = [x + 1, y];
                     spanRight = 1;
                 }
                 else if (spanRight && x < WIDTH_M1 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
@@ -1938,7 +1982,7 @@ var BitmapData = new Class(Object, function()
         //transparent=false doesn't work
         width  = width  | 0;
         height = height | 0;
-        if (!width || !height) {
+        if (!width || !height || width > 2880 || height > 2880) {
             throw new ArgumentError("Invalid BitmapData.");
         }
         
@@ -1946,9 +1990,6 @@ var BitmapData = new Class(Object, function()
         this.__height = height;
         //this.__transparent = (transparent) ? true : false;
         
-        //TODO: IMPORTANT
-        //cannot create a canvas element if document is no loaded.
-        //maybe we should limit the entire library to be used only after window.onload.
         this.__canvas = cs3.utils.createCanvas(width, height);
         this.__context = cs3.utils.getContext2d(this.__canvas);
         this.__rect = new Rectangle(0, 0, width, height);
@@ -1959,13 +2000,14 @@ var BitmapData = new Class(Object, function()
         if (fillColor === null) { fillColor = 0xFFFFFFFF; }
         if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
+    
     this.__render = function(context, matrix, colorTransform)
     {
         if (this.__canvas) {
-            var rect = this.__rect;
             context.drawImage(this.__canvas, 0, 0);
         }
     };
+    
     this.__resize = function(width, height)
     {
         this.__width = width;
@@ -1975,11 +2017,13 @@ var BitmapData = new Class(Object, function()
         this.__canvas.width = width;
         this.__canvas.height = height;
     };
+    
     this.applyFilter = function(sourceBitmapData, sourceRect, destPoint, filter)
     {
         filter.__filterBitmapData(sourceBitmapData, sourceRect, this, destPoint);
         this.__modified = true;
     };
+    
     this.clone = function()
     {
         var clone = new BitmapData(this.__width, this.__height, true, 0);
@@ -1987,6 +2031,7 @@ var BitmapData = new Class(Object, function()
         clone.__rect = this.__rect.clone();
         return clone;
     };
+    
     this.colorTransform = function(rect, colorTransform)
     {
         var rm = colorTransform.redMultiplier;
@@ -1998,8 +2043,8 @@ var BitmapData = new Class(Object, function()
         var bo = colorTransform.blueOffset;
         var ao = colorTransform.alphaOffset;
         
-        var image = this.__context.getImageData(rect.x, rect.y, rect.width, rect.height);
-        var data = image.data;
+        var imageData = this.__context.getImageData(rect.x, rect.y, rect.width, rect.height);
+        var data = imageData.data;
         var length = data.length;
         var i;
         
@@ -2007,10 +2052,14 @@ var BitmapData = new Class(Object, function()
             //I think opera does something like (color & 0xFF)
             for (i = 0; i < length;)
             {
-                data[i] = Math.min(data[i++] * rm + ro, 255);
-                data[i] = Math.min(data[i++] * gm + go, 255);
-                data[i] = Math.min(data[i++] * bm + bo, 255);
-                data[i] = Math.min(data[i++] * am + ao, 255);
+                var r = data[i]   * rm + ro;
+                var g = data[i+1] * gm + go;
+                var b = data[i+2] * bm + bo;
+                var a = data[i+3] * am + ao;
+                data[i++] = (r < 255) ? r : 255;
+                data[i++] = (g < 255) ? g : 255;
+                data[i++] = (b < 255) ? b : 255;
+                data[i++] = (a < 255) ? a : 255;
             }
         }
         else {
@@ -2023,9 +2072,10 @@ var BitmapData = new Class(Object, function()
             }
         }
         
-        this.__context.putImageData(image, rect.x, rect.y);
+        this.__context.putImageData(imageData, rect.x, rect.y);
         this.__modified = true;
     };
+    
     this.compare = function(otherBitmapData)
     {
         //TODO not tested
@@ -2041,38 +2091,36 @@ var BitmapData = new Class(Object, function()
             return -4;
         }
         
-        var sourceImageData = sourceBitmapData.__context.getImageData(0, 0, width, height);
-        var otherImageData = otherBitmapData.__context.getImageData(0, 0, width, height);
+        var sourceData   = sourceBitmapData.__context.getImageData(0, 0, width, height).data;
+        var otherData    = otherBitmapData.__context.getImageData(0, 0, width, height).data;
         var newImageData = sourceBitmapData.__context.createImageData(width, height);
-        var sourcePixels = sourceImageData.data;
-        var otherPixels = otherImageData.data;
-        var newPixels = newImageData.data;
-        var length = sourceImageData.length;
-        var isDifferent = false;
+        var newData      = newImageData.data;
+        var length       = newData.length;
+        var isDifferent  = false;
         
         for (var i = 0; i < length;)
         {
-            var sr = sourcePixels[i];
-            var sg = sourcePixels[i+1];
-            var sb = sourcePixels[i+2];
-            var sa = sourcePixels[i+3];
-            var or = otherPixels[i];
-            var og = otherPixels[i+1];
-            var ob = otherPixels[i+2];
-            var oa = otherPixels[i+3];
+            var sr = sourceData[i];
+            var sg = sourceData[i+1];
+            var sb = sourceData[i+2];
+            var sa = sourceData[i+3];
+            var or = otherData[i];
+            var og = otherData[i+1];
+            var ob = otherData[i+2];
+            var oa = otherData[i+3];
             
             if ((sr !== or) || (sg !== og) || (sb !== ob)) {
-                newPixels[i++] = sr - or;
-                newPixels[i++] = sg - og;
-                newPixels[i++] = sb - ob;
-                newPixels[i++] = 0xFF;
+                newData[i++] = sr - or;
+                newData[i++] = sg - og;
+                newData[i++] = sb - ob;
+                newData[i++] = 0xFF;
                 isDifferent = true;
             }
             else if (sa !== oa) {
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = 0xFF;
-                newPixels[i++] = sa - oa;
+                newData[i++] = 0xFF;
+                newData[i++] = 0xFF;
+                newData[i++] = 0xFF;
+                newData[i++] = sa - oa;
                 isDifferent = true;
             }
         }
@@ -2085,14 +2133,14 @@ var BitmapData = new Class(Object, function()
         newBitmapData.__context.putImageData(newImageData, 0, 0);
         return newBitmapData;
     };
+    
     this.copyChannel = function(sourceBitmapData, sourceRect, destPoint, sourceChannel, destChannel)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         var sourceChannelIndex, destChannelIndex;
         if (sourceChannel == BitmapDataChannel.RED) { sourceChannelIndex = 0; }
@@ -2108,7 +2156,7 @@ var BitmapData = new Class(Object, function()
         
         for (var i = 0; i < length; i += 4)
         {
-            destPixels[i + destChannelIndex] = sourcePixels[i + sourceChannelIndex];
+            destData[i + destChannelIndex] = sourceData[i + sourceChannelIndex];
         }
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
@@ -2127,10 +2175,12 @@ var BitmapData = new Class(Object, function()
                         destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
         this.__modified = true;
     };
+    
     this.createImageData = function()
     {
         return this.__context.createImageData.apply(this.__context, arguments);
     };
+    
     this.dispose = function()
     {
         this.__width = 0;
@@ -2159,6 +2209,7 @@ var BitmapData = new Class(Object, function()
         this.__modified = true;
         this.__disposed = true;
     };
+    
     this.draw = function(source, matrix)
     {
         //TODO a lot to fix..
@@ -2177,6 +2228,7 @@ var BitmapData = new Class(Object, function()
         context.restore();
         this.__modified = true;
     };
+    
     this.fillRect = function(rect, color)
     {
         var context = this.__context;
@@ -2189,12 +2241,13 @@ var BitmapData = new Class(Object, function()
         context.restore();
         this.__modified = true;
     };
+    
     this.floodFill = function(x, y, color)
     {
         var width = this.__width;
         var height = this.__height;
-        var pixels = this.__context.getImageData(0, 0, width, height);
-        var data = pixels.data;
+        var imageData = this.__context.getImageData(0, 0, width, height);
+        var data = imageData.data;
         
         //get the array index
         var p = ((y * width) + x) * 4;
@@ -2212,23 +2265,25 @@ var BitmapData = new Class(Object, function()
         }
         
         //start the search
-        __floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
+        floodFillScanlineStack(data, x, y, width, height, targetColor, replacementColor);
         
-        this.__context.putImageData(pixels, 0, 0);
+        this.__context.putImageData(imageData, 0, 0);
         this.__modified = true;
     };
+    
     this.generateFilterRect = function(sourceRect, filter)
     {
         return filter.__generateRect(sourceRect);
     };
+    
     this.getColorBoundsRect = function(mask, color, findColor)
     {
         if (mask === undefined || color === undefined) { return null; }
         findColor = (findColor) ? true : false;
         
-        var width = this.__width;
+        var width  = this.__width;
         var height = this.__height;
-        var data = this.__context.getImageData(0, 0, width, height).data;
+        var data   = this.__context.getImageData(0, 0, width, height).data;
         
         var minX = width;
         var minY = height;
@@ -2246,10 +2301,10 @@ var BitmapData = new Class(Object, function()
                     p = ((y * width) + x) * 4;
                     value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
                     if ((value & mask) === color) {
-                        minX = (x < minX) ? x : minX;
-                        minY = (y < minY) ? y : minY;
-                        maxX = (x > maxX) ? x : maxX;
-                        maxY = (y > maxY) ? y : maxY;
+                        if (x < minX) { minX = x; }
+                        if (x > maxX) { maxX = x; }
+                        if (y < minY) { minY = y; }
+                        if (y > maxY) { maxY = y; }
                     }
                 }
             }
@@ -2262,10 +2317,10 @@ var BitmapData = new Class(Object, function()
                     p = ((y * width) + x) * 4;
                     value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
                     if ((value & mask) !== color) {
-                        minX = (x < minX) ? x : minX;
-                        minY = (y < minY) ? y : minY;
-                        maxX = (x > maxX) ? x : maxX;
-                        maxY = (y > maxY) ? y : maxY;
+                        if (x < minX) { minX = x; }
+                        if (x > maxX) { maxX = x; }
+                        if (y < minY) { minY = y; }
+                        if (y > maxY) { maxY = y; }
                     }
                 }
             }
@@ -2277,10 +2332,12 @@ var BitmapData = new Class(Object, function()
         }
         return rect;
     };
+    
     this.getImageData = function()
     {
         return this.__context.getImageData.apply(this.__context, arguments);
     };
+    
     this.getPixel = function(x, y)
     {
         if (!this.__rect.contains(x, y)) { return 0; }
@@ -2288,6 +2345,7 @@ var BitmapData = new Class(Object, function()
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return (data[0] << 16) | (data[1] << 8) | data[2];
     };
+    
     this.getPixel32 = function(x, y)
     {
         if (!this.__rect.contains(x, y)) { return 0; }
@@ -2295,60 +2353,66 @@ var BitmapData = new Class(Object, function()
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return ((data[3] << 24) | (data[0] << 16) | (data[1] << 8) | data[2]) >>> 0;
     };
+    
     this.getPixels = function(rect)
     {
         return this.__context.getImageData(rect.x, rect.y, rect.width, rect.height).data;
     };
+    
     this.hitTest = function(firstPoint, firstAlphaThreshold, secondObject, secondBitmapDataPoint, secondAlphaThreshold)
     {
         secondAlphaThreshold = secondAlphaThreshold || 1;
         //TODO
         return false;
     };
+    
     this.lock = function()
     {
         //use getImageData and putImageData
         __noImp('BitmapData.lock()');
     };
+    
     this.unlock = function()
     {
         //use getImageData and putImageData
         __noImp('BitmapData.unlock()');
     };
+    
     this.merge = function(sourceBitmapData, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         for (var i = 0; i < length;)
         {
-            destPixels[i]   = (sourcePixels[i] * redMultiplier   + destPixels[i] * (256 - redMultiplier))   / 256;
-            destPixels[++i] = (sourcePixels[i] * greenMultiplier + destPixels[i] * (256 - greenMultiplier)) / 256;
-            destPixels[++i] = (sourcePixels[i] * blueMultiplier  + destPixels[i] * (256 - blueMultiplier))  / 256;
-            destPixels[++i] = (sourcePixels[i] * alphaMultiplier + destPixels[i] * (256 - alphaMultiplier)) / 256;
+            destData[i]   = (sourceData[i] * redMultiplier   + destData[i] * (256 - redMultiplier))   / 256;
+            destData[++i] = (sourceData[i] * greenMultiplier + destData[i] * (256 - greenMultiplier)) / 256;
+            destData[++i] = (sourceData[i] * blueMultiplier  + destData[i] * (256 - blueMultiplier))  / 256;
+            destData[++i] = (sourceData[i] * alphaMultiplier + destData[i] * (256 - alphaMultiplier)) / 256;
             ++i;
         }
         
         this.__context.putImageData(destImageData, destPoint.x, destPoint.y);
         this.__modified = true;
     };
+    
     this.noise = function()
     {
         //alert("HELP!");
     };
+    
     this.paletteMap = function(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         //var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
         //var destImageData = this.__context.createImageData(destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        //var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var sourceData = sourceImageData.data;
+        //var destData = destImageData.data;
+        var length = sourceData.length;
         
         if (!(redArray   instanceof Array)) { redArray   = []; }
         if (!(greenArray instanceof Array)) { greenArray = []; }
@@ -2367,30 +2431,32 @@ var BitmapData = new Class(Object, function()
         for (i = 0; i < length;)
         {
             
-            newColor = redArray[sourcePixels[i]] | greenArray[sourcePixels[i+1]] | blueArray[sourcePixels[i+2]] | alphaArray[sourcePixels[i+3]];
+            newColor = redArray[sourceData[i]] | greenArray[sourceData[i+1]] | blueArray[sourceData[i+2]] | alphaArray[sourceData[i+3]];
             newAlpha = newColor >> 24 & 0xFF;
             newRed   = newColor >> 16 & 0xFF;
-            newGreen = newColor >> 8  & 0xFF;
-            newBlue  = newColor & 0xFF;
+            newGreen = newColor >>  8 & 0xFF;
+            newBlue  = newColor       & 0xFF;
             
-            sourcePixels[i++] = newRed;
-            sourcePixels[i++] = newGreen;
-            sourcePixels[i++] = newBlue;
-            sourcePixels[i++] = newAlpha;
+            sourceData[i++] = newRed;
+            sourceData[i++] = newGreen;
+            sourceData[i++] = newBlue;
+            sourceData[i++] = newAlpha;
         }
         
         this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
         this.__modified = true;
     };
+    
     this.perlinNoise = function(baseX, baseY, numOctaves, randomSeed, stitch, fractalNoise, channelOptions, grayScale, offsets)
     {
         //alert("HELP!");
     };
+    
     this.pixelDissolve = function(sourceBitmapData, sourceRect, destPoint, randomSeed, numPixels, fillColor)
     {
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var destPixels = destImageData.data;
+        var destData = destImageData.data;
         var width = destImageData.width;
         var height = destImageData.height;
         var size = width * height;
@@ -2419,24 +2485,24 @@ var BitmapData = new Class(Object, function()
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destPixels[p]   = fillRed;
-                destPixels[p+1] = fillGreen;
-                destPixels[p+2] = fillBlue;
-                destPixels[p+3] = fillAlpha;
+                destData[p]   = fillRed;
+                destData[++p] = fillGreen;
+                destData[++p] = fillBlue;
+                destData[++p] = fillAlpha;
             }
         }
         else {
             //TODO: make sure the sourceRect and destRect are the same size
-            var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
-            var sourcePixels = sourceImageData.data;
+            var sourceData = sourceBitmapData.__context.getImageData(
+                                sourceRect.x,sourceRect.y, width, height).data;
             for (i = 0; i < numPixels; ++i)
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destPixels[p]   = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
-                destPixels[++p] = sourcePixels[p];
+                destData[p]   = sourceData[p];
+                destData[++p] = sourceData[p];
+                destData[++p] = sourceData[p];
+                destData[++p] = sourceData[p];
             }
         }
         
@@ -2446,10 +2512,12 @@ var BitmapData = new Class(Object, function()
         //return the new seed
         return ((coordinateShuffler.getIndex() << 8) | seed) >>> 0;
     };
+    
     this.putImageData = function()
     {
         this.__context.putImageData.apply(this.__context, arguments);
     };
+    
     this.scroll = function(x, y)
     {
         var sourceX, sourceY, sourceWidth, sourceHeight;
@@ -2473,6 +2541,7 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(imageData, x, y);
         this.__modified = true;
     };
+    
     this.setPixel = function(x, y, color)
     {
         var a = 255;
@@ -2489,6 +2558,7 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(pixel, x, y);
         this.__modified = true;
     };
+    
     this.setPixel32 = function(x, y, color)
     {
         var a = color >> 24 & 0xFF;
@@ -2505,21 +2575,23 @@ var BitmapData = new Class(Object, function()
         this.__context.putImageData(pixel, x, y);
         this.__modified = true;
     };
+    
     this.setPixels = function(rect, inputArray)
     {
         var rectLength = rect.width * rect.height * 4;
         var arrayLength = inputArray.length;
         var length = (rectLength > arrayLength) ? arrayLength : rectLength;
         
-        var pixels = this.__context.createImageData(rect.width, rect.height);
-        var data = pixels.data;
+        var imageData = this.__context.createImageData(rect.width, rect.height);
+        var data = imageData.data;
         for (var i = 0; i < length; ++i)
         {
             data[i] = inputArray[i];
         }
-        this.__context.putImageData(pixels, rect.x, rect.y);
+        this.__context.putImageData(imageData, rect.x, rect.y);
         this.__modified = true;
     };
+    
     this.threshold = function(sourceBitmapData, sourceRect, destPoint, operation, threshold, color, mask, copySource)
     {
         if (color === undefined) { color = 0x00000000; }
@@ -2527,11 +2599,10 @@ var BitmapData = new Class(Object, function()
         if (copySource === undefined) { copySource = false; }
         
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height);
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
-        var sourcePixels = sourceImageData.data;
-        var destPixels = destImageData.data;
-        var length = sourcePixels.length;
+        var destData = destImageData.data;
+        var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
+        var length = sourceData.length;
         
         threshold = threshold & mask;
         var colors = [color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF];
@@ -2542,73 +2613,73 @@ var BitmapData = new Class(Object, function()
         
         if (operation == '<') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) < threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '<=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) <= threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '>') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) > threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '>=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) >= threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '==') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) == threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
         else if (operation == '!=') {
             for (i = 0; i < length; i += 4) {
-                testColor = (sourcePixels[i+3] << 24) | (sourcePixels[i] << 16) | (sourcePixels[i+1] << 8) | sourcePixels[i+2];
+                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
                 if ((testColor & mask) != threshold) {
-                    destPixels[i] = colors[0]; destPixels[i+1] = colors[1]; destPixels[i+2] = colors[2]; destPixels[i+3] = colors[3];
+                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
                     ++cnt;
                 }
                 else if (copySource) {
-                    destPixels[i] = sourcePixels[i]; destPixels[i+1] = sourcePixels[i+1]; destPixels[i+2] = sourcePixels[i+2]; destPixels[i+3] = sourcePixels[i+3];
+                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
                 }
             }
         }
@@ -2619,32 +2690,32 @@ var BitmapData = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getWidth = function()
+    this.__get__width = function()
     {
         return this.__width;
     };
-    this.getHeight = function()
+    
+    this.__get__height = function()
     {
         return this.__height;
     };
-    this.getRect = function()
+    
+    this.__get__rect = function()
     {
         return this.__rect.clone();
     };
-    this.getTransparent = function()
+    
+    this.__get__transparent = function()
     {
         //return this.__transparent;
         return true;
     };
+    
+    this.toString = function()
+    {
+        return '[object BitmapData]';
+    };
 });
-BitmapData.prototype.__defineGetter__("width", BitmapData.prototype.getWidth);
-BitmapData.prototype.__defineGetter__("height", BitmapData.prototype.getHeight);
-BitmapData.prototype.__defineGetter__("rect", BitmapData.prototype.getRect);
-BitmapData.prototype.__defineGetter__("transparent", BitmapData.prototype.getTransparent);
-BitmapData.prototype.toString = function()
-{
-    return '[object BitmapData]';
-};
 var BitmapDataChannel = {
     RED: 1,
     GREEN: 2,
@@ -2667,6 +2738,7 @@ var Graphics = new Class(Object, function()
     var LINE_STYLE = 11;
     var LINE_TO = 12;
     var MOVE_TO = 13;
+    
     this.__init__ = function()
     {
         this.__lineWidth = 0;
@@ -2676,6 +2748,7 @@ var Graphics = new Class(Object, function()
         this.__commands = [];
         this.__modified = false;
     };
+    
     this.__updateRect = function(x, y, width, height)
     {
         var rect = new Rectangle(x, y, width, height);
@@ -2684,19 +2757,23 @@ var Graphics = new Class(Object, function()
         rect.inflate(this.__lineWidth * 0.5, this.__lineWidth * 0.5);
         this.__rect = this.__rect.union(rect);
     };
+    
     this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     {
         //TODO:
     };
+    
     this.beginFill = function(color, alpha)
     {
         if (alpha === undefined) { alpha = 1; }
         this.__commands.push([BEGIN_FILL, color, alpha]);
     };
+    
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         //TODO:
     };
+    
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
     {
         //TODO: calculate rect
@@ -2706,6 +2783,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([CURVE_TO, controlX, controlY, anchorX, anchorY]);
         this.__modified = true;
     };
+    
     this.drawEllipse = function(x, y, width, height)
     {
         this.__updateRect(x, y, width, height);
@@ -2714,6 +2792,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_ELLIPSE, x, y, width, height]);
         this.__modified = true;
     };
+    
     this.drawCircle = function(x, y, radius)
     {
         this.__updateRect(x - radius, y - radius, radius * 2, radius * 2);
@@ -2722,6 +2801,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_CIRCLE, x, y, radius]);
         this.__modified = true;
     };
+    
     this.drawRect = function(x, y, width, height)
     {
         this.__updateRect(x, y, width, height);
@@ -2730,6 +2810,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_RECT, x, y, width, height]);
         this.__modified = true;
     };
+    
     this.drawRoundRect = function(x, y, width, height, ellipseWidth, ellipseHeight)
     {
         if (ellipseHeight === undefined) { ellipseHeight = ellipseWidth; }
@@ -2739,15 +2820,18 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_ROUND_RECT, x, y, width, height, ellipseWidth, ellipseHeight]);
         this.__modified = true;
     };
+    
     this.endFill = function()
     {
         this.__commands.push([END_FILL]);
         this.__modified = true;
     };
+    
     this.lineGradientStyle = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         
     };
+    
     this.lineStyle = function(thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit)
     {
         if (color === undefined) { color = 0; }
@@ -2760,12 +2844,14 @@ var Graphics = new Class(Object, function()
         this.__lineWidth = thickness;
         this.__commands.push([LINE_STYLE, thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
     };
+    
     this.moveTo = function(x, y)
     {
         this.__x = x;
         this.__y = y;
         this.__commands.push([MOVE_TO, x, y]);
     };
+    
     this.lineTo = function(x, y)
     {
         this.__updateRect(this.__x, this.__y, x - this.__x, y - this.__y);
@@ -2774,12 +2860,14 @@ var Graphics = new Class(Object, function()
         this.__commands.push([LINE_TO, x, y]);
         this.__modified = true;
     };
+    
     this.clear = function()
     {
         this.__rect.setEmpty();
         this.__commands = [];
         this.__modified = true;
     };
+    
     this.__fill = function(context, fillAlpha)
     {
         context.closePath();
@@ -2794,6 +2882,7 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
+    
     this.__stroke = function(context, strokeAlpha)
     {
         if (strokeAlpha === 1) {
@@ -2806,12 +2895,14 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
+    
     this.__closeStroke = function(context, sx, sy, ax, ay)
     {
         if (sx !== ax || sy !== ay) {
             context.lineTo(sx, sy);
         }
     };
+    
     this.__render = function(context, matrix, colorTransform)
     {
         //TODO: optimize
@@ -3079,17 +3170,20 @@ var Graphics = new Class(Object, function()
         if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
         if (doStroke) { this.__stroke(context, strokeAlpha); }
     };
+    
+    this.toString = function()
+    {
+        return '[object Graphics]';
+    };
 });
-Graphics.prototype.toString = function()
-{
-    return '[object Graphics]';
-};
 var Loader = new Class(DisplayObjectContainer, function()
 {
     var noImplement = function()
     {
         throw new Error("The Loader class does not implement this method.");
     };
+    
+    /* @constructor */
     this.__init__ = function()
     {
         DisplayObjectContainer.call(this);
@@ -3097,20 +3191,37 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__contentLoaderInfo = new LoaderInfo(this);
         this.__img = null;
     };
-    //override
+    
+    /* @override DisplayObject */
     this.__getAsBitmap = function()
     {
         if (this.__content) {
             return this.__content.__getAsBitmap();
         }
     };
-    //override
+    
+    /* @override DisplayObject */
+    this.__getModified = function()
+    {
+        return this.__transform.__modified || this.__modified;
+    };
+    
+    /* @override DisplayObject */
+    this.__setModified = function(v)
+    {
+        this.__transform.__modified = this.__modified = v;
+    };
+    
+    /* @override DisplayObject */
     this.__render = function(context, matrix, colorTransform)
     {
-        if (this.__content) {
-            this.__content.__render(context, matrix, colorTransform);
+        if (!this.__content) {
+            return;
         }
+        
+        this.__renderChildren(context, matrix, colorTransform);
     };
+    
     this.load = function(request)
     {
         if (typeof request == 'string') {
@@ -3153,6 +3264,7 @@ var Loader = new Class(DisplayObjectContainer, function()
         img.src = request.__url;
         this.__img = img;
     };
+    
     this.unload = function()
     {
         if (this.__content) {
@@ -3165,6 +3277,7 @@ var Loader = new Class(DisplayObjectContainer, function()
             contentLoaderInfo.dispatchEvent(new Event(Event.UNLOAD, false, false));
         }
     };
+    
     this.close = function()
     {
         this.__img.src = null;
@@ -3173,6 +3286,7 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__img.onabort = null;
         this.__img = null;
     };
+    
     this.addChild = noImplement;
     this.addChildAt = noImplement;
     this.removeChild = noImplement;
@@ -3180,21 +3294,21 @@ var Loader = new Class(DisplayObjectContainer, function()
     this.setChildIndex = noImplement;
     
     /* getters and setters */
-    this.getContent = function()
+    this.__get__content = function()
     {
         return this.__content;
     };
-    this.getContentLoaderInfo = function()
+    
+    this.__get__contentLoaderInfo = function()
     {
         return this.__contentLoaderInfo;
     };
+    
+    this.toString = function()
+    {
+        return '[object Loader]';
+    };
 });
-Loader.prototype.__defineGetter__("content", Loader.prototype.getContent);
-Loader.prototype.__defineGetter__("contentLoaderInfo", Loader.prototype.getContentLoaderInfo);
-Loader.prototype.toString = function()
-{
-    return '[object Loader]';
-};
 var LoaderInfo = new Class(EventDispatcher, function()
 {
     this.__init__ = function()
@@ -3206,26 +3320,24 @@ var LoaderInfo = new Class(EventDispatcher, function()
     };
     
     /* getters and setters */
-    this.getContent = function()
+    this.__get__content = function()
     {
         return this.__content;
     };
-    this.getWidth = function()
+    this.__get__width = function()
     {
         return this.__width;
     };
-    this.getHeight = function()
+    this.__get__height = function()
     {
         return this.__height;
     };
+    
+    this.toString = function()
+    {
+        return '[object LoaderInfo]';
+    };
 });
-LoaderInfo.prototype.__defineGetter__("content", LoaderInfo.prototype.getContent);
-LoaderInfo.prototype.__defineGetter__("width", LoaderInfo.prototype.getWidth);
-LoaderInfo.prototype.__defineGetter__("height", LoaderInfo.prototype.getHeight);
-LoaderInfo.prototype.toString = function()
-{
-    return '[object LoaderInfo]';
-};
 var Shape = new Class(DisplayObject, function()
 {
     this.__init__ = function()
@@ -3233,17 +3345,16 @@ var Shape = new Class(DisplayObject, function()
         DisplayObject.call(this);
         this.__graphics = null;
     };
+    
     //override
     this.__getContentBounds = function()
     {
-        //if (this.__cache) {
-        //    return this.__cache.__rect.clone();
-        //}
         if (this.__graphics) {
             return this.__graphics.__rect.clone();
         }
         return new Rectangle();
     };
+    
     //override
     this.__getModified = function()
     {
@@ -3251,6 +3362,7 @@ var Shape = new Class(DisplayObject, function()
                 this.__transform.__modified ||
                 (this.__graphics && this.__graphics.__modified));
     };
+    
     //override
     this.__setModified = function(v)
     {
@@ -3260,6 +3372,7 @@ var Shape = new Class(DisplayObject, function()
             this.__graphics.__modified = v;
         }
     };
+    
     //override
     this.__render = function(context, matrix, colorTransform)
     {
@@ -3267,6 +3380,7 @@ var Shape = new Class(DisplayObject, function()
             this.__graphics.__render(context, matrix, colorTransform);
         }
     };
+    
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
@@ -3280,31 +3394,26 @@ var Shape = new Class(DisplayObject, function()
             
             if (bounds.containsPoint(localPoint)) {
                 this.__graphics.__render(context, matrix, null);
-                
-                var imageData = context.getImageData(point.x, point.y, 1, 1);
-                var pixel = imageData.data;
-                //if (pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0) {
-                if (pixel[3] !== 0) {
-                    return true;
-                }
+                return (context.getImageData(point.x, point.y, 1, 1).data[3] !== 0);
             }
         }
         return false;
     };
+    
     /* getters and setters */
-    this.getGraphics = function()
+    this.__get__graphics = function()
     {
         if (this.__graphics === null) {
             this.__graphics = new Graphics();
         }
         return this.__graphics;
     };
+    
+    this.toString = function()
+    {
+        return '[object Shape]';
+    };
 });
-Shape.prototype.__defineGetter__("graphics", Shape.prototype.getGraphics);
-Shape.prototype.toString = function()
-{
-    return '[object Shape]';
-};
 var Sprite = new Class(DisplayObjectContainer, function()
 {
     this.__init__ = function()
@@ -3317,10 +3426,17 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.soundTransform = null;
         this.useHandCursor = true;
     };
+    
+    /* @override DisplayObject */
     this.__getContentBounds = Shape.prototype.__getContentBounds;
+    
+    /* @override DisplayObject */
     this.__getModified = Shape.prototype.__getModified;
+    
+    /* @override DisplayObject */
     this.__setModified = Shape.prototype.__setModified;
-    //override
+    
+    /* @override DisplayObject */
     this.__render = function(context, matrix, colorTransform)
     {
         if (this.__graphics) {
@@ -3329,54 +3445,50 @@ var Sprite = new Class(DisplayObjectContainer, function()
         
         this.__renderChildren(context, matrix, colorTransform);
     };
+    
+    /* @override DisplayObject.__hitTestPoint */
     this.__hitTestPoint = Shape.prototype.__hitTestPoint;
+    
     this.startDrag = function(lockCenter, bounds)
     {
         this.__stage.startDrag(this, lockCenter, bounds);
     };
+    
     this.stopDrag = function()
     {
         this.__stage.stopDrag();
     };
     
     /* getters and setters */
-    this.getGraphics = Shape.prototype.getGraphics;
+    this.__get__graphics = Shape.prototype.__get__graphics;
+    
+    this.toString = function()
+    {
+        return '[object Sprite]';
+    };
 });
-Sprite.prototype.__defineGetter__("graphics", Sprite.prototype.getGraphics);
-Sprite.prototype.toString = function()
-{
-    return '[object Sprite]';
-};
 var Stage = new Class(DisplayObjectContainer, function()
 {
-    this.__init__ = function(params)
+    this.__init__ = function(canvas, width, height, frameRate)
     {
         DisplayObjectContainer.call(this);
         
-        params = params || {};
-        params.canvas     = params.canvas || null;
-        params.width      = params.width | 0;
-        params.height     = params.height | 0;
-        params.frameRate  = params.frameRate || cs3.config.DEFAULT_FRAMERATE;
-        params.align      = params.align || StageAlign.TOP_LEFT;
-        params.scaleMode  = params.scaleMode || StageScaleMode.NO_SCALE;
-        params.renderMode = params.renderMode || StageRenderMode.AUTO;/* all, dirty, auto */
-        params.debug      = (params.debug) ? true : false;
-        params.preventMouseWheel = (params.preventMouseWheel) ? true : false;
-        params.preventTabKey     = (params.preventTabKey) ? true : false;
-        
-        cs3.core.debug = params.debug;
+        canvas    = canvas || null;
+        width     = width || 640;
+        height    = height || 480;
+        frameRate = frameRate || 30;
         
         this.__initialized = false;
-        this.__rect = new Rectangle(0, 0, params.width ,params.height);
-        this.__stageWidth = params.width;
-        this.__stageHeight = params.height;
+        this.__rect = new Rectangle(0, 0, width, height);
+        this.__stageWidth  = width;
+        this.__stageHeight = height;
         this.__offsetX = 0;
         this.__offsetY = 0;
+        this.__frameRate = frameRate;
         this.__timer = null;
-        this.__align = params.align;
-        this.__scaleMode = params.scaleMode;
-        this.__renderMode = params.renderMode;
+        this.__align = StageAlign.TOP_LEFT;
+        this.__scaleMode = StageScaleMode.NO_SCALE;
+        this.__renderMode = StageRenderMode.AUTO;
         this.__mouseX = 0;
         this.__mouseY = 0;
         //wether the mouse is over the stage rect
@@ -3393,21 +3505,18 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__dragOffsetY = 0;
         this.__dragTarget = null;
         this.__dragBounds = null;
-        this.__lockFrameEvent = false;
-        this.__blockedFrameEvent = false;
         this.__renderAll = true;
         this.__redrawRegions = [];
         this.__keyPressTimer = null;
         this.__isKeyDown = false;
-        this.__preventMouseWheel = params.preventMouseWheel;
-        this.__preventTabKey = params.preventTabKey;
-        this.__frameRate = params.frameRate;
-        this.stageFocusRect = false;
-        this.showRedrawRegions = params.showRedrawRegions;
+        this.__preventMouseWheel = false;
+        this.__preventTabKey = false;
         this.__canvasWidth = null;
         this.__canvasHeight = null;
         this.__stage = null;
         this.__root = null;
+        this.stageFocusRect = false;
+        this.showRedrawRegions = false;
         
         //TODO start preloading
         
@@ -3416,22 +3525,23 @@ var Stage = new Class(DisplayObjectContainer, function()
             var stage = this;
             cs3.utils.addOnload(function()
             {
-                stage.__setup(params);
+                stage.__setup(canvas, width, height, frameRate);
             });
         }
         else {
-            this.__setup(params);
+            this.__setup(canvas, width, height, frameRate);
         }
     };
-    this.__setup = function(params)
+    
+    this.__setup = function(canvas, width, height, frameRate)
     {
-        //document should now be loaded
-        //setup stage
-        if (params.canvas instanceof HTMLCanvasElement) {
-            this.canvas = params.canvas;
+        // document.body should now be loaded
+        // setup stage
+        if (canvas instanceof HTMLCanvasElement) {
+            this.canvas = canvas;
         }
-        else if (typeof params.canvas == 'string') {
-            this.canvas = document.getElementById(params.canvas);
+        else if (typeof canvas == 'string') {
+            this.canvas = document.getElementById(canvas);
         }
         
         if (!this.canvas) {
@@ -3444,9 +3554,8 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__hiddenContext = cs3.utils.getContext2d(this.__hiddenCanvas);
         
         this.canvas.style.cursor = 'default';
-        this.canvas.tabIndex = 1;//enable focus events
-        this.canvas.style.outline = "none";//remove focus rects
-        //this.canvas.oncontextmenu = function() { return false; };
+        this.canvas.tabIndex = 1;// enable focus events
+        this.canvas.style.outline = "none";// remove focus rects
         
         //register stage for document events
         cs3.core.registerStage(this);
@@ -3465,6 +3574,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__initialized = true;
         this.__enterFrame();
     };
+    
     this.__addRedrawRegion = function(rect)
     {
         rect = rect.clone();
@@ -3498,20 +3608,15 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         redrawRegions.push(rect);
     };
+    
     this.__focusHandler = function(e)
     {
-        //trace("focus");
-        //Firefox needs to resize
-        //solved by adding outline=none
-        //this.__resize();
     };
+    
     this.__blurHandler = function(e)
     {
-        //trace("blur");
-        //Firefox needs to resize
-        //solved by adding outline=none
-        //this.__resize();
     };
+    
     this.__keyDownHandler = function(e)
     {
         clearTimeout(this.__keyPressTimer);
@@ -3522,7 +3627,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         var keyCode = e.keyCode;
-        var charCode = 0;//todo
+        var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
         this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
         
@@ -3532,6 +3637,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             e.returnValue = false;
         }
     };
+    
     this.__keyPressHandler = function(e)
     {
         clearTimeout(this.__keyPressTimer);
@@ -3543,28 +3649,23 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__keyPressTimer = setTimeout(function(){ this.__keyPressHandler(e); }, 33);
         }
     };
+    
     this.__keyUpHandler = function(e)
     {
         this.__isKeyDown = false;
         clearTimeout(this.__keyPressTimer);
         
         var keyCode = e.keyCode;
-        var charCode = 0;//todo
+        var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
         this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_UP, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
     };
     
-    /**
-     * TODO reactes different when the mouse goes out the stage
-     */
     this.__mouseMoveHandler = function(e)
     {
-        //TODO: fix the mouse position relative to canvas
-        var x, y;
         var canvas = this.canvas;
-        
-        x = e.pageX - canvas.offsetLeft;
-        y = e.pageY - canvas.offsetTop;
+        var x = e.pageX - canvas.offsetLeft;
+        var y = e.pageY - canvas.offsetTop;
         
         /*
         if (this.__scaleX || this.__scaleY) {
@@ -3577,8 +3678,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             return;
         }
         
-        
-        //mouse move events
+        // mouse move events
         this.__mouseOverStage = false;
         if (this.__rect.contains(x, y) === true) {
             this.__mouseX = x;
@@ -3612,12 +3712,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         
         //handle startDrag
-        var drag = this.__dragTarget;
-        var bounds = this.__dragBounds;
-        
-        if (drag) {
+        var target = this.__dragTarget;
+        if (target) {
             var newX = x - this.__dragOffsetX;
             var newY = y - this.__dragOffsetY;
+            var bounds = this.__dragBounds;
             
             if (bounds) {
                 if (newX < bounds.x) {
@@ -3634,10 +3733,11 @@ var Stage = new Class(DisplayObjectContainer, function()
                 }
             }
             
-            drag.setX(newX);
-            drag.setY(newY);
+            target.__set__x(newX);
+            target.__set__y(newY);
         }
     };
+    
     this.__mouseDownHandler = function(e)
     {
         //FIXED in opera and chrome we can't capture mousemove events while the contextmenu is open.
@@ -3647,11 +3747,10 @@ var Stage = new Class(DisplayObjectContainer, function()
         var target = this.__objectUnderMouse;
         if (!target) { return; }
         
-        //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //left click
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
-            target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true, false, 0, 0, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
+            target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
             this.__mouseDownObject = target;
         }
         else if (e.which === 2) {
@@ -3663,6 +3762,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             return;
         }
     };
+    
     this.__mouseUpHandler = function(e)
     {
         this.__mouseMoveHandler(e);
@@ -3677,17 +3777,16 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
         }
         
-        //TODO fix MouseEvent arguments
         if (e.which === 1) {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
-            target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_UP, true, false, 0, 0, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
+            target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_UP, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
             if (this.__mouseDownObject === target) {
-                target.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, false, 0, 0, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
+                target.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                 
                 //double click
                 clearTimeout(this.__doubleClickTimer);
                 if (this.__mouseClickObject === target) {
-                    target.dispatchEvent(new MouseEvent(MouseEvent.DOUBLE_CLICK, true, false, 0, 0, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
+                    target.dispatchEvent(new MouseEvent(MouseEvent.DOUBLE_CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                     this.__mouseClickObject = null;
                 }
                 else {
@@ -3706,6 +3805,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             return;
         }
     };
+    
     this.__mouseWheelHandler = function(e)
     {
         var target = this.__objectUnderMouse;
@@ -3720,9 +3820,8 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         if (delta) {
-            //TODO MouseEvent arguments
             target.dispatchEvent(new MouseEvent(
-                MouseEvent.MOUSE_WHEEL, true, false, 0, 0, null, false, false, false, false, delta));
+                MouseEvent.MOUSE_WHEEL, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, delta));
         }
         if (this.__preventMouseWheel) {
             //disable browser scrolling
@@ -3730,6 +3829,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             e.returnValue = false;
         }
     };
+    
     this.__getObjectUnderPoint = function(point)
     {
         if (this.__rect.containsPoint(point) === false) { return null; }
@@ -3745,6 +3845,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         context.restore();
         return result || this;
     };
+    
     this.__enterFrame = function()
     {
         //reserve next frame
@@ -3757,26 +3858,51 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         this.__updateStage();
     };
-    //override
-    this.__render = function(context, matrix, colorTransform)
+    
+    /* @override DisplayObject */
+    this.__render = function(context)
     {
-        this.__renderChildren(context, matrix, colorTransform);
+        this.__renderChildren(context);
     };
+    
+    /* @override DisplayObjectContainer */
+    this.__renderChildren = function(context)
+    {
+        // render children
+        var children = this.__children;
+        var render = DisplayObject.prototype.__render;
+        for (var i = 0, l = children.length; i < l; ++i)
+        {
+            var child = children[i];
+            
+            if (child.__visible === false) { continue; }
+            if (child.__maskee !== null) { continue; }
+            
+            var childMatrix = child.__transform.__matrix;
+            var childColor = child.__transform.__colorTransform;
+            
+            context.globalAlpha = child.__alpha;
+            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            
+            render.call(child, context, childMatrix, childColor);
+        }
+    };
+    
     this.__updateStage = function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
         var stageRect = this.__rect;
         
-        //update the display list
+        // update the display list
         var redrawRegions;
         if (this.__renderMode == 'all') {
-            //force to render the entire stage
+            // force to render the entire stage
             redrawRegions = [stageRect];
         }
         else {
-            //update modified objects and collect redraw regions
-            this.__updateList(new Matrix());
+            // update modified objects and collect redraw regions
+            this.__update(new Matrix(), false);
             redrawRegions = this.__redrawRegions;
             
             if (this.__renderAll || (this.__renderMode == 'auto' && redrawRegions.length > 50)) {
@@ -3785,10 +3911,10 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         
         if (redrawRegions.length) {
-            //begin rendering
+            // begin rendering
             context.save();
             
-            //clear the redraw regions and clip for rendering
+            // clear the redraw regions and clip for rendering
             context.beginPath();
             for (i = 0, l = redrawRegions.length; i < l; ++i)
             {
@@ -3798,13 +3924,13 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
             context.clip();
             
-            this.__render(context, new Matrix(), new ColorTransform());
+            this.__render(context);
             context.restore();
             
-            //catch mouse events
+            // catch mouse events
             this.__updateObjectUnderMouse();
             
-            //debug
+            // debug
             if (this.showRedrawRegions) {
                 context.save();
                 context.strokeStyle = "#FF0000";
@@ -3820,13 +3946,15 @@ var Stage = new Class(DisplayObjectContainer, function()
             }
         }
         
-        //clean up
+        // clean up
         this.__renderAll = false;
         this.__redrawRegions = [];
     };
+    
     this.__updateObjectUnderMouse = function()
     {
         //NOTE: do not call these events against the stage.
+        //TODO: Add mouse event arguments
         if (this.__mouseOverStage === false) { return; }
         
         var stage = this;
@@ -3855,8 +3983,6 @@ var Stage = new Class(DisplayObjectContainer, function()
                 else {
                     last.dispatchEvent(rollOutEvent);
                 }
-                
-                //this.__objectUnderMouse = null;
             }
             if (current) {
                 //mouse over
@@ -3877,8 +4003,6 @@ var Stage = new Class(DisplayObjectContainer, function()
                 else {
                     current.dispatchEvent(rollOverEvent);
                 }
-                
-                //this.__objectUnderMouse = current;
             }
         }
         
@@ -3892,6 +4016,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.canvas.style.cursor = 'default';
         }
     };
+    
     this.__resize = function()
     {
         var canvas = this.canvas;
@@ -3931,10 +4056,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         //so we have to redraw the entire stage
         this.__renderAll = true;
     };
+    
     this.renderAll = function()
     {
         this.__renderAll = true;
     };
+    
     this.startDrag = function(target, lockCenter, bounds)
     {
         if (lockCenter) {
@@ -3947,6 +4074,7 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__dragTarget = target;
         this.__dragBounds = bounds;
     };
+    
     this.stopDrag = function()
     {
         this.__dragOffsetX = 0;
@@ -3956,43 +4084,55 @@ var Stage = new Class(DisplayObjectContainer, function()
     };
     
     /* getters and setters */
-    //override
-    this.getMouseX = function()
+    
+    /* @override DisplayObject */
+    this.__get__mouseX = function()
     {
         return this.__mouseX;
     };
-    //override
-    this.getMouseY = function()
+    
+    /* @override DisplayObject */
+    this.__get__mouseY = function()
     {
         return this.__mouseY;
     };
-    this.getStageWidth = function()
+    
+    this.__get__stageWidth = function()
     {
         return this.__rect.width;
     };
-    this.getStageHeight = function()
+    
+    this.__get__stageHeight = function()
     {
         return this.__rect.height;
     };
-    this.getFrameRate = function()
+    
+    this.__get__frameRate = function()
     {
         return this.__frameRate;
     };
-    this.setFrameRate = function(v)
+    
+    this.__set__frameRate = function(v)
     {
         this.__frameRate = +v || 1;
     };
+    
+    this.__get__renderMode = function()
+    {
+        return this.__renderMode;
+    };
+    
+    this.__set__renderMode = function(v)
+    {
+        this.__renderMode = v;
+        this.__renderAll = true;
+    };
+    
+    this.toString = function()
+    {
+        return '[object Stage]';
+    };
 });
-Stage.prototype.__defineGetter__("mouseX", Stage.prototype.getMouseX);
-Stage.prototype.__defineGetter__("mouseY", Stage.prototype.getMouseY);
-Stage.prototype.__defineGetter__("stageWidth", Stage.prototype.getStageWidth);
-Stage.prototype.__defineGetter__("stageHeight", Stage.prototype.getStageHeight);
-Stage.prototype.__defineGetter__("frameRate", Stage.prototype.getFrameRate);
-Stage.prototype.__defineSetter__("frameRate", Stage.prototype.setFrameRate);
-Stage.prototype.toString = function()
-{
-    return '[object Stage]';
-};
 var StageAlign = {
     BOTTOM: 'B',
     BOTTOM_LEFT: 'BL',
@@ -4029,11 +4169,12 @@ var BitmapFilter = new Class(Object, function()
     {
         return new BitmapFilter();
     };
+    
+    this.toString = function()
+    {
+        return '[object BitmapFilter]';
+    };
 });
-BitmapFilter.prototype.toString = function()
-{
-    return '[object BitmapFilter]';
-};
 var ContextFilter = new Class(Object, function()
 {
     this.__filter = function(context, target)
@@ -4046,11 +4187,12 @@ var ContextFilter = new Class(Object, function()
     {
         return new ContextFilter();
     };
+    
+    this.toString = function()
+    {
+        return '[object ContextFilter]';
+    };
 });
-ContextFilter.prototype.toString = function()
-{
-    return '[object ContextFilter]';
-};
 var BlurFilter = new Class(BitmapFilter, function()
 {
     this.__init__ = function(blurX, blurY, quality)
@@ -4173,11 +4315,12 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         return new BlurFilter(this.blurX, this.blurY, this.quality);
     };
+    
+    this.toString = function()
+    {
+        return '[object BlurFilter]';
+    };
 });
-BlurFilter.prototype.toString = function()
-{
-    return '[object BlurFilter]';
-};
 var ColorMatrixFilter = new Class(BitmapFilter, function()
 {
     this.__init__ = function(matrix)
@@ -4276,11 +4419,12 @@ var DropShadowFilter = new Class(ContextFilter, function()
     {
         return new DropShadowFilter(this.distance, this.angle, this.color, this.alpha, this.blur);
     };
+    
+    this.toString = function()
+    {
+        return '[object DropShadowFilter]';
+    };
 });
-DropShadowFilter.prototype.toString = function()
-{
-    return '[object DropShadowFilter]';
-};
 var ColorTransform = new Class(Object, function()
 {
     this.__init__ = function(redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier, redOffset, greenOffset, blueOffset, alphaOffset)
@@ -4311,17 +4455,21 @@ var ColorTransform = new Class(Object, function()
     };
     this.transformColor = function(color)
     {
-        var a = Math.min((color >> 24 & 0xFF) * this.alphaMultiplier + this.alphaOffset, 255);
-        var r = Math.min((color >> 16 & 0xFF) * this.redMultiplier + this.redOffset, 255);
-        var g = Math.min((color >> 8  & 0xFF) * this.greenMultiplier + this.greenOffset, 255);
-        var b = Math.min((color & 0xFF) * this.blueMultiplier + this.blueOffset, 255);
+        var a = (color >> 24 & 0xFF) * this.alphaMultiplier + this.alphaOffset;
+        var r = (color >> 16 & 0xFF) * this.redMultiplier + this.redOffset;
+        var g = (color >>  8 & 0xFF) * this.greenMultiplier + this.greenOffset;
+        var b = (color       & 0xFF) * this.blueMultiplier + this.blueOffset;
+        if (a > 255) { a = 255; }
+        if (r > 255) { r = 255; }
+        if (g > 255) { g = 255; }
+        if (b > 255) { b = 255; }
         return ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
     };
-    this.getColor = function()
+    this.__get__color = function()
     {
         return ((this.alphaOffset << 24) | (this.redOffset << 16) | (this.greenOffset << 8) | this.blueOffset) >>> 0;
     };
-    this.setColor = function(v)
+    this.__set__color = function(v)
     {
         this.alphaMultiplier = 0;
         this.redMultiplier   = 0;
@@ -4332,16 +4480,15 @@ var ColorTransform = new Class(Object, function()
         this.greenOffset = v >> 8  & 0xFF;
         this.blueOffset  = v & 0xFF;
     };
+    
+    this.toString = function()
+    {
+        return '(redMultiplier=' + this.redMultiplier + ', greenMultiplier=' + this.greenMultiplier +
+            ', blueMultiplier=' + this.blueMultiplier + ', alphaMultiplier=' + this.alphaMultiplier +
+            ', redOffset=' + this.redOffset + ', greenOffset=' + this.greenOffset +
+            ', blueOffset=' + this.blueOffset + ', alphaOffset=' + this.alphaOffset + ')';
+    };
 });
-ColorTransform.prototype.__defineGetter__("color", ColorTransform.prototype.getColor);
-ColorTransform.prototype.__defineSetter__("color", ColorTransform.prototype.setColor);
-ColorTransform.prototype.toString = function()
-{
-    return '(redMultiplier=' + this.redMultiplier + ', greenMultiplier=' + this.greenMultiplier +
-        ', blueMultiplier=' + this.blueMultiplier + ', alphaMultiplier=' + this.alphaMultiplier +
-        ', redOffset=' + this.redOffset + ', greenOffset=' + this.greenOffset +
-        ', blueOffset=' + this.blueOffset + ', alphaOffset=' + this.alphaOffset + ')';
-};
 var Matrix = new Class(Object, function()
 {
     this.__init__ = function(a, b, c, d, tx, ty)
@@ -4498,17 +4645,19 @@ var Matrix = new Class(Object, function()
         this.tx += dx;
         this.ty += dy;
     };
+    
+    this.toString = function()
+    {
+        return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
+    };
 });
-Matrix.prototype.toString = function()
+var MatrixTransformer = new Class(Object, function()
 {
-    return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
-};var MatrixTransformer = new Class(Object, function()
-{
+    this.toString = function()
+    {
+        return '[object MatrixTransformer]';
+    };
 });
-MatrixTransformer.prototype.toString = function()
-{
-    return '[object MatrixTransformer]';
-};
 MatrixTransformer.getScaleX = function(m)
 {
     return Math.sqrt(m.a * m.a + m.b * m.b);
@@ -4679,16 +4828,16 @@ var Point = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         return Math.sqrt(this._x * this._x + this._y * this._y);
     };
+    
+    this.toString = function()
+    {
+        return '(x=' + this.x + ', y=' + this.y + ')';
+    };
 });
-Point.prototype.__defineGetter__("length", Point.prototype.getLength);
-Point.prototype.toString = function()
-{
-    return '(x=' + this.x + ', y=' + this.y + ')';
-};
 Point.distance = function(pt1, pt2)
 {
     var dx = pt2.x - pt1.x;
@@ -4863,64 +5012,55 @@ var Rectangle = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getTop = function()
+    this.__get__top = function()
     {
         return this.y;
     };
-    this.getRight = function()
+    this.__get__right = function()
     {
         return this.x + this.width;
     };
-    this.getBottom = function()
+    this.__get__bottom = function()
     {
         return this.y + this.height;
     };
-    this.getLeft = function()
+    this.__get__left = function()
     {
         return this.x;
     };
-    this.getTopLeft = function()
+    this.__get__topLeft = function()
     {
         return new Point(this.x, this.y);
     };
-    this.setTopLeft = function(v)
+    this.__set__topLeft = function(v)
     {
         this.x = v.x;
         this.y = v.y;
     };
-    this.getBottomRight = function()
+    this.__get__bottomRight = function()
     {
         return new Point(this.x + this.width, this.y + this.height);
     };
-    this.setBottomRight = function(v)
+    this.__set__bottomRight = function(v)
     {
         this.width = v.x - this.x;
         this.height = v.y - this.y;
     };
-    this.getSize = function()
+    this.__get__size = function()
     {
         return new Point(this.width, this.height);
     };
-    this.setSize = function(v)
+    this.__set__size = function(v)
     {
         this.width = v.x;
         this.height = v.y;
     };
+    
+    this.toString = function()
+    {
+        return '(x=' + this.x + ', y=' + this.y + ', w=' + this.width + ', h=' + this.height + ')';
+    };
 });
-Rectangle.prototype.__defineGetter__("top", Rectangle.prototype.getTop);
-Rectangle.prototype.__defineGetter__("right", Rectangle.prototype.getRight);
-Rectangle.prototype.__defineGetter__("bottom", Rectangle.prototype.getBottom);
-Rectangle.prototype.__defineGetter__("left", Rectangle.prototype.getLeft);
-Rectangle.prototype.__defineGetter__("topLeft", Rectangle.prototype.getTopLeft);
-Rectangle.prototype.__defineSetter__("topLeft", Rectangle.prototype.setTopLeft);
-Rectangle.prototype.__defineGetter__("bottomRight", Rectangle.prototype.getBottomRight);
-Rectangle.prototype.__defineSetter__("bottomRight", Rectangle.prototype.setBottomRight);
-Rectangle.prototype.__defineGetter__("size", Rectangle.prototype.getSize);
-Rectangle.prototype.__defineSetter__("size", Rectangle.prototype.setSize);
-Rectangle.prototype.toString = function()
-{
-    return '(x=' + this.x + ', y=' + this.y + ', w=' + this.width + ', h=' + this.height + ')';
-};
 var Transform = new Class(Object, function()
 {
     var getRotation = MatrixTransformer.getRotation;
@@ -4935,7 +5075,7 @@ var Transform = new Class(Object, function()
         this.__target = null;
         this.__colorTransform = new ColorTransform();
         this.__matrix = new Matrix();
-        this.__modified = true;
+        this.__modified = false;
     };
     this.__getX = function()
     {
@@ -4984,49 +5124,49 @@ var Transform = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getConcatenatedColorTransform = function()
+    this.__get__concatenatedColorTransform = function()
     {
         var target = this.__target;
         if (target && target.__parent) {
             var concatenated = this.__colorTransform.clone();
-            concatenated.concat(target.__parent.__transform.getConcatenatedColorTransform());
+            concatenated.concat(target.__parent.__transform.__get__concatenatedColorTransform());
             return concatenated;
         }
         else {
             return this.__colorTransform.clone();
         }
     };
-    this.getColorTransform = function()
+    this.__get__colorTransform = function()
     {
         return this.__colorTransform.clone();
     };
-    this.setColorTransform = function(v)
+    this.__set__colorTransform = function(v)
     {
         this.__colorTransform = v.clone();
         this.__modified = true;
     };
-    this.getConcatenatedMatrix = function()
+    this.__get__concatenatedMatrix = function()
     {
         var target = this.__target;
         if (target && target.__parent) {
             var concatenated = this.__matrix.clone();
-            concatenated.concat(target.__parent.__transform.getConcatenatedMatrix());
+            concatenated.concat(target.__parent.__transform.__get__concatenatedMatrix());
             return concatenated;
         }
         else {
             return this.__matrix.clone();
         }
     };
-    this.getMatrix = function()
+    this.__get__matrix = function()
     {
         return this.__matrix.clone();
     };
-    this.setMatrix = function(v)
+    this.__set__matrix = function(v)
     {
         this.__matrix = v.clone();
         this.__modified = true;
     };
-    this.getPixelBounds = function()
+    this.__get__pixelBounds = function()
     {
         var target = this.__target;
         if (target) {
@@ -5034,18 +5174,12 @@ var Transform = new Class(Object, function()
         }
         return new Rectangle();
     };
+    
+    this.toString = function()
+    {
+        return '[object Transform]';
+    };
 });
-Transform.prototype.__defineGetter__("concatenatedColorTransform", Transform.prototype.getConcatenatedColorTransform);
-Transform.prototype.__defineGetter__("colorTransform", Transform.prototype.getColorTransform);
-Transform.prototype.__defineSetter__("colorTransform", Transform.prototype.setColorTransform);
-Transform.prototype.__defineGetter__("concatenatedMatrix", Transform.prototype.getConcatenatedMatrix);
-Transform.prototype.__defineGetter__("matrix", Transform.prototype.getMatrix);
-Transform.prototype.__defineSetter__("matrix", Transform.prototype.setMatrix);
-Transform.prototype.__defineGetter__("pixelBounds", Transform.prototype.getPixelBounds);
-Transform.prototype.toString = function()
-{
-    return '[object Transform]';
-};
 var Sound = new Class(EventDispatcher, function()
 {
     this.__init__ = function(/* source1, source2.. */)
@@ -5063,6 +5197,7 @@ var Sound = new Class(EventDispatcher, function()
             this.load.apply(this, arguments);
         }
     };
+    
     this.__onCanPlay = function()
     {
         this.__canPlay = true;
@@ -5071,6 +5206,7 @@ var Sound = new Class(EventDispatcher, function()
             this.__media.play();
         }
     };
+    
     this.__onEnded = function()
     {
         if (this.__loops === -1 || this.__loops > this.__loopCount) {
@@ -5079,6 +5215,7 @@ var Sound = new Class(EventDispatcher, function()
             this.__media.play();
         }
     };
+    
     this.close = function()
     {
         this.__url = null;
@@ -5091,6 +5228,7 @@ var Sound = new Class(EventDispatcher, function()
         cs3.utils.removeAllEventListeners(this.__media);
         this.__media = null;
     };
+    
     this.load = function(/* source1, source2.. */)
     {
         if (arguments.length === 0) {
@@ -5130,6 +5268,7 @@ var Sound = new Class(EventDispatcher, function()
         this.__media = media;
         this.__url = media.currentSrc;
     };
+    
     this.play = function(startTime, loops)
     {
         if (this.__media === null) {
@@ -5148,6 +5287,7 @@ var Sound = new Class(EventDispatcher, function()
             media.play();
         }
     };
+    
     this.pause = function()
     {
         if (this.__media === null) {
@@ -5158,45 +5298,45 @@ var Sound = new Class(EventDispatcher, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         if (this.__media) {
             return this.__media.duration;
         }
         return 0;
     };
-    this.getPosition = function()
+    
+    this.__get__position = function()
     {
         if (this.__media) {
             return this.__media.currentTime;
         }
         return 0;
     };
-    this.getUrl = function()
+    
+    this.__get__url = function()
     {
         return this.__url;
     };
-    this.getVolume = function()
+    
+    this.__get__volume = function()
     {
         return this.__volume;
     };
-    this.setVolume = function(v)
+    
+    this.__set__volume = function(v)
     {
         this.__volume = v;
         if (this.__media) {
             this.__media.volume = v;
         }
     };
+    
+    this.toString = function()
+    {
+        return '[object Sound]';
+    };
 });
-Sound.prototype.__defineGetter__("length", Sound.prototype.getLength);
-Sound.prototype.__defineGetter__("position", Sound.prototype.getPosition);
-Sound.prototype.__defineGetter__("volume", Sound.prototype.getVolume);
-Sound.prototype.__defineSetter__("volume", Sound.prototype.setVolume);
-Sound.prototype.__defineGetter__("url", Sound.prototype.getUrl);
-Sound.prototype.toString = function()
-{
-    return '[object Sound]';
-};
 var Video = new Class(DisplayObject, function()
 {
     this.__init__ = function()
@@ -5214,6 +5354,7 @@ var Video = new Class(DisplayObject, function()
             this.load.apply(this, arguments);
         }
     };
+    
     //override
     this.__getContentBounds = function()
     {
@@ -5223,6 +5364,7 @@ var Video = new Class(DisplayObject, function()
         }
         return new Rectangle();
     };
+    
     //override
     this.__getModified = function()
     {
@@ -5230,13 +5372,15 @@ var Video = new Class(DisplayObject, function()
         if (this.__media && this.__media.paused === false) {
             return true;
         }
-        return this.__modified || this.__transform.__modified;
+        return this.__transform.__modified || this.__modified;
     };
+    
     //override
     this.__setModified = function(v)
     {
-        this.__modified = v;
+        this.__transform.__modified = this.__modified = v;
     };
+    
     //override
     this.__render = function(context, matrix, colorTransform)
     {
@@ -5244,6 +5388,7 @@ var Video = new Class(DisplayObject, function()
             context.drawImage(this.__media, 0, 0);
         }
     };
+    
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
@@ -5261,6 +5406,7 @@ var Video = new Class(DisplayObject, function()
         }
         return false;
     };
+    
     this.__onCanPlay = function()
     {
         this.__canPlay = true;
@@ -5269,6 +5415,7 @@ var Video = new Class(DisplayObject, function()
             this.__media.play();
         }
     };
+    
     this.__onEnded = function()
     {
         if (this.__loops === -1 || this.__loops > this.__loopCount) {
@@ -5277,6 +5424,7 @@ var Video = new Class(DisplayObject, function()
             this.__media.play();
         }
     };
+    
     this.close = function()
     {
         this.__url = null;
@@ -5289,6 +5437,7 @@ var Video = new Class(DisplayObject, function()
         cs3.utils.removeAllEventListeners(this.__media);
         this.__media = null;
     };
+    
     this.load = function(/* source1, source2.. */)
     {
         if (arguments.length === 0) {
@@ -5328,6 +5477,7 @@ var Video = new Class(DisplayObject, function()
         this.__media = media;
         this.__url = media.currentSrc;
     };
+    
     this.play = function(startTime, loops)
     {
         if (this.__media === null) {
@@ -5346,6 +5496,7 @@ var Video = new Class(DisplayObject, function()
             media.play();
         }
     };
+    
     this.pause = function()
     {
         if (this.__media === null) {
@@ -5356,45 +5507,45 @@ var Video = new Class(DisplayObject, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         if (this.__media) {
             return this.__media.duration;
         }
         return 0;
     };
-    this.getPosition = function()
+    
+    this.__get__position = function()
     {
         if (this.__media) {
             return this.__media.currentTime;
         }
         return 0;
     };
-    this.getUrl = function()
+    
+    this.__get__url = function()
     {
         return this.__url;
     };
-    this.getVolume = function()
+    
+    this.__get__volume = function()
     {
         return this.__volume;
     };
-    this.setVolume = function(v)
+    
+    this.__set__volume = function(v)
     {
         this.__volume = v;
         if (this.__media) {
             this.__media.volume = v;
         }
     };
+    
+    this.toString = function()
+    {
+        return '[object Video]';
+    };
 });
-Video.prototype.__defineGetter__("length", Video.prototype.getLength);
-Video.prototype.__defineGetter__("position", Video.prototype.getPosition);
-Video.prototype.__defineGetter__("volume", Video.prototype.getVolume);
-Video.prototype.__defineSetter__("volume", Video.prototype.setVolume);
-Video.prototype.__defineGetter__("url", Video.prototype.getUrl);
-Video.prototype.toString = function()
-{
-    return '[object Video]';
-};
 var URLLoader = new Class(EventDispatcher, function()
 {
     this.__init__ = function()
@@ -5464,25 +5615,25 @@ var URLLoader = new Class(EventDispatcher, function()
                 else {
                     self.dispatchEvent(new IOErrorEvent(IOErrorEvent.IO_ERROR, false, false, this.statusText));
                 }
+                
+                this.onreadystatechange = null;
             }
         };
         this.__request.send(null);
     };
+    
+    this.toString = function()
+    {
+        return '[object URLLoader]';
+    };
 });
-URLLoader.prototype.toString = function()
-{
-    return '[object URLLoader]';
+var URLLoaderDataFormat = {
+    BINARY: 'binary',
+    TEXT: 'text',
+    XML: 'xml',
+    JSON: 'json',
+    VARIABLES: 'variables'
 };
-var URLLoaderDataFormat = new Class();
-URLLoaderDataFormat.prototype.toString = function()
-{
-    return '[object URLLoaderDataFormat]';
-};
-URLLoaderDataFormat.BINARY = 'binary';
-URLLoaderDataFormat.TEXT = 'text';
-URLLoaderDataFormat.XML = 'xml';
-URLLoaderDataFormat.JSON = 'json';
-URLLoaderDataFormat.VARIABLES = 'variables';
 var URLRequest = new Class(Object, function()
 {
     this.__init__ = function(url)
@@ -5495,61 +5646,52 @@ var URLRequest = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getContentType = function()
+    this.__get__contentType = function()
     {
         return this.__contentType;
     };
-    this.setContentType = function(v)
+    this.__set__contentType = function(v)
     {
         this.__contentType = v;
     };
-    this.getData = function()
+    this.__get__data = function()
     {
         return this.__data;
     };
-    this.setData = function(v)
+    this.__set__data = function(v)
     {
         this.__data = v;
     };
-    this.getMethod = function()
+    this.__get__method = function()
     {
         return this.__method;
     };
-    this.setMethod = function(v)
+    this.__set__method = function(v)
     {
         this.__method = v;
     };
-    this.getRequestHeaders = function()
+    this.__get__requestHeaders = function()
     {
         return this.__requestHeaders.slice(0);
     };
-    this.setRequestHeaders = function(v)
+    this.__set__requestHeaders = function(v)
     {
         this.__requestHeaders = v.slice(0);
     };
-    this.getUrl = function()
+    this.__get__url = function()
     {
         return this.__url;
     };
-    this.setUrl = function(v)
+    this.__set__url = function(v)
     {
         this.__url = v;
     };
+    
+    this.toString = function()
+    {
+        return '[object URLRequest]';
+    };
 });
-URLRequest.prototype.__defineGetter__("contentType", URLRequest.prototype.getContentType);
-URLRequest.prototype.__defineSetter__("contentType", URLRequest.prototype.setContentType);
-URLRequest.prototype.__defineGetter__("data", URLRequest.prototype.getData);
-URLRequest.prototype.__defineSetter__("data", URLRequest.prototype.setData);
-URLRequest.prototype.__defineGetter__("method", URLRequest.prototype.getMethod);
-URLRequest.prototype.__defineSetter__("method", URLRequest.prototype.setMethod);
-URLRequest.prototype.__defineGetter__("requestHeaders", URLRequest.prototype.getRequestHeaders);
-URLRequest.prototype.__defineSetter__("requestHeaders", URLRequest.prototype.setRequestHeaders);
-URLRequest.prototype.__defineGetter__("url", URLRequest.prototype.getUrl);
-URLRequest.prototype.__defineSetter__("url", URLRequest.prototype.setUrl);
-URLRequest.prototype.toString = function()
-{
-    return '[object URLRequest]';
-};
 var URLRequestMethod = {
    GET: 'GET',
    POST: 'POST'
@@ -5580,18 +5722,19 @@ var URLVariables = new Class(Object, function()
             this[p[0]] = decodeURIComponent(p[1]);
         }
     };
-});
-URLVariables.prototype.toString = function()
-{
-    var pairs = [];
-    for (var p in this)
+    
+    this.toString = function()
     {
-        if (p != 'constructor' && p != 'decode' && p != 'toString') {
-            pairs.push(p + '=' + encodeURIComponent(this[p]));
+        var pairs = [];
+        for (var p in this)
+        {
+            if (p != 'constructor' && p != 'decode' && p != 'toString') {
+                pairs.push(p + '=' + encodeURIComponent(this[p]));
+            }
         }
-    }
-    return pairs.join('&');
-};
+        return pairs.join('&');
+    };
+});
 var TextField;
 (function()
 {
@@ -5914,45 +6057,40 @@ var TextField;
         };
         
         /* getters and setters */
-        this.getLength = function()
+        this.__get__length = function()
         {
             return this.__buffer.length;
         };
-        this.getNumLines = function()
+        this.__get__numLines = function()
         {
             return this.__lines.length;
         };
-        this.getText = function()
+        this.__get__text = function()
         {
             return this.__buffer.join("");
         };
-        this.setText = function(v)
+        this.__set__text = function(v)
         {
             this.__buffer = [];
             this.__formats = [];
             this.appendText(v);
         };
-        this.getDefaultTextFormat = function()
+        this.__get__defaultTextFormat = function()
         {
             //TODO clone it
             return this.__defaultTextFormat;
         };
-        this.setDefaultTextFormat = function(v)
+        this.__set__defaultTextFormat = function(v)
         {
             this.__defaultTextFormat = v;
             this.__updateBlocks();
         };
+        
+        this.toString = function()
+        {
+            return '[object TextField]';
+        };
     });
-    TextField.prototype.__defineGetter__("length", TextField.prototype.getLength);
-    TextField.prototype.__defineGetter__("numLines", TextField.prototype.getNumLines);
-    TextField.prototype.__defineGetter__("text", TextField.prototype.getText);
-    TextField.prototype.__defineSetter__("text", TextField.prototype.setText);
-    TextField.prototype.__defineGetter__("defaultTextFormat", TextField.prototype.getDefaultTextFormat);
-    TextField.prototype.__defineSetter__("defaultTextFormat", TextField.prototype.setDefaultTextFormat);
-    TextField.prototype.toString = function()
-    {
-        return '[object TextField]';
-    };
     
     var Line = new Class(Object, function()
     {
@@ -6004,6 +6142,11 @@ var TextFormat = new Class(Object, function()
         this.underline = (underline) ? true : false;
         this.url = (url) ? url : "";
     };
+    
+    this.toString = function()
+    {
+        return '[object TextFormat]';
+    };
 });
 var TextFormatAlign = {
     CENTER: 'center',
@@ -6012,368 +6155,360 @@ var TextFormatAlign = {
     RIGHT: 'right'
 };
 var Tween;
-(function()
+(function(){
+
+var DH  = 1 / 22;
+var D1  = 1 / 11;
+var D2  = 2 / 11;
+var D3  = 3 / 11;
+var D4  = 4 / 11;
+var D5  = 5 / 11;
+var D7  = 7 / 11;
+var IH  = 1 / DH;
+var I1  = 1 / D1;
+var I2  = 1 / D2;
+var I4D = 1 / D4 / D4;
+
+Tween = new Class(EventDispatcher, function()
 {
-    var DH  = 1 / 22;
-    var D1  = 1 / 11;
-    var D2  = 2 / 11;
-    var D3  = 3 / 11;
-    var D4  = 4 / 11;
-    var D5  = 5 / 11;
-    var D7  = 7 / 11;
-    var IH  = 1 / DH;
-    var I1  = 1 / D1;
-    var I2  = 1 / D2;
-    var I4D = 1 / D4 / D4;
-    
-    Tween = new Class(EventDispatcher, function()
+    this.__init__ = function(obj, prop, func, begin, finish, duration, useSeconds)
     {
-        this.__init__ = function(obj, prop, func, begin, finish, duration, useSeconds)
-        {
-            EventDispatcher.call(this);
-            this.__duration = duration;
-            this.__range = finish - begin;
-            this.__FPS = undefined;
-            this.__position = 0;
-            this.__startTime = 0;
-            this.__time = 0;
-            this.__timer = null;
-            this.begin = begin;
-            this.func = func;
-            this.isPlaying = false;
-            this.looping = false;
-            this.obj = obj;
-            this.prop = prop;
-            this.useSeconds = (useSeconds) ? true : false;
-            
-            this.start();
-        };
-        this.__start = function()
-        {
-            this.__stop();
-            
-            var frameRate;
-            if (this.__FPS) {
-                //use user specified FPS
-                frameRate = this.__FPS;
-            }
-            else if (this.obj.__stage) {
-                //use the objects stage.frameRate
-                frameRate = this.obj.__stage.__frameRate;
-            }
-            else if (cs3.core.stages.length) {
-                //use the last created stage.frameRate
-                frameRate = cs3.core.stages[cs3.core.stages.length-1].__frameRate;
-            }
-            else {
-                //use the system's default frameRate
-                frameRate = cs3.config.DEFAULT_FRAMERATE;
-            }
-            
-            this.__timer = setInterval(__closure(this, this.__enterFrame), 1000 / frameRate);
-            this.isPlaying = true;
-        };
-        this.__stop = function()
-        {
-            clearInterval(this.__timer);
-            this.isPlaying = false;
-        };
-        this.__dispatchEvent = function(type)
-        {
-            this.dispatchEvent(new TweenEvent(type, this.__time, this.__position));
-        };
-        this.__enterFrame = function()
-        {
-            this.nextFrame();
-        };
-        this.__restart = function()
-        {
-            this.__startTime = (new Date()).getTime();
-        };
-        this.__update = function()
-        {
-            var durationRatio = this.__time / this.__duration;
-            var positionRatio = this.func(durationRatio);
-            var newPosition   = this.begin + this.__range * positionRatio;
-            this.setPosition(newPosition);
-        };
-        this.continueTo = function(finish, duration)
-        {
-            this.begin = this.__position;
-            this.__range = finish - this.begin;
-            if (duration !== undefined) {
-                this.__duration = duration;
-            }
-            this.start();
-        };
-        this.fforward = function()
-        {
-            this.setTime(this.__duration);
-            this.__restart();
-        };
-        this.nextFrame = function()
-        {
-            if (this.useSeconds) {
-                //update the time
-                var elapseTime = (new Date()).getTime() - this.__startTime;
-                this.setTime(elapseTime / 1000);
-            }
-            else {
-                //increase the frame
-                this.setTime(this.__time + 1);
-            }
-        };
-        this.prevFrame = function()
-        {
-            if (this.useSeconds === false) {
-                //decrease the frame
-                this.setTime(this.__time - 1);
-            }
-        };
-        this.resume = function()
-        {
-            this.__restart();
-            this.__start();
-            this.__dispatchEvent(TweenEvent.MOTION_RESUME);
-        };
-        this.rewind = function(t)
-        {
-            //set the time
-            this.__time = t | 0;
-            this.__restart();
-            this.__update();
-        };
-        this.start = function()
-        {
-            this.rewind(0);
-            this.__start();
-            this.__dispatchEvent(TweenEvent.MOTION_START);
-        };
-        this.stop = function()
-        {
-            this.__stop();
-            this.__dispatchEvent(TweenEvent.MOTION_STOP);
-        };
-        this.yoyo = function()
-        {
-            this.continueTo(this.begin, this.__time);
-        };
+        EventDispatcher.call(this);
+        this.__duration = duration;
+        this.__range = finish - begin;
+        this.__FPS = undefined;
+        this.__position = 0;
+        this.__startTime = 0;
+        this.__time = 0;
+        this.__timer = null;
+        this.begin = begin;
+        this.func = func;
+        this.isPlaying = false;
+        this.looping = false;
+        this.obj = obj;
+        this.prop = prop;
+        this.useSeconds = (useSeconds) ? true : false;
         
-        /* getters and setters */
-        this.getDuration = function()
+        this.start();
+    };
+    this.__start = function()
+    {
+        this.__stop();
+        
+        var frameRate;
+        if (this.__FPS) {
+            //use user specified FPS
+            frameRate = this.__FPS;
+        }
+        else if (this.obj.__stage) {
+            //use the objects stage.frameRate
+            frameRate = this.obj.__stage.__frameRate;
+        }
+        else if (cs3.core.stages.length) {
+            //use the last created stage.frameRate
+            frameRate = cs3.core.stages[cs3.core.stages.length-1].__frameRate;
+        }
+        else {
+            //use the system's default frameRate
+            frameRate = cs3.config.DEFAULT_FRAMERATE;
+        }
+        
+        this.__timer = setInterval(cs3.utils.closure(this, this.__enterFrame), 1000 / frameRate);
+        this.isPlaying = true;
+    };
+    this.__stop = function()
+    {
+        clearInterval(this.__timer);
+        this.isPlaying = false;
+    };
+    this.__dispatchEvent = function(type)
+    {
+        this.dispatchEvent(new TweenEvent(type, this.__time, this.__position));
+    };
+    this.__enterFrame = function()
+    {
+        this.nextFrame();
+    };
+    this.__restart = function()
+    {
+        this.__startTime = (new Date()).getTime();
+    };
+    this.__update = function()
+    {
+        var durationRatio = this.__time / this.__duration;
+        var positionRatio = this.func(durationRatio);
+        var newPosition   = this.begin + this.__range * positionRatio;
+        this.__set__position(newPosition);
+    };
+    this.continueTo = function(finish, duration)
+    {
+        this.begin = this.__position;
+        this.__range = finish - this.begin;
+        if (duration !== undefined) {
+            this.__duration = duration;
+        }
+        this.start();
+    };
+    this.fforward = function()
+    {
+        this.__set__time(this.__duration);
+        this.__restart();
+    };
+    this.nextFrame = function()
+    {
+        if (this.useSeconds) {
+            //update the time
+            var elapseTime = (new Date()).getTime() - this.__startTime;
+            this.__set__time(elapseTime / 1000);
+        }
+        else {
+            //increase the frame
+            this.__set__time(this.__time + 1);
+        }
+    };
+    this.prevFrame = function()
+    {
+        if (this.useSeconds === false) {
+            //decrease the frame
+            this.__set__time(this.__time - 1);
+        }
+    };
+    this.resume = function()
+    {
+        this.__restart();
+        this.__start();
+        this.__dispatchEvent(TweenEvent.MOTION_RESUME);
+    };
+    this.rewind = function(t)
+    {
+        //set the time
+        this.__time = t | 0;
+        this.__restart();
+        this.__update();
+    };
+    this.start = function()
+    {
+        this.rewind(0);
+        this.__start();
+        this.__dispatchEvent(TweenEvent.MOTION_START);
+    };
+    this.stop = function()
+    {
+        this.__stop();
+        this.__dispatchEvent(TweenEvent.MOTION_STOP);
+    };
+    this.yoyo = function()
+    {
+        this.continueTo(this.begin, this.__time);
+    };
+    
+    /* getters and setters */
+    this.__get__duration = function()
+    {
+        return this.__duration;
+    };
+    this.__set__duration = function(v)
+    {
+        this.__duration = v;
+    };
+    this.__get__finish = function()
+    {
+        return this.begin + this.__range;
+    };
+    this.__set__finish = function(v)
+    {
+        this.__range = v - this.begin;
+    };
+    this.__get__FPS = function()
+    {
+        return this.__FPS;
+    };
+    this.__set__FPS = function(v)
+    {
+        var isPlaying = this.isPlaying;
+        this.__stop();
+        this.__FPS = v;
+        if (isPlaying) {
+            //resume with the new FPS
+            this.__start();
+        }
+    };
+    this.__get__position = function()
+    {
+        return this.__position;
+    };
+    this.__set__position = function(v)
+    {
+        this.__position = v;
+        this.obj[this.prop] = this.__position;
+        this.__dispatchEvent(TweenEvent.MOTION_CHANGE);
+    };
+    this.__get__time = function()
+    {
+        return this.__time;
+    };
+    this.__set__time = function(v)
+    {
+        if (v > this.__duration)
         {
-            return this.__duration;
-        };
-        this.setDuration = function(v)
-        {
-            this.__duration = v;
-        };
-        this.getFinish = function()
-        {
-            return this.begin + this.__range;
-        };
-        this.setFinish = function(v)
-        {
-            this.__range = v - this.begin;
-        };
-        this.getFPS = function()
-        {
-            return this.__FPS;
-        };
-        this.setFPS = function(v)
-        {
-            var isPlaying = this.isPlaying;
-            this.__stop();
-            this.__FPS = v;
-            if (isPlaying) {
-                //resume with the new FPS
-                this.__start();
+            if (this.looping) {
+                this.rewind(v - this.__duration);
+                this.__update();
+                this.__dispatchEvent(TweenEvent.MOTION_LOOP);
             }
-        };
-        this.getPosition = function()
-        {
-            return this.__position;
-        };
-        this.setPosition = function(v)
-        {
-            this.__position = v;
-            this.obj[this.prop] = this.__position;
-            this.__dispatchEvent(TweenEvent.MOTION_CHANGE);
-        };
-        this.getTime = function()
-        {
-            return this.__time;
-        };
-        this.setTime = function(v)
-        {
-            if (v > this.__duration)
-            {
-                if (this.looping) {
-                    this.rewind(v - this.__duration);
+            else {
+                if (this.useSeconds) {
+                    this.__time = this.__duration;
                     this.__update();
-                    this.__dispatchEvent(TweenEvent.MOTION_LOOP);
                 }
-                else {
-                    if (this.useSeconds) {
-                        this.__time = this.__duration;
-                        this.__update();
-                    }
-                    this.stop();
-                    this.__dispatchEvent(TweenEvent.MOTION_FINISH);
-                }
+                this.stop();
+                this.__dispatchEvent(TweenEvent.MOTION_FINISH);
             }
-            else if (v < 0) {
-                this.rewind(0);
-                this.__update();
-            }
-            else {
-                this.__time = v;
-                this.__update();
-            }
-        };
-    });
-    Tween.Back = {
-        easeIn: function(t) {
-            return 3 * t * t * t - 2 * t * t;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Back.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Back.easeIn(t * 2.0) * 0.5 : 1 - Tween.Back.easeIn(2.0 - t * 2.0) * 0.5;
+        }
+        else if (v < 0) {
+            this.rewind(0);
+            this.__update();
+        }
+        else {
+            this.__time = v;
+            this.__update();
         }
     };
-    Tween.Bounce = {
-        easeIn: function(t) {
-            var s;
-            if (t < D1) {
-                s = t - DH;
-                s = DH - s * s * IH;
-            }
-            else if (t < D3) {
-                s = t - D2;
-                s = D1 - s * s * I1;
-            }
-            else if (t < D7) {
-                s = t - D5;
-                s = D2 - s * s * I2;
-            }
-            else {
-                s = t - 1;
-                s = 1 - s * s * I4D;
-            }
-            return s;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Bounce.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Bounce.easeIn(t * 2.0) * 0.5 : 1 - Tween.Bounce.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Circ = {
-        easeIn: function(t) {
-            return 1.0 - Math.sqrt(1.0 - t * t);
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Circ.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Circ.easeIn(t * 2.0) * 0.5 : 1 - Tween.Circ.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Cubic = {
-        easeIn: function(t) {
-            return t * t * t;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Cubic.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Cubic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Cubic.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Elastic = {
-        easeIn: function(t) {
-            return 1.0 - Tween.Elastic.easeOut(1.0 - t);
-        },
-        easeOut: function(t) {
-            var s = 1 - t;
-            return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Elastic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Elastic.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Linear = {
-        easeIn: function(t) {
-            return t;
-        },
-        easeOut: function(t) {
-            return t;
-        },
-        easeInOut: function(t) {
-            return t;
-        }
-    };
-    Tween.Quad = {
-        easeIn: function(t) {
-            return t * t;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Quad.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Quad.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quad.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Quart = {
-        easeIn: function(t) {
-            return t * t * t * t;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Quart.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Quart.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quart.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Quint = {
-        easeIn: function(t) {
-            return t * t * t * t * t;
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Quint.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Quint.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quint.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.Sine = {
-        easeIn: function(t) {
-            return 1.0 - Math.cos(t * (Math.PI / 2));
-        },
-        easeOut: function(t) {
-            return 1.0 - Tween.Sine.easeIn(1.0 - t);
-        },
-        easeInOut: function(t) {
-            return (t < 0.5) ? Tween.Sine.easeIn(t * 2.0) * 0.5 : 1 - Tween.Sine.easeIn(2.0 - t * 2.0) * 0.5;
-        }
-    };
-    Tween.prototype.__defineGetter__("duration", Tween.prototype.getDuration);
-    Tween.prototype.__defineSetter__("duration", Tween.prototype.setDuration);
-    Tween.prototype.__defineGetter__("finish", Tween.prototype.getFinish);
-    Tween.prototype.__defineSetter__("finish", Tween.prototype.setFinish);
-    Tween.prototype.__defineGetter__("FPS", Tween.prototype.getFPS);
-    Tween.prototype.__defineSetter__("FPS", Tween.prototype.setFPS);
-    Tween.prototype.__defineGetter__("position", Tween.prototype.getPosition);
-    Tween.prototype.__defineSetter__("position", Tween.prototype.setPosition);
-    Tween.prototype.__defineGetter__("time", Tween.prototype.getTime);
-    Tween.prototype.__defineSetter__("time", Tween.prototype.setTime);
-    Tween.prototype.toString = function()
+    
+    this.toString = function()
     {
         return '[object Tween]';
     };
+});
+Tween.Back = {
+    easeIn: function(t) {
+        return 3 * t * t * t - 2 * t * t;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Back.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Back.easeIn(t * 2.0) * 0.5 : 1 - Tween.Back.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Bounce = {
+    easeIn: function(t) {
+        var s;
+        if (t < D1) {
+            s = t - DH;
+            s = DH - s * s * IH;
+        }
+        else if (t < D3) {
+            s = t - D2;
+            s = D1 - s * s * I1;
+        }
+        else if (t < D7) {
+            s = t - D5;
+            s = D2 - s * s * I2;
+        }
+        else {
+            s = t - 1;
+            s = 1 - s * s * I4D;
+        }
+        return s;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Bounce.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Bounce.easeIn(t * 2.0) * 0.5 : 1 - Tween.Bounce.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Circ = {
+    easeIn: function(t) {
+        return 1.0 - Math.sqrt(1.0 - t * t);
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Circ.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Circ.easeIn(t * 2.0) * 0.5 : 1 - Tween.Circ.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Cubic = {
+    easeIn: function(t) {
+        return t * t * t;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Cubic.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Cubic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Cubic.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Elastic = {
+    easeIn: function(t) {
+        return 1.0 - Tween.Elastic.easeOut(1.0 - t);
+    },
+    easeOut: function(t) {
+        var s = 1 - t;
+        return 1 - Math.pow(s, 8) + Math.sin(t * t * 6 * Math.PI) * s * s;
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Elastic.easeIn(t * 2.0) * 0.5 : 1 - Tween.Elastic.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Linear = {
+    easeIn: function(t) {
+        return t;
+    },
+    easeOut: function(t) {
+        return t;
+    },
+    easeInOut: function(t) {
+        return t;
+    }
+};
+Tween.Quad = {
+    easeIn: function(t) {
+        return t * t;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Quad.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Quad.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quad.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Quart = {
+    easeIn: function(t) {
+        return t * t * t * t;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Quart.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Quart.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quart.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Quint = {
+    easeIn: function(t) {
+        return t * t * t * t * t;
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Quint.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Quint.easeIn(t * 2.0) * 0.5 : 1 - Tween.Quint.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+Tween.Sine = {
+    easeIn: function(t) {
+        return 1.0 - Math.cos(t * (Math.PI / 2));
+    },
+    easeOut: function(t) {
+        return 1.0 - Tween.Sine.easeIn(1.0 - t);
+    },
+    easeInOut: function(t) {
+        return (t < 0.5) ? Tween.Sine.easeIn(t * 2.0) * 0.5 : 1 - Tween.Sine.easeIn(2.0 - t * 2.0) * 0.5;
+    }
+};
+
 })();
 var Endian = {
     BIG_ENDIAN: 'bigEndian',
@@ -6519,10 +6654,10 @@ var ByteArray = new Class(Array, function()
     
     var EOFErrorMessage = 'Error #2030: End of file was encountered.';
     
-    this.__bigEndian = true;
-    this.__position = 0;
     this.__init__ = function()
     {
+        this.__bigEndian = true;
+        this.__position = 0;
     };
     this.compress = function()
     {
@@ -6695,9 +6830,9 @@ var ByteArray = new Class(Array, function()
         if (end > this.length) { throw new EOFError(EOFErrorMessage); }
         
         var chars = [];
-        for (var i = start; i < end; ++i)
+        for (var i = start, c = 0; i < end;)
         {
-            chars.push(String.fromCharCode(this[i]));
+            chars[c++] = String.fromCharCode(this[i++]);
         }
         this.__position = end;
         
@@ -6832,9 +6967,8 @@ var ByteArray = new Class(Array, function()
     };
     this.writeUTF = function(value)
     {
-        var bytes = [];
-        var s = unescape(encodeURIComponent(value));
-        var length = s.length;
+        var str = unescape(encodeURIComponent(value));
+        var length = str.length;
         
         if (length > 0xFFFF) {
             throw new RangeError('Error #2006 : The supplied index is out of bounds.');
@@ -6845,35 +6979,34 @@ var ByteArray = new Class(Array, function()
         var position = this.__position;
         for (var i = 0; i < length; ++i)
         {
-            this[position++] = s.charCodeAt(i);
+            this[position++] = str.charCodeAt(i);
         }
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
     this.writeUTFBytes = function(value)
     {
-        var bytes = [];
-        var s = unescape(encodeURIComponent(value));
-        var length = s.length;
+        var str = unescape(encodeURIComponent(value));
+        var length = str.length;
         
         var position = this.__position;
         for (var i = 0; i < length; ++i)
         {
-            this[position++] = s.charCodeAt(i);
+            this[position++] = str.charCodeAt(i);
         }
         this.__position = position;
         if (position > this.length) { this.length = position; }
     };
     
-    this.getBytesAvailable = function()
+    this.__get__bytesAvailable = function()
     {
-        return Math.max(this.length - this.__position, 0);
+        return this.length - this.__position;
     };
-    this.getEndian = function()
+    this.__get__endian = function()
     {
         return (this.__bigEndian) ? Endian.BIG_ENDIAN : Endian.LITTLE_ENDIAN;
     };
-    this.setEndian = function(v)
+    this.__set__endian = function(v)
     {
         this.__bigEndian = (v == Endian.BIG_ENDIAN);
         var suffix = (this.__bigEndian) ? 'B' : 'L';
@@ -6888,13 +7021,12 @@ var ByteArray = new Class(Array, function()
         this.writeFloat = this['__writeFloat' + suffix];
         this.writeDouble = this['__writeDouble' + suffix];
     };
-    this.getPosition = function()
+    this.__get__position = function()
     {
         return this.__position;
     };
-    this.setPosition = function(v)
+    this.__set__position = function(v)
     {
-        v = Math.max(v | 0, 0);
         if (v > this.length) {
             //fill the array with zeros until length == position
             var len = v - this.length;
@@ -6903,25 +7035,22 @@ var ByteArray = new Class(Array, function()
                 this.push(0);
             }
         }
-        this.__position = v;
+        this.__position = v | 0;
+    };
+    
+    this.toString = function()
+    {
+        return this.map(function(element, index, array)
+        {
+            return String.fromCharCode(element);
+        }, this).join("");
+    };
+    
+    this.toArray = function()
+    {
+        return this.splice(0);
     };
 });
-ByteArray.prototype.__defineGetter__("bytesAvailable", ByteArray.prototype.getBytesAvailable);
-ByteArray.prototype.__defineGetter__("endian", ByteArray.prototype.getEndian);
-ByteArray.prototype.__defineSetter__("endian", ByteArray.prototype.setEndian);
-ByteArray.prototype.__defineGetter__("position", ByteArray.prototype.getPosition);
-ByteArray.prototype.__defineSetter__("position", ByteArray.prototype.setPosition);
-ByteArray.prototype.toString = function()
-{
-    return this.map(function(element, index, array)
-    {
-        return String.fromCharCode(element);
-    }, this).join("");
-};
-ByteArray.prototype.toArray = function()
-{
-    return this.splice(0);
-};
 /**
 * CoordinateShuffler by Mario Klingemann. Dec 14, 2008
 * Visit www.quasimondo.com for documentation, updates and more free code.
@@ -7021,8 +7150,8 @@ var CoordinateShuffler = new Class(Object, function()
         var __lookupTableSize = this.__lookupTableSize;
         var list = [];
         
-        if ( count < 1 ) { return []; }
-        count = Math.min(count, __maximumIndex);
+        if (count < 1) { return []; }
+        if (count > __maximumIndex) { count = __maximumIndex; }
         
         index %= __maximumIndex;
         var xx = index % __width;
@@ -7065,7 +7194,7 @@ var CoordinateShuffler = new Class(Object, function()
     };
     this.setShuffleDepth = function(v)
     {
-        this.__shuffleDepth = Math.max(1, v);
+        this.__shuffleDepth = (v > 1) ? v : 1;
         this.setSeed(this.__seed);
     };
     
@@ -7082,7 +7211,7 @@ var CoordinateShuffler = new Class(Object, function()
     };
     this.setLookupTableSize = function(v)
     {
-        this.__lookupTableSize = Math.max(1, v);
+        this.__lookupTableSize = (v > 1) ? v : 1;
         this.setSeed(this.__seed);
     };
     
@@ -7212,7 +7341,7 @@ var Timer = new Class(EventDispatcher, function()
         this.__running = false;
         this.__timer = null;
         
-        this.setDelay(delay);
+        this.__set__delay(delay);
     };
     this.reset = function()
     {
@@ -7222,7 +7351,7 @@ var Timer = new Class(EventDispatcher, function()
     this.start = function()
     {
         this.__running = true;
-        this.__timer = setInterval(__closure(this, function()
+        this.__timer = setInterval(cs3.utils.closure(this, function()
         {
             this.__currentCount++;
             
@@ -7240,15 +7369,15 @@ var Timer = new Class(EventDispatcher, function()
         this.__running = false;
     };
     
-    this.getCurrentCount = function()
+    this.__get__currentCount = function()
     {
         return this.__currentCount;
     };
-    this.getDelay = function()
+    this.__get__delay = function()
     {
         return this.__delay;
     };
-    this.setDelay = function(v)
+    this.__set__delay = function(v)
     {
         v = +v;
         if (v < 0 || v == Infinity) {
@@ -7256,26 +7385,21 @@ var Timer = new Class(EventDispatcher, function()
         }
         this.__delay = v;
     };
-    this.getRepeatCount = function()
+    this.__get__repeatCount = function()
     {
         return this.__repeatCount;
     };
-    this.setRepeatCount = function(v)
+    this.__set__repeatCount = function(v)
     {
         this.__repeatCount = v | 0;
     };
-    this.getRunning = function()
+    this.__get__running = function()
     {
         return this.__running;
     };
+    
+    this.toString = function()
+    {
+        return '[object Timer]';
+    };
 });
-Timer.prototype.__defineGetter__("currentCount", Timer.prototype.getCurrentCount);
-Timer.prototype.__defineGetter__("delay", Timer.prototype.getDelay);
-Timer.prototype.__defineSetter__("delay", Timer.prototype.setDelay);
-Timer.prototype.__defineGetter__("repeatCount", Timer.prototype.getRepeatCount);
-Timer.prototype.__defineSetter__("repeatCount", Timer.prototype.setRepeatCount);
-Timer.prototype.__defineGetter__("running", Timer.prototype.getRunning);
-Timer.prototype.toString = function()
-{
-    return '[object Timer]';
-};

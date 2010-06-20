@@ -10,10 +10,17 @@ var Sprite = new Class(DisplayObjectContainer, function()
         //this.soundTransform = null;
         this.useHandCursor = true;
     };
+    
+    /* @override DisplayObject */
     this.__getContentBounds = Shape.prototype.__getContentBounds;
+    
+    /* @override DisplayObject */
     this.__getModified = Shape.prototype.__getModified;
+    
+    /* @override DisplayObject */
     this.__setModified = Shape.prototype.__setModified;
-    //override
+    
+    /* @override DisplayObject */
     this.__render = function(context, matrix, colorTransform)
     {
         if (this.__graphics) {
@@ -22,21 +29,25 @@ var Sprite = new Class(DisplayObjectContainer, function()
         
         this.__renderChildren(context, matrix, colorTransform);
     };
+    
+    /* @override DisplayObject.__hitTestPoint */
     this.__hitTestPoint = Shape.prototype.__hitTestPoint;
+    
     this.startDrag = function(lockCenter, bounds)
     {
         this.__stage.startDrag(this, lockCenter, bounds);
     };
+    
     this.stopDrag = function()
     {
         this.__stage.stopDrag();
     };
     
     /* getters and setters */
-    this.getGraphics = Shape.prototype.getGraphics;
+    this.__get__graphics = Shape.prototype.__get__graphics;
+    
+    this.toString = function()
+    {
+        return '[object Sprite]';
+    };
 });
-Sprite.prototype.__defineGetter__("graphics", Sprite.prototype.getGraphics);
-Sprite.prototype.toString = function()
-{
-    return '[object Sprite]';
-};

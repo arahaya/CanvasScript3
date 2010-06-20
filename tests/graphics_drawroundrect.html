@@ -21,7 +21,7 @@ var Main = new Class(Sprite, function()
         shape.y = 50;
         shape.graphics.lineStyle(0);
         shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         shape.graphics.endFill();
         this.addChild(shape);
         
@@ -30,7 +30,7 @@ var Main = new Class(Sprite, function()
         shape.x = 200;
         shape.y = 50;
         shape.graphics.lineStyle(10, 0xFF0000);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         this.addChild(shape);
         
         //draw a rectangle with strokes and fill
@@ -39,7 +39,7 @@ var Main = new Class(Sprite, function()
         shape.y = 50;
         shape.graphics.lineStyle(10, 0xFF0000);
         shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         this.addChild(shape);
         
         //draw a rectangle with alpha fill
@@ -48,7 +48,7 @@ var Main = new Class(Sprite, function()
         shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000);
         shape.graphics.beginFill(0x0000FF, 0.5);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         this.addChild(shape);
         
         //draw a rectangle with alpha stroke
@@ -57,7 +57,7 @@ var Main = new Class(Sprite, function()
         shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000, 0.5);
         shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         this.addChild(shape);
         
         //draw a rectangle with alpha fill and stroke
@@ -66,12 +66,13 @@ var Main = new Class(Sprite, function()
         shape.y = 200;
         shape.graphics.lineStyle(10, 0xFF0000, 0.5);
         shape.graphics.beginFill(0x0000FF, 0.5);
-        shape.graphics.drawRoundRect(0, 0, 100, 100, 20, 20);
+        shape.graphics.drawRoundRect(0, 0, 100, 100, 50, 50);
         this.addChild(shape);
     }
 });
 
-new Stage({canvas:"stage"}).addChild(new Main());
+var stage = new Stage("stage", 640, 480, 30);
+stage.addChild(new Main());
 </script>
 </head>
 <body>

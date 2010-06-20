@@ -100,7 +100,7 @@ var Main = new Class(Sprite, function()
             //if the mouse did not move
             //draw a dot at the mouse position
             this.canvas.graphics.beginFill(0x000000);
-            this.canvas.graphics.drawCircle(this.mouseX, this.mouseY, 2);
+            this.canvas.graphics.drawCircle(this.mouseX, this.mouseY, 4);
             this.canvas.graphics.endFill();
         }
         
@@ -111,18 +111,10 @@ var Main = new Class(Sprite, function()
         this.canvas.graphics.clear();
     };
 });
-cs3.utils.addOnload(function()
-{
-    var params = {
-        canvas: 'stage',
-        frameRate: 60,
-        renderMode: StageRenderMode.DIRTY,
-        width: 800,
-        height: 600
-    };
-    var stage = new Stage(params);
-    stage.addChild(new Main());
-});
+
+var stage = new Stage("stage", 800, 600, 60);
+stage.renderMode = StageRenderMode.DIRTY;
+stage.addChild(new Main());
 </script>
 <style type="text/css">
 html, body {

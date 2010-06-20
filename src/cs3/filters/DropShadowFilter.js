@@ -44,8 +44,9 @@ var DropShadowFilter = new Class(ContextFilter, function()
     {
         return new DropShadowFilter(this.distance, this.angle, this.color, this.alpha, this.blur);
     };
+    
+    this.toString = function()
+    {
+        return '[object DropShadowFilter]';
+    };
 });
-DropShadowFilter.prototype.toString = function()
-{
-    return '[object DropShadowFilter]';
-};

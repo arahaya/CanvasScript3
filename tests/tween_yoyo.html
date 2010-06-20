@@ -63,7 +63,8 @@ var Main = new Class(Sprite, function()
     }
 });
 
-new Stage({canvas:"stage"}).addChild(new Main());
+var stage = new Stage("stage");
+stage.addChild(new Main());
 </script>
 </head>
 <body>

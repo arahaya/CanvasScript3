@@ -10,8 +10,9 @@ var ContextFilter = new Class(Object, function()
     {
         return new ContextFilter();
     };
+    
+    this.toString = function()
+    {
+        return '[object ContextFilter]';
+    };
 });
-ContextFilter.prototype.toString = function()
-{
-    return '[object ContextFilter]';
-};

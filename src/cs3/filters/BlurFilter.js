@@ -120,8 +120,9 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         return new BlurFilter(this.blurX, this.blurY, this.quality);
     };
+    
+    this.toString = function()
+    {
+        return '[object BlurFilter]';
+    };
 });
-BlurFilter.prototype.toString = function()
-{
-    return '[object BlurFilter]';
-};

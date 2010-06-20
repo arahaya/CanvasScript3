@@ -10,10 +10,11 @@ var ProgressEvent = new Class(Event, function()
     {
         return new ProgressEvent(this.type, this.bubbles, this.cancelable, this.bytesLoaded, this.bytesTotal);
     };
+    
+    this.toString = function()
+    {
+        return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
+            ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
+    };
 });
 ProgressEvent.PROGRESS = 'progress';
-ProgressEvent.prototype.toString = function()
-{
-    return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-        ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
-};

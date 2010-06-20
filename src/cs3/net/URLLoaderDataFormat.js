@@ -1,10 +1,7 @@
-var URLLoaderDataFormat = new Class();
-URLLoaderDataFormat.prototype.toString = function()
-{
-    return '[object URLLoaderDataFormat]';
+var URLLoaderDataFormat = {
+    BINARY: 'binary',
+    TEXT: 'text',
+    XML: 'xml',
+    JSON: 'json',
+    VARIABLES: 'variables'
 };
-URLLoaderDataFormat.BINARY = 'binary';
-URLLoaderDataFormat.TEXT = 'text';
-URLLoaderDataFormat.XML = 'xml';
-URLLoaderDataFormat.JSON = 'json';
-URLLoaderDataFormat.VARIABLES = 'variables';

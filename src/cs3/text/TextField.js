@@ -320,45 +320,40 @@ var TextField;
         };
         
         /* getters and setters */
-        this.getLength = function()
+        this.__get__length = function()
         {
             return this.__buffer.length;
         };
-        this.getNumLines = function()
+        this.__get__numLines = function()
         {
             return this.__lines.length;
         };
-        this.getText = function()
+        this.__get__text = function()
         {
             return this.__buffer.join("");
         };
-        this.setText = function(v)
+        this.__set__text = function(v)
         {
             this.__buffer = [];
             this.__formats = [];
             this.appendText(v);
         };
-        this.getDefaultTextFormat = function()
+        this.__get__defaultTextFormat = function()
         {
             //TODO clone it
             return this.__defaultTextFormat;
         };
-        this.setDefaultTextFormat = function(v)
+        this.__set__defaultTextFormat = function(v)
         {
             this.__defaultTextFormat = v;
             this.__updateBlocks();
         };
+        
+        this.toString = function()
+        {
+            return '[object TextField]';
+        };
     });
-    TextField.prototype.__defineGetter__("length", TextField.prototype.getLength);
-    TextField.prototype.__defineGetter__("numLines", TextField.prototype.getNumLines);
-    TextField.prototype.__defineGetter__("text", TextField.prototype.getText);
-    TextField.prototype.__defineSetter__("text", TextField.prototype.setText);
-    TextField.prototype.__defineGetter__("defaultTextFormat", TextField.prototype.getDefaultTextFormat);
-    TextField.prototype.__defineSetter__("defaultTextFormat", TextField.prototype.setDefaultTextFormat);
-    TextField.prototype.toString = function()
-    {
-        return '[object TextField]';
-    };
     
     var Line = new Class(Object, function()
     {

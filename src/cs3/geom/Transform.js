@@ -12,7 +12,7 @@ var Transform = new Class(Object, function()
         this.__target = null;
         this.__colorTransform = new ColorTransform();
         this.__matrix = new Matrix();
-        this.__modified = true;
+        this.__modified = false;
     };
     this.__getX = function()
     {
@@ -61,49 +61,49 @@ var Transform = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getConcatenatedColorTransform = function()
+    this.__get__concatenatedColorTransform = function()
     {
         var target = this.__target;
         if (target && target.__parent) {
             var concatenated = this.__colorTransform.clone();
-            concatenated.concat(target.__parent.__transform.getConcatenatedColorTransform());
+            concatenated.concat(target.__parent.__transform.__get__concatenatedColorTransform());
             return concatenated;
         }
         else {
             return this.__colorTransform.clone();
         }
     };
-    this.getColorTransform = function()
+    this.__get__colorTransform = function()
     {
         return this.__colorTransform.clone();
     };
-    this.setColorTransform = function(v)
+    this.__set__colorTransform = function(v)
     {
         this.__colorTransform = v.clone();
         this.__modified = true;
     };
-    this.getConcatenatedMatrix = function()
+    this.__get__concatenatedMatrix = function()
     {
         var target = this.__target;
         if (target && target.__parent) {
             var concatenated = this.__matrix.clone();
-            concatenated.concat(target.__parent.__transform.getConcatenatedMatrix());
+            concatenated.concat(target.__parent.__transform.__get__concatenatedMatrix());
             return concatenated;
         }
         else {
             return this.__matrix.clone();
         }
     };
-    this.getMatrix = function()
+    this.__get__matrix = function()
     {
         return this.__matrix.clone();
     };
-    this.setMatrix = function(v)
+    this.__set__matrix = function(v)
     {
         this.__matrix = v.clone();
         this.__modified = true;
     };
-    this.getPixelBounds = function()
+    this.__get__pixelBounds = function()
     {
         var target = this.__target;
         if (target) {
@@ -111,15 +111,9 @@ var Transform = new Class(Object, function()
         }
         return new Rectangle();
     };
+    
+    this.toString = function()
+    {
+        return '[object Transform]';
+    };
 });
-Transform.prototype.__defineGetter__("concatenatedColorTransform", Transform.prototype.getConcatenatedColorTransform);
-Transform.prototype.__defineGetter__("colorTransform", Transform.prototype.getColorTransform);
-Transform.prototype.__defineSetter__("colorTransform", Transform.prototype.setColorTransform);
-Transform.prototype.__defineGetter__("concatenatedMatrix", Transform.prototype.getConcatenatedMatrix);
-Transform.prototype.__defineGetter__("matrix", Transform.prototype.getMatrix);
-Transform.prototype.__defineSetter__("matrix", Transform.prototype.setMatrix);
-Transform.prototype.__defineGetter__("pixelBounds", Transform.prototype.getPixelBounds);
-Transform.prototype.toString = function()
-{
-    return '[object Transform]';
-};

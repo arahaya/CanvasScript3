@@ -24,15 +24,16 @@ var URLVariables = new Class(Object, function()
             this[p[0]] = decodeURIComponent(p[1]);
         }
     };
-});
-URLVariables.prototype.toString = function()
-{
-    var pairs = [];
-    for (var p in this)
+    
+    this.toString = function()
     {
-        if (p != 'constructor' && p != 'decode' && p != 'toString') {
-            pairs.push(p + '=' + encodeURIComponent(this[p]));
+        var pairs = [];
+        for (var p in this)
+        {
+            if (p != 'constructor' && p != 'decode' && p != 'toString') {
+                pairs.push(p + '=' + encodeURIComponent(this[p]));
+            }
         }
-    }
-    return pairs.join('&');
-};
+        return pairs.join('&');
+    };
+});

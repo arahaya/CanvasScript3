@@ -183,18 +183,9 @@ var Particle = new Class(Shape, function()
     };
 });
 
-cs3.utils.addOnload(function()
-{
-    var params = {
-        canvas: 'stage',
-        frameRate: 1000,
-        renderMode: StageRenderMode.ALL,
-        width: STAGE_WIDTH,
-        height: STAGE_HEIGHT
-    };
-    var stage = new Stage(params);
-    stage.addChild(new Main());
-});
+var stage = new Stage("stage", STAGE_WIDTH, STAGE_HEIGHT, 60);
+stage.renderMode = StageRenderMode.ALL;
+stage.addChild(new Main());
 </script>
 <style type="text/css">
 * {

@@ -9,23 +9,21 @@ var LoaderInfo = new Class(EventDispatcher, function()
     };
     
     /* getters and setters */
-    this.getContent = function()
+    this.__get__content = function()
     {
         return this.__content;
     };
-    this.getWidth = function()
+    this.__get__width = function()
     {
         return this.__width;
     };
-    this.getHeight = function()
+    this.__get__height = function()
     {
         return this.__height;
     };
+    
+    this.toString = function()
+    {
+        return '[object LoaderInfo]';
+    };
 });
-LoaderInfo.prototype.__defineGetter__("content", LoaderInfo.prototype.getContent);
-LoaderInfo.prototype.__defineGetter__("width", LoaderInfo.prototype.getWidth);
-LoaderInfo.prototype.__defineGetter__("height", LoaderInfo.prototype.getHeight);
-LoaderInfo.prototype.toString = function()
-{
-    return '[object LoaderInfo]';
-};

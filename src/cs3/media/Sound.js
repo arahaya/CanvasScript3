@@ -15,6 +15,7 @@ var Sound = new Class(EventDispatcher, function()
             this.load.apply(this, arguments);
         }
     };
+    
     this.__onCanPlay = function()
     {
         this.__canPlay = true;
@@ -23,6 +24,7 @@ var Sound = new Class(EventDispatcher, function()
             this.__media.play();
         }
     };
+    
     this.__onEnded = function()
     {
         if (this.__loops === -1 || this.__loops > this.__loopCount) {
@@ -31,6 +33,7 @@ var Sound = new Class(EventDispatcher, function()
             this.__media.play();
         }
     };
+    
     this.close = function()
     {
         this.__url = null;
@@ -43,6 +46,7 @@ var Sound = new Class(EventDispatcher, function()
         cs3.utils.removeAllEventListeners(this.__media);
         this.__media = null;
     };
+    
     this.load = function(/* source1, source2.. */)
     {
         if (arguments.length === 0) {
@@ -82,6 +86,7 @@ var Sound = new Class(EventDispatcher, function()
         this.__media = media;
         this.__url = media.currentSrc;
     };
+    
     this.play = function(startTime, loops)
     {
         if (this.__media === null) {
@@ -100,6 +105,7 @@ var Sound = new Class(EventDispatcher, function()
             media.play();
         }
     };
+    
     this.pause = function()
     {
         if (this.__media === null) {
@@ -110,42 +116,42 @@ var Sound = new Class(EventDispatcher, function()
     };
     
     /* getters and setters */
-    this.getLength = function()
+    this.__get__length = function()
     {
         if (this.__media) {
             return this.__media.duration;
         }
         return 0;
     };
-    this.getPosition = function()
+    
+    this.__get__position = function()
     {
         if (this.__media) {
             return this.__media.currentTime;
         }
         return 0;
     };
-    this.getUrl = function()
+    
+    this.__get__url = function()
     {
         return this.__url;
     };
-    this.getVolume = function()
+    
+    this.__get__volume = function()
     {
         return this.__volume;
     };
-    this.setVolume = function(v)
+    
+    this.__set__volume = function(v)
     {
         this.__volume = v;
         if (this.__media) {
             this.__media.volume = v;
         }
     };
+    
+    this.toString = function()
+    {
+        return '[object Sound]';
+    };
 });
-Sound.prototype.__defineGetter__("length", Sound.prototype.getLength);
-Sound.prototype.__defineGetter__("position", Sound.prototype.getPosition);
-Sound.prototype.__defineGetter__("volume", Sound.prototype.getVolume);
-Sound.prototype.__defineSetter__("volume", Sound.prototype.setVolume);
-Sound.prototype.__defineGetter__("url", Sound.prototype.getUrl);
-Sound.prototype.toString = function()
-{
-    return '[object Sound]';
-};

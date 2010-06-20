@@ -67,12 +67,15 @@ var URLLoader = new Class(EventDispatcher, function()
                 else {
                     self.dispatchEvent(new IOErrorEvent(IOErrorEvent.IO_ERROR, false, false, this.statusText));
                 }
+                
+                this.onreadystatechange = null;
             }
         };
         this.__request.send(null);
     };
+    
+    this.toString = function()
+    {
+        return '[object URLLoader]';
+    };
 });
-URLLoader.prototype.toString = function()
-{
-    return '[object URLLoader]';
-};

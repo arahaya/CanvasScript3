@@ -39,7 +39,8 @@ var Main = new Class(Sprite, function()
     }
 });
 
-new Stage({canvas:"stage", frameRate:12}).addChild(new Main());
+var stage = new Stage("stage", 640, 480, 12);
+stage.addChild(new Main());
 </script>
 </head>
 <body>

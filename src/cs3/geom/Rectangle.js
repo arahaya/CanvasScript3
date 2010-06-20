@@ -158,61 +158,52 @@ var Rectangle = new Class(Object, function()
     };
     
     /* getters and setters */
-    this.getTop = function()
+    this.__get__top = function()
     {
         return this.y;
     };
-    this.getRight = function()
+    this.__get__right = function()
     {
         return this.x + this.width;
     };
-    this.getBottom = function()
+    this.__get__bottom = function()
     {
         return this.y + this.height;
     };
-    this.getLeft = function()
+    this.__get__left = function()
     {
         return this.x;
     };
-    this.getTopLeft = function()
+    this.__get__topLeft = function()
     {
         return new Point(this.x, this.y);
     };
-    this.setTopLeft = function(v)
+    this.__set__topLeft = function(v)
     {
         this.x = v.x;
         this.y = v.y;
     };
-    this.getBottomRight = function()
+    this.__get__bottomRight = function()
     {
         return new Point(this.x + this.width, this.y + this.height);
     };
-    this.setBottomRight = function(v)
+    this.__set__bottomRight = function(v)
     {
         this.width = v.x - this.x;
         this.height = v.y - this.y;
     };
-    this.getSize = function()
+    this.__get__size = function()
     {
         return new Point(this.width, this.height);
     };
-    this.setSize = function(v)
+    this.__set__size = function(v)
     {
         this.width = v.x;
         this.height = v.y;
     };
+    
+    this.toString = function()
+    {
+        return '(x=' + this.x + ', y=' + this.y + ', w=' + this.width + ', h=' + this.height + ')';
+    };
 });
-Rectangle.prototype.__defineGetter__("top", Rectangle.prototype.getTop);
-Rectangle.prototype.__defineGetter__("right", Rectangle.prototype.getRight);
-Rectangle.prototype.__defineGetter__("bottom", Rectangle.prototype.getBottom);
-Rectangle.prototype.__defineGetter__("left", Rectangle.prototype.getLeft);
-Rectangle.prototype.__defineGetter__("topLeft", Rectangle.prototype.getTopLeft);
-Rectangle.prototype.__defineSetter__("topLeft", Rectangle.prototype.setTopLeft);
-Rectangle.prototype.__defineGetter__("bottomRight", Rectangle.prototype.getBottomRight);
-Rectangle.prototype.__defineSetter__("bottomRight", Rectangle.prototype.setBottomRight);
-Rectangle.prototype.__defineGetter__("size", Rectangle.prototype.getSize);
-Rectangle.prototype.__defineSetter__("size", Rectangle.prototype.setSize);
-Rectangle.prototype.toString = function()
-{
-    return '(x=' + this.x + ', y=' + this.y + ', w=' + this.width + ', h=' + this.height + ')';
-};

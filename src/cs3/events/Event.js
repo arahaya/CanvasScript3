@@ -29,6 +29,11 @@ var Event = new Class(Object, function()
     {
         this.__stopPropagation = true;
     };
+    
+    this.toString = function()
+    {
+        return '[Event type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+    };
 });
 Event.ACTIVATE = 'activate';
 Event.ADDED = 'added';
@@ -56,7 +61,3 @@ Event.TAB_CHILDREN_CHANGE = 'tabChildrenChange';
 Event.TAB_ENABLED_CHANGE = 'tabEnabledChange';
 Event.TAB_INDEX_CHANGE = 'tabIndexChange';
 Event.UNLOAD = 'unload';
-Event.prototype.toString = function()
-{
-    return '[Event type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
-};

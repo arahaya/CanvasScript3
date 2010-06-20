@@ -25,13 +25,18 @@
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 */
+
+//Opera Fix
 if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.createImageData && window.ImageData) {
     CanvasRenderingContext2D.prototype.createImageData = function(w, h) { return new ImageData(w, h); };
 }
+
+//IE Fix
 if (Object.prototype.__defineGetter__ == undefined) {
     Object.prototype.__defineGetter__ = function(){};
     Object.prototype.__defineSetter__ = function(){};
 }
+
 var cs3 = {
     core: {
         initialized: false,
@@ -51,11 +56,6 @@ var cs3 = {
         init: function()
         {
             if (this.initialized) { return; }
-            
-            if (!document.body) {
-                alert('document not loaded');
-                return;
-            }
             
             window.onresize = this.resizeHandler;
             
@@ -82,7 +82,7 @@ var cs3 = {
             var canvas = stage.canvas;
             
             //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(__closure(stage, stage.__mouseMoveHandler, [e]), 1); });
+            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(cs3.utils.closure(stage, stage.__mouseMoveHandler, [e]), 1); });
             cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
             cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
             
@@ -277,8 +277,6 @@ var cs3 = {
         },
         createCanvas: function(width, height)
         {
-            if (!window.document) { return null; }
-            
             cs3.core.canvasId++;
             var canvas = document.createElement('CANVAS');
             canvas.id = "_cs3_canvas_" + cs3.core.canvasId;
@@ -305,6 +303,13 @@ var cs3 = {
             var s = (new Date()).getTime();
             func.apply(scope, args);
             trace((new Date()).getTime() - s);
+        },
+        closure: function(scope, func, args)
+        {
+            return function()
+            {
+                func.apply(scope, args);
+            };
         }
     }
 };
@@ -321,13 +326,6 @@ var __clearContext = (function()
         };
     }
 })();
-function __closure(scope, func, args)
-{
-    return function()
-    {
-        func.apply(scope, args);
-    };
-}
 /**
  * Fix rectangle coords from floats to integers
  */
@@ -402,19 +400,69 @@ var trace = (function()
         return function(msg){};
     }
 })();
-function Class(e, o)
+
+
+function Class(superClass, object)
 {
-    if (e === undefined) { e = {}; }
-    if (o === undefined) { o = e; e = Object; }
-    if (typeof(o) === 'function') { o = new o(); }
-    if (o.__init__ === undefined) { o.__init__ = function(){}; }
-    var c = o.__init__;
-    var f = function(){};
-    f.prototype = e.prototype;
-    c.prototype = new f();
-    c.prototype.constructor = c;
-    for (var p in o) { if (p != '__init__') { c.prototype[p] = o[p]; } }
-    return c;
+    if (superClass === undefined) {
+        superClass = {};
+    }
+    if (object === undefined) {
+        object = superClass;
+        superClass = Object;
+    }
+    if (typeof(object) === 'function') {
+        object = new object();
+    }
+    if (object.__init__ === undefined) {
+        object.__init__ = function(){};
+    }
+    var subClass = object.__init__;
+    var copy = function(){};
+    copy.prototype = superClass.prototype;
+    subClass.prototype = new copy();
+    subClass.prototype.constructor = subClass;
+    
+    //copy properties
+    var preffix, name, method;
+    for (var property in object)
+    {
+        if (property == '__init__') {
+            //do not copy the constructor
+            continue;
+        }
+        
+        preffix = property.substr(0, 7);
+        if (preffix == '__get__') {
+            //define getters
+            name = property.substr(7);
+            subClass.prototype.__defineGetter__(name, object[property]);
+            
+            //also copy as a public method for IE
+            //eg: obj.__get__methodName will become obj.getMethodName()
+            method = 'get' + name.charAt(0).toUpperCase() + name.slice(1);
+            if (!subClass.hasOwnProperty(method)) {
+                //do not override if a method or property with the same name exists
+                subClass.prototype[method] = object[property];
+            }
+        }
+        else if (preffix == '__set__') {
+            //define setters
+            name = property.substr(7);
+            subClass.prototype.__defineSetter__(name, object[property]);
+            
+            //also copy as a public method for IE
+            //eg: obj.__set__methodName will become obj.setMethodName()
+            method = 'set' + name.charAt(0).toUpperCase() + name.slice(1);
+            if (!subClass.hasOwnProperty(method)) {
+                //do not override if a method or property with the same name exists
+                subClass.prototype[method] = object[property];
+            }
+        }
+        
+        subClass.prototype[property] = object[property];
+    }
+    return subClass;
 }
 
 

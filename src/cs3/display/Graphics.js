@@ -14,6 +14,7 @@ var Graphics = new Class(Object, function()
     var LINE_STYLE = 11;
     var LINE_TO = 12;
     var MOVE_TO = 13;
+    
     this.__init__ = function()
     {
         this.__lineWidth = 0;
@@ -23,6 +24,7 @@ var Graphics = new Class(Object, function()
         this.__commands = [];
         this.__modified = false;
     };
+    
     this.__updateRect = function(x, y, width, height)
     {
         var rect = new Rectangle(x, y, width, height);
@@ -31,19 +33,23 @@ var Graphics = new Class(Object, function()
         rect.inflate(this.__lineWidth * 0.5, this.__lineWidth * 0.5);
         this.__rect = this.__rect.union(rect);
     };
+    
     this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     {
         //TODO:
     };
+    
     this.beginFill = function(color, alpha)
     {
         if (alpha === undefined) { alpha = 1; }
         this.__commands.push([BEGIN_FILL, color, alpha]);
     };
+    
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         //TODO:
     };
+    
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
     {
         //TODO: calculate rect
@@ -53,6 +59,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([CURVE_TO, controlX, controlY, anchorX, anchorY]);
         this.__modified = true;
     };
+    
     this.drawEllipse = function(x, y, width, height)
     {
         this.__updateRect(x, y, width, height);
@@ -61,6 +68,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_ELLIPSE, x, y, width, height]);
         this.__modified = true;
     };
+    
     this.drawCircle = function(x, y, radius)
     {
         this.__updateRect(x - radius, y - radius, radius * 2, radius * 2);
@@ -69,6 +77,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_CIRCLE, x, y, radius]);
         this.__modified = true;
     };
+    
     this.drawRect = function(x, y, width, height)
     {
         this.__updateRect(x, y, width, height);
@@ -77,6 +86,7 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_RECT, x, y, width, height]);
         this.__modified = true;
     };
+    
     this.drawRoundRect = function(x, y, width, height, ellipseWidth, ellipseHeight)
     {
         if (ellipseHeight === undefined) { ellipseHeight = ellipseWidth; }
@@ -86,15 +96,18 @@ var Graphics = new Class(Object, function()
         this.__commands.push([DRAW_ROUND_RECT, x, y, width, height, ellipseWidth, ellipseHeight]);
         this.__modified = true;
     };
+    
     this.endFill = function()
     {
         this.__commands.push([END_FILL]);
         this.__modified = true;
     };
+    
     this.lineGradientStyle = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         
     };
+    
     this.lineStyle = function(thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit)
     {
         if (color === undefined) { color = 0; }
@@ -107,12 +120,14 @@ var Graphics = new Class(Object, function()
         this.__lineWidth = thickness;
         this.__commands.push([LINE_STYLE, thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
     };
+    
     this.moveTo = function(x, y)
     {
         this.__x = x;
         this.__y = y;
         this.__commands.push([MOVE_TO, x, y]);
     };
+    
     this.lineTo = function(x, y)
     {
         this.__updateRect(this.__x, this.__y, x - this.__x, y - this.__y);
@@ -121,12 +136,14 @@ var Graphics = new Class(Object, function()
         this.__commands.push([LINE_TO, x, y]);
         this.__modified = true;
     };
+    
     this.clear = function()
     {
         this.__rect.setEmpty();
         this.__commands = [];
         this.__modified = true;
     };
+    
     this.__fill = function(context, fillAlpha)
     {
         context.closePath();
@@ -141,6 +158,7 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
+    
     this.__stroke = function(context, strokeAlpha)
     {
         if (strokeAlpha === 1) {
@@ -153,12 +171,14 @@ var Graphics = new Class(Object, function()
             context.globalAlpha = alpha;
         }
     };
+    
     this.__closeStroke = function(context, sx, sy, ax, ay)
     {
         if (sx !== ax || sy !== ay) {
             context.lineTo(sx, sy);
         }
     };
+    
     this.__render = function(context, matrix, colorTransform)
     {
         //TODO: optimize
@@ -426,8 +446,9 @@ var Graphics = new Class(Object, function()
         if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
         if (doStroke) { this.__stroke(context, strokeAlpha); }
     };
+    
+    this.toString = function()
+    {
+        return '[object Graphics]';
+    };
 });
-Graphics.prototype.toString = function()
-{
-    return '[object Graphics]';
-};

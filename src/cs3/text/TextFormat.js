@@ -20,4 +20,9 @@ var TextFormat = new Class(Object, function()
         this.underline = (underline) ? true : false;
         this.url = (url) ? url : "";
     };
+    
+    this.toString = function()
+    {
+        return '[object TextFormat]';
+    };
 });

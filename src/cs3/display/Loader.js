@@ -4,6 +4,8 @@ var Loader = new Class(DisplayObjectContainer, function()
     {
         throw new Error("The Loader class does not implement this method.");
     };
+    
+    /* @constructor */
     this.__init__ = function()
     {
         DisplayObjectContainer.call(this);
@@ -11,20 +13,37 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__contentLoaderInfo = new LoaderInfo(this);
         this.__img = null;
     };
-    //override
+    
+    /* @override DisplayObject */
     this.__getAsBitmap = function()
     {
         if (this.__content) {
             return this.__content.__getAsBitmap();
         }
     };
-    //override
+    
+    /* @override DisplayObject */
+    this.__getModified = function()
+    {
+        return this.__transform.__modified || this.__modified;
+    };
+    
+    /* @override DisplayObject */
+    this.__setModified = function(v)
+    {
+        this.__transform.__modified = this.__modified = v;
+    };
+    
+    /* @override DisplayObject */
     this.__render = function(context, matrix, colorTransform)
     {
-        if (this.__content) {
-            this.__content.__render(context, matrix, colorTransform);
+        if (!this.__content) {
+            return;
         }
+        
+        this.__renderChildren(context, matrix, colorTransform);
     };
+    
     this.load = function(request)
     {
         if (typeof request == 'string') {
@@ -67,6 +86,7 @@ var Loader = new Class(DisplayObjectContainer, function()
         img.src = request.__url;
         this.__img = img;
     };
+    
     this.unload = function()
     {
         if (this.__content) {
@@ -79,6 +99,7 @@ var Loader = new Class(DisplayObjectContainer, function()
             contentLoaderInfo.dispatchEvent(new Event(Event.UNLOAD, false, false));
         }
     };
+    
     this.close = function()
     {
         this.__img.src = null;
@@ -87,6 +108,7 @@ var Loader = new Class(DisplayObjectContainer, function()
         this.__img.onabort = null;
         this.__img = null;
     };
+    
     this.addChild = noImplement;
     this.addChildAt = noImplement;
     this.removeChild = noImplement;
@@ -94,18 +116,18 @@ var Loader = new Class(DisplayObjectContainer, function()
     this.setChildIndex = noImplement;
     
     /* getters and setters */
-    this.getContent = function()
+    this.__get__content = function()
     {
         return this.__content;
     };
-    this.getContentLoaderInfo = function()
+    
+    this.__get__contentLoaderInfo = function()
     {
         return this.__contentLoaderInfo;
     };
+    
+    this.toString = function()
+    {
+        return '[object Loader]';
+    };
 });
-Loader.prototype.__defineGetter__("content", Loader.prototype.getContent);
-Loader.prototype.__defineGetter__("contentLoaderInfo", Loader.prototype.getContentLoaderInfo);
-Loader.prototype.toString = function()
-{
-    return '[object Loader]';
-};

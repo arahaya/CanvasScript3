@@ -154,8 +154,9 @@ var Matrix = new Class(Object, function()
         this.tx += dx;
         this.ty += dy;
     };
+    
+    this.toString = function()
+    {
+        return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
+    };
 });
-Matrix.prototype.toString = function()
-{
-    return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
-};

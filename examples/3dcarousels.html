@@ -99,18 +99,9 @@ var Main = new Class(Sprite, function()
     };
 });
 
-cs3.utils.addOnload(function()
-{
-    var params = {
-        canvas: 'stage',
-        frameRate: 60,
-        renderMode: StageRenderMode.DIRTY,
-        width: 800,
-        height: 600
-    };
-    var stage = new Stage(params);
-    stage.addChild(new Main());
-});
+var stage = new Stage("stage", 800, 600, 60);
+stage.renderMode = StageRenderMode.ALL;
+stage.addChild(new Main());
 </script>
 <style type="text/css">
 html, body {

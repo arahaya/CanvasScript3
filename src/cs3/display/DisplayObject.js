@@ -9,7 +9,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__transform.__target = this;
         this.__visible = true;
         this.__alpha = 1;
-        this.__modified = true;
+        this.__modified = false;
         this.__parent = null;
         this.__stage = null;
         this.__root = null;
@@ -24,6 +24,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__cache = null;//cached result for mask and filters
         //this.opaqueBackground = null;
     };
+    
     this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
@@ -36,8 +37,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         var bitmapData;
         if (bitmap === null) {
             bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
-            bitmap.setX(bounds.x);
-            bitmap.setY(bounds.y);
+            bitmap.__set__x(bounds.x);
+            bitmap.__set__y(bounds.y);
         }
         
         //TODO: check if the bitmap needs to be rendered
@@ -49,8 +50,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         
         if (render) {
             //update the position
-            bitmap.setX(bounds.x);
-            bitmap.setY(bounds.y);
+            bitmap.__set__x(bounds.x);
+            bitmap.__set__y(bounds.y);
             
             //update the size(this also clears the contents)
             bitmap.__bitmapData.__resize(bounds.width, bounds.height);
@@ -77,28 +78,33 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__bitmap = bitmap;
         return bitmap;
     };
+    
     /**
-     * Bounds of your entire display list
+     * Bounds of the DisplayObject
      */
     this.__getBounds = function()
     {
         return this.__getContentBounds();
     };
+    
     /**
-     * Bounds of yourself only
+     * Bounds of the inner content
      */
     this.__getContentBounds = function()
     {
         return new Rectangle();
     };
+    
     this.__getRect = function()
     {
         return this.__getContentRect();
     };
+    
     this.__getContentRect = function()
     {
         return this.__getContentBounds();
     };
+    
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
@@ -107,19 +113,20 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
         return null;
     };
+    
     this.__hitTestPoint = function(context, matrix, point)
     {
         return false;
     };
+    
     this.__getModified = function()
     {
-        return this.__modified || this.__transform.__modified;
     };
+    
     this.__setModified = function(v)
     {
-        this.__modified = v;
-        this.__transform.__modified = v;
     };
+    
     this.__applyContextFilters = function(context, matrix, colorTransform)
     {
         var filters = this.__filters;
@@ -130,91 +137,113 @@ var DisplayObject = new Class(EventDispatcher, function()
             }
         }
     };
+    
     this.__applyMask = function(context, matrix, colorTransform)
     {
         /*** experimental ***/
-        if (this.__mask) {
-            var selfBitmap = this.__getAsBitmap();
-            if (!selfBitmap) {
-                //child content is empty so we don't need to apply a mask
-                return;
-            }
-            var mask = this.__mask;
-            var maskBitmap = mask.__getAsBitmap();
-            if (!maskBitmap) {
-                //mask content is empty so we don't need to render the child
-                return;
-            }
-            
-            var selfBitmapData = selfBitmap.__bitmapData;
-            var maskBitmapData = maskBitmap.__bitmapData;
-            
-            //create another bitmap to apply the mask
-            if (this.__cache) {
-                //if it already exists, reuse it
-                this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
-                this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
-            }
-            else {
-                //create a new bitmap
-                this.__cache = new Bitmap(selfBitmapData.clone());
-            }
-            this.__cache.setX(selfBitmap.getX());
-            this.__cache.setY(selfBitmap.getY());
-            
-            
-            var bitmap = this.__cache;
-            var bitmapData = bitmap.__bitmapData;
-            var bitmapDataContext = bitmapData.__context;
-            
-            //create the mask's matrix
-            var maskMatrix = mask.__transform.getConcatenatedMatrix();
-            var deltaMatrix = matrix.clone();
-            deltaMatrix.invert();
-            maskMatrix.concat(deltaMatrix);
-            
-            //adjust the position to draw
-            maskMatrix.tx += maskBitmap.getX();
-            maskMatrix.ty += maskBitmap.getY();
-            
-            //apply the mask
-            bitmapDataContext.save();
-            bitmapDataContext.globalCompositeOperation = 'destination-in';
-            bitmapDataContext.setTransform(
-                maskMatrix.a,
-                maskMatrix.b,
-                maskMatrix.c,
-                maskMatrix.d,
-                maskMatrix.tx,
-                maskMatrix.ty);
-            maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
-            bitmapDataContext.restore();
+        var selfBitmap = this.__getAsBitmap();
+        if (!selfBitmap) {
+            //child content is empty so we don't need to apply a mask
+            return;
         }
-    };
-    this.__render = function(context, matrix, colorTransform)
-    {
-    };
-    this.__update = function(matrix)
-    {
-    };
-    this.__updateList = function(matrix)
-    {
-        //this.__update();
-        var modified = this.__getModified();
-        if (modified) {
-            var globalBounds = matrix.transformRect(this.__getContentBounds());
-            
-            //collect redraw regions
-            this.__stage.__addRedrawRegion(globalBounds);
-            if (this.__globalBounds) {
-                this.__stage.__addRedrawRegion(this.__globalBounds);
-            }
-            this.__globalBounds = globalBounds;
+        var mask = this.__mask;
+        var maskBitmap = mask.__getAsBitmap();
+        if (!maskBitmap) {
+            //mask content is empty so we don't need to render the child
+            return;
         }
         
-        //reset modification
-        this.__setModified(false);
+        var selfBitmapData = selfBitmap.__bitmapData;
+        var maskBitmapData = maskBitmap.__bitmapData;
+        
+        //create another bitmap to apply the mask
+        if (this.__cache) {
+            //if it already exists, reuse it
+            this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
+            this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
+        }
+        else {
+            //create a new bitmap
+            this.__cache = new Bitmap(selfBitmapData.clone());
+        }
+        this.__cache.setX(selfBitmap.getX());
+        this.__cache.setY(selfBitmap.getY());
+        
+        
+        var bitmap = this.__cache;
+        var bitmapData = bitmap.__bitmapData;
+        var bitmapDataContext = bitmapData.__context;
+        
+        //create the mask's matrix
+        var maskMatrix = mask.__transform.__get__concatenatedMatrix();
+        var deltaMatrix = matrix.clone();
+        deltaMatrix.invert();
+        maskMatrix.concat(deltaMatrix);
+        
+        //adjust the position to draw
+        maskMatrix.tx += maskBitmap.getX();
+        maskMatrix.ty += maskBitmap.getY();
+        
+        //apply the mask
+        bitmapDataContext.save();
+        bitmapDataContext.globalCompositeOperation = 'destination-in';
+        bitmapDataContext.setTransform(
+            maskMatrix.a,
+            maskMatrix.b,
+            maskMatrix.c,
+            maskMatrix.d,
+            maskMatrix.tx,
+            maskMatrix.ty);
+        maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+        bitmapDataContext.restore();
     };
+    
+    this.__render = function(context, matrix, colorTransform)
+    {
+        if (this.__filters.length) {
+            this.__applyContextFilters(context, matrix, colorTransform);
+        }
+        if (this.__mask) {
+            this.__applyMask(context, matrix, colorTransform);
+        }
+        
+        if (this.__cache) {
+            this.__cache.__render(context, matrix, colorTransform);
+        }
+        else {
+            this.__render(context, matrix, colorTransform);
+        }
+    };
+    
+    this.__update = function(matrix, forceUpdate)
+    {
+        if (forceUpdate || this.__getModified()) {
+            var stage = this.__stage;
+            var globalBounds = matrix.transformRect(this.__getContentBounds());
+            var lastGlobalBounds = this.__globalBounds;
+            
+            // collect redraw regions
+            if (!lastGlobalBounds) {
+                stage.__addRedrawRegion(globalBounds);
+            }
+            else {
+                if (globalBounds.intersects(lastGlobalBounds)) {
+                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
+                }
+                else {
+                    stage.__addRedrawRegion(globalBounds);
+                    stage.__addRedrawRegion(lastGlobalBounds);
+                }
+            }
+            
+            // save the global bounds for the next update
+            this.__globalBounds = globalBounds;
+            
+            // reset modification
+            this.__setModified(false);
+        }
+    };
+    
     this.getBounds = function(targetCoordinateSpace)
     {
         var bounds = this.__getBounds();
@@ -226,37 +255,41 @@ var DisplayObject = new Class(EventDispatcher, function()
             return this.__transform.__matrix.transformRect(bounds);
         }
         
-        var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(bounds);
+        var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(bounds);
         if (targetCoordinateSpace === this.__root) {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
         
         //tansform your global bounds to targets local bounds
-        var targetMatrix = targetCoordinateSpace.__transform.getConcatenatedMatrix();
+        var targetMatrix = targetCoordinateSpace.__transform.__get__concatenatedMatrix();
         targetMatrix.invert();
         return targetMatrix.transformRect(globalBounds);
     };
+    
     this.getRect = function(targetCoordinateSpace)
     {
         return this.getBounds(targetCoordinateSpace);
     };
+    
     this.globalToLocal = function(point)
     {
-        var matrix = this.__transform.getConcatenatedMatrix();
+        var matrix = this.__transform.__get__concatenatedMatrix();
         matrix.invert();
         return matrix.transformPoint(point);
     };
+    
     this.hitTestObject = function(obj)
     {
-        var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
-        var targetGlobalBounds = obj.__transform.getConcatenatedMatrix().transformRect(obj.__getBounds());
+        var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
+        var targetGlobalBounds = obj.__transform.__get__concatenatedMatrix().transformRect(obj.__getBounds());
         return globalBounds.intersects(targetGlobalBounds);
     };
+    
     this.hitTestPoint = function(x, y, shapeFlag)
     {
         if (shapeFlag === false) {
-            var globalBounds = this.__transform.getConcatenatedMatrix().transformRect(this.__getBounds());
+            var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);
         }
         else {
@@ -267,7 +300,7 @@ var DisplayObject = new Class(EventDispatcher, function()
             }
             
             var context = this.__stage.__hiddenContext;
-            var matrix = this.__transform.getConcatenatedMatrix();
+            var matrix = this.__transform.__get__concatenatedMatrix();
             var point = new Point(x, y);
             
             context.clearRect(x, y, 1, 1);
@@ -280,114 +313,139 @@ var DisplayObject = new Class(EventDispatcher, function()
             return result;
         }
     };
+    
     this.localToGlobal = function(point)
     {
-        return this.__transform.getConcatenatedMatrix().transformPoint(point);
+        return this.__transform.__get__concatenatedMatrix().transformPoint(point);
     };
     
     /* getters and setters */
-    this.getName = function()
+    this.__get__name = function()
     {
         if (this.__name === null) {
             return "instance" + this.__id;
         }
         return this.__name;
     };
-    this.setName = function(name)
+    
+    this.__set__name = function(name)
     {
         this.__name = name;
     };
-    this.getStage = function()
+    
+    this.__get__stage = function()
     {
         return this.__stage;
     };
-    this.getRoot = function()
+    
+    this.__get__root = function()
     {
         return this.__root;
     };
-    this.getParent = function()
+    
+    this.__get__parent = function()
     {
         return this.__parent;
     };
-    this.getWidth = function()
+    
+    this.__get__width = function()
     {
         return this.__transform.__matrix.transformRect(this.__getBounds()).width;
     };
-    this.getHeight = function()
+    
+    this.__get__height = function()
     {
         return this.__transform.__matrix.transformRect(this.__getBounds()).height;
     };
-    this.getX = function()
+    
+    this.__get__x = function()
     {
         return this.__transform.__getX();
     };
-    this.setX = function(v)
+    
+    this.__set__x = function(v)
     {
         this.__transform.__setX(v);
     };
-    this.getY = function()
+    
+    this.__get__y = function()
     {
         return this.__transform.__getY();
     };
-    this.setY = function(v)
+    
+    this.__set__y = function(v)
     {
         this.__transform.__setY(v);
     };
-    this.getRotation = function()
+    
+    this.__get__rotation = function()
     {
         return this.__transform.__getRotation();
     };
-    this.setRotation = function(v)
+    
+    this.__set__rotation = function(v)
     {
         this.__transform.__setRotation(v);
     };
-    this.getScaleX = function()
+    
+    this.__get__scaleX = function()
     {
         return this.__transform.__getScaleX();
     };
-    this.setScaleX = function(v)
+    
+    this.__set__scaleX = function(v)
     {
         this.__transform.__setScaleX(v);
     };
-    this.getScaleY = function()
+    
+    this.__get__scaleY = function()
     {
         return this.__transform.__getScaleY();
     };
-    this.setScaleY = function(v)
+    
+    this.__set__scaleY = function(v)
     {
         this.__transform.__setScaleY(v);
     };
-    this.getAlpha = function()
+    
+    this.__get__alpha = function()
     {
         return this.__alpha;
     };
-    this.setAlpha = function(v)
+    
+    this.__set__alpha = function(v)
     {
         this.__alpha = v;
         this.__modified = true;
     };
-    this.getVisible = function()
+    
+    this.__get__visible = function()
     {
         return this.__visible;
     };
-    this.setVisible = function(v)
+    
+    this.__set__visible = function(v)
     {
         this.__visible = (v) ? true : false;
         this.__modified = true;
     };
-    this.getMouseX = function()
+    
+    this.__get__mouseX = function()
     {
         return this.globalToLocal(new Point(this.__stage.__mouseX, this.__stage.__mouseY)).x;
     };
-    this.getMouseY = function()
+    
+    this.__get__mouseY = function()
     {
         return this.globalToLocal(new Point(this.__stage.__mouseX, this.__stage.__mouseY)).y;
     };
-    this.getMask = function()
+    
+    this.__get__mask = function()
     {
         return this.__mask;
     };
-    this.setMask = function(v)
+    
+    this.__set__mask = function(v)
     {
         //if the mask object is allready a mask of a different object remove it
         if (v.__maskee) {
@@ -400,11 +458,13 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__mask = v;
         v.__maskee = this;
     };
-    this.getFilters = function()
+    
+    this.__get__filters = function()
     {
         return this.__filters.slice(0);
     };
-    this.setFilters = function(v)
+    
+    this.__set__filters = function(v)
     {
         this.__cache = null;
         for (var i = 0, l = v.length; i < l; ++i)
@@ -417,46 +477,20 @@ var DisplayObject = new Class(EventDispatcher, function()
         this.__filters = v.slice(0);
         this.__modified = true;
     };
-    this.getTransform = function()
+    
+    this.__get__transform = function()
     {
         return this.__transform;
     };
-    this.setTransform = function(v)
+    
+    this.__set__transform = function(v)
     {
         this.__transform = v;
         this.__transform.__modified = true;
     };
+    
+    this.toString = function()
+    {
+        return '[object DisplayObject]';
+    };
 });
-DisplayObject.prototype.__defineGetter__("name", DisplayObject.prototype.getName);
-DisplayObject.prototype.__defineSetter__("name", DisplayObject.prototype.setName);
-DisplayObject.prototype.__defineGetter__("parent", DisplayObject.prototype.getParent);
-DisplayObject.prototype.__defineGetter__("stage", DisplayObject.prototype.getStage);
-DisplayObject.prototype.__defineGetter__("root", DisplayObject.prototype.getRoot);
-DisplayObject.prototype.__defineGetter__("width", DisplayObject.prototype.getWidth);
-DisplayObject.prototype.__defineGetter__("height", DisplayObject.prototype.getHeight);
-DisplayObject.prototype.__defineGetter__("x", DisplayObject.prototype.getX);
-DisplayObject.prototype.__defineSetter__("x", DisplayObject.prototype.setX);
-DisplayObject.prototype.__defineGetter__("y", DisplayObject.prototype.getY);
-DisplayObject.prototype.__defineSetter__("y", DisplayObject.prototype.setY);
-DisplayObject.prototype.__defineGetter__("rotation", DisplayObject.prototype.getRotation);
-DisplayObject.prototype.__defineSetter__("rotation", DisplayObject.prototype.setRotation);
-DisplayObject.prototype.__defineGetter__("scaleX", DisplayObject.prototype.getScaleX);
-DisplayObject.prototype.__defineSetter__("scaleX", DisplayObject.prototype.setScaleX);
-DisplayObject.prototype.__defineGetter__("scaleY", DisplayObject.prototype.getScaleY);
-DisplayObject.prototype.__defineSetter__("scaleY", DisplayObject.prototype.setScaleY);
-DisplayObject.prototype.__defineGetter__("alpha", DisplayObject.prototype.getAlpha);
-DisplayObject.prototype.__defineSetter__("alpha", DisplayObject.prototype.setAlpha);
-DisplayObject.prototype.__defineGetter__("visible", DisplayObject.prototype.getVisible);
-DisplayObject.prototype.__defineSetter__("visible", DisplayObject.prototype.setVisible);
-DisplayObject.prototype.__defineGetter__("mask", DisplayObject.prototype.getMask);
-DisplayObject.prototype.__defineSetter__("mask", DisplayObject.prototype.setMask);
-DisplayObject.prototype.__defineGetter__("filters", DisplayObject.prototype.getFilters);
-DisplayObject.prototype.__defineSetter__("filters", DisplayObject.prototype.setFilters);
-DisplayObject.prototype.__defineGetter__("transform", DisplayObject.prototype.getTransform);
-DisplayObject.prototype.__defineSetter__("transform", DisplayObject.prototype.setTransform);
-DisplayObject.prototype.__defineGetter__("mouseX", DisplayObject.prototype.getMouseX);
-DisplayObject.prototype.__defineGetter__("mouseY", DisplayObject.prototype.getMouseY);
-DisplayObject.prototype.toString = function()
-{
-    return '[object DisplayObject]';
-};
