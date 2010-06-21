@@ -71,7 +71,7 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.d,
                 matrix.tx,
                 matrix.ty);
-            this.__render(context, matrix, new ColorTransform());
+            this.__render(context, new ColorTransform());
             context.restore();
         }
         
@@ -127,7 +127,7 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
     };
     
-    this.__applyContextFilters = function(context, matrix, colorTransform)
+    this.__applyContextFilters = function(context)
     {
         var filters = this.__filters;
         for (var i = 0, l = filters.length; i < l; ++i)
@@ -138,7 +138,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
     };
     
-    this.__applyMask = function(context, matrix, colorTransform)
+    this.__applyMask = function()
     {
         /*** experimental ***/
         var selfBitmap = this.__getAsBitmap();
@@ -176,7 +176,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         
         //create the mask's matrix
         var maskMatrix = mask.__transform.__get__concatenatedMatrix();
-        var deltaMatrix = matrix.clone();
+        //var deltaMatrix = matrix.clone();
+        var deltaMatrix = this.__transform.__get__concatenatedMatrix();
         deltaMatrix.invert();
         maskMatrix.concat(deltaMatrix);
         
@@ -194,46 +195,42 @@ var DisplayObject = new Class(EventDispatcher, function()
             maskMatrix.d,
             maskMatrix.tx,
             maskMatrix.ty);
-        maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+        maskBitmapData.__render(bitmapDataContext, null);
         bitmapDataContext.restore();
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__filters.length) {
-            this.__applyContextFilters(context, matrix, colorTransform);
+            this.__applyContextFilters(context);
         }
         if (this.__mask) {
-            this.__applyMask(context, matrix, colorTransform);
+            this.__applyMask();
         }
         
         if (this.__cache) {
-            this.__cache.__render(context, matrix, colorTransform);
+            this.__cache.__render(context, colorTransform);
         }
         else {
-            this.__render(context, matrix, colorTransform);
+            this.__render(context, colorTransform);
         }
     };
     
-    this.__update = function(matrix, forceUpdate)
+    this.__update = function(matrix, forceUpdate, summary)
     {
+        summary.total++;
+        
         if (forceUpdate || this.__getModified()) {
-            var stage = this.__stage;
+            summary.modified++;
+            
+            // collect redraw regions
+            var redrawRegions = this.__stage.__redrawRegions;
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             var lastGlobalBounds = this.__globalBounds;
             
-            // collect redraw regions
-            if (!lastGlobalBounds) {
-                stage.__addRedrawRegion(globalBounds);
-            }
-            else {
-                if (globalBounds.intersects(lastGlobalBounds)) {
-                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
-                }
-                else {
-                    stage.__addRedrawRegion(globalBounds);
-                    stage.__addRedrawRegion(lastGlobalBounds);
-                }
+            redrawRegions[redrawRegions.length] = globalBounds;
+            if (lastGlobalBounds) {
+                redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
             // save the global bounds for the next update

@@ -99,6 +99,7 @@ var Main = new Class(Sprite, function()
         if (this.linesCount == 0) {
             //if the mouse did not move
             //draw a dot at the mouse position
+            this.canvas.graphics.lineStyle(0);
             this.canvas.graphics.beginFill(0x000000);
             this.canvas.graphics.drawCircle(this.mouseX, this.mouseY, 4);
             this.canvas.graphics.endFill();

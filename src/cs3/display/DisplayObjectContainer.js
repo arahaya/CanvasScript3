@@ -61,8 +61,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     
     /* @override DisplayObject.__update */
-    this.__update = function(matrix, forceUpdate)
+    this.__update = function(matrix, forceUpdate, summary)
     {
+        summary.total++;
+        
         var update = forceUpdate || this.__getModified();
         
         // update children first
@@ -72,27 +74,21 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
-            child.__update(childMatrix, update);
+            child.__update(childMatrix, update, summary);
         }
         
         // update your self
         if (update) {
-            var stage = this.__stage;
+            summary.modified++;
+            
+            // collect redraw regions
+            var redrawRegions = this.__stage.__redrawRegions;
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             var lastGlobalBounds = this.__globalBounds;
             
-            // collect redraw regions
-            if (!lastGlobalBounds) {
-                stage.__addRedrawRegion(globalBounds);
-            }
-            else {
-                if (globalBounds.intersects(lastGlobalBounds)) {
-                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
-                }
-                else {
-                    stage.__addRedrawRegion(globalBounds);
-                    stage.__addRedrawRegion(lastGlobalBounds);
-                }
+            redrawRegions[redrawRegions.length] = globalBounds;
+            if (lastGlobalBounds) {
+                redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
             // save the global bounds for the next update
@@ -103,9 +99,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
     };
     
-    this.__renderChildren = function(context, matrix, colorTransform)
+    this.__renderChildren = function(context, colorTransform)
     {
-        var alpha = context.globalAlpha;
         var children = this.__children;
         var render = DisplayObject.prototype.__render;
         for (var i = 0, l = children.length; i < l; ++i)
@@ -115,16 +110,17 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             if (child.__visible === false) { continue; }
             if (child.__maskee !== null) { continue; }
             
-            var childMatrix = child.__transform.__matrix.clone();
-            childMatrix.concat(matrix);
-            
+            var childMatrix = child.__transform.__matrix;
             var childColor = child.__transform.__colorTransform.clone();
             childColor.concat(colorTransform);
             
-            context.globalAlpha = alpha * child.__alpha;
-            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            context.save();
+            context.globalAlpha *= child.__alpha;
+            context.transform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            render.call(child, context, childMatrix, childColor);
+            render.call(child, context, childColor);
+            
+            context.restore();
         }
     };
     
@@ -159,7 +155,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         var child = this.__children[index];
         
         // add redraw regions
-        child.__update(child.__transform.__get__concatenatedMatrix(), true);
+        child.__update(child.__transform.__get__concatenatedMatrix(), true, {total:0, modified:0});
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -174,6 +170,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return child;
     };
+    
     this.contains = function(object)
     {
         var children = this.__children;

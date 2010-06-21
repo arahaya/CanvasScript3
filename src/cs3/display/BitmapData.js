@@ -98,7 +98,7 @@ var BitmapData = new Class(Object, function()
         if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__canvas) {
             context.drawImage(this.__canvas, 0, 0);
@@ -321,7 +321,7 @@ var BitmapData = new Class(Object, function()
             matrix.d,
             matrix.tx,
             matrix.ty);
-        source.__render(context, matrix, new ColorTransform());
+        source.__render(context, new ColorTransform());
         context.restore();
         this.__modified = true;
     };

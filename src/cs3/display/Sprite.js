@@ -21,13 +21,13 @@ var Sprite = new Class(DisplayObjectContainer, function()
     this.__setModified = Shape.prototype.__setModified;
     
     /* @override DisplayObject */
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__graphics) {
-            this.__graphics.__render(context, matrix, colorTransform);
+            this.__graphics.__render(context, colorTransform);
         }
         
-        this.__renderChildren(context, matrix, colorTransform);
+        this.__renderChildren(context, colorTransform);
     };
     
     /* @override DisplayObject.__hitTestPoint */

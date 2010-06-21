@@ -106,40 +106,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__enterFrame();
     };
     
-    this.__addRedrawRegion = function(rect)
-    {
-        rect = rect.clone();
-        
-        //only add parts inside of the stage rect
-        if (!this.__rect.containsRect(rect)) {
-            if (!this.__rect.intersects(rect)) {
-                return;
-            }
-            rect = this.__rect.intersection(rect);
-        }
-        //rect = this.__rect.intersection(rect);
-        //if (rect.isEmpty()) { return; }
-        
-        //convert float's to int's
-        __ceilRect(rect);
-        
-        var redrawRegions = this.__redrawRegions;
-        var i = redrawRegions.length;
-        while (i--)
-        {
-            var region = redrawRegions[i];
-            if (region.intersects(rect)) {
-                //var intersection = region.intersection(rect);
-                //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
-                    redrawRegions[i] = region.union(rect);
-                    return;
-                //}
-            }
-        }
-        
-        redrawRegions.push(rect);
-    };
-    
     this.__focusHandler = function(e)
     {
     };
@@ -379,12 +345,12 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__enterFrame = function()
     {
-        //reserve next frame
+        // reserve next frame
         var self = this;
         clearTimeout(this.__timer);
         this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
-        //run user ENTER_FRAME event code
+        // run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
         this.__updateStage();
@@ -415,7 +381,19 @@ var Stage = new Class(DisplayObjectContainer, function()
             context.globalAlpha = child.__alpha;
             context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            render.call(child, context, childMatrix, childColor);
+            render.call(child, context, childColor);
+        }
+    };
+    
+    /* @override DisplayObjectContainer */
+    this.__update = function(matrix, forceUpdate, summary)
+    {
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
+        {
+            var child = children[i];
+            var childMatrix = child.__transform.__matrix.clone();
+            child.__update(childMatrix, forceUpdate, summary);
         }
     };
     
@@ -423,58 +401,115 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
-        var stageRect = this.__rect;
         
         // update the display list
-        var redrawRegions;
-        if (this.__renderMode == 'all') {
-            // force to render the entire stage
-            redrawRegions = [stageRect];
-        }
-        else {
-            // update modified objects and collect redraw regions
-            this.__update(new Matrix(), false);
-            redrawRegions = this.__redrawRegions;
-            
-            if (this.__renderAll || (this.__renderMode == 'auto' && redrawRegions.length > 50)) {
-                redrawRegions = [stageRect];
-            }
-        }
+        var summary = {total:0, modified:0};
+        this.__update(new Matrix(), false, summary);
+        var redrawRegions = this.__redrawRegions;
+        var redrawRegionsLength = redrawRegions.length;
+        var renderAll = this.__renderAll;
+        var renderMode = this.__renderMode;
         
-        if (redrawRegions.length) {
-            // begin rendering
-            context.save();
+        if (redrawRegionsLength) {
+            // render required
+            var stageRect = this.__rect;
+            var i;
             
-            // clear the redraw regions and clip for rendering
-            context.beginPath();
-            for (i = 0, l = redrawRegions.length; i < l; ++i)
-            {
-                var rect = redrawRegions[i];
-                context.clearRect(rect.x, rect.y, rect.width, rect.height);
-                context.rect(rect.x, rect.y, rect.width, rect.height);
+            // render mode
+            if (!renderAll && renderMode == StageRenderMode.AUTO) {
+                // TODO: better algorithm to detect the appropriate render mode
+                renderAll = (redrawRegionsLength > 50 || (summary.modified / summary.total) > 0.7);
             }
-            context.clip();
             
-            this.__render(context);
-            context.restore();
+            if (renderAll || renderMode == StageRenderMode.ALL) {
+                // render the entire stage
+                context.save();
+                context.clearRect(stageRect.x, stageRect.y, stageRect.width, stageRect.height);
+                this.__render(context);
+                context.restore();
+            }
+            else {
+                // optimize the redraw regions
+                var temp = [];
+                var tempLength = 0;
+                
+                for (i = 0; i < redrawRegionsLength; ++i)
+                {
+                    var rect = redrawRegions[i].clone();
+                    if (rect.width <= 0 || rect.height <= 0) { continue; }
+                    
+                    //only add parts inside of the stage rect
+                    if (!stageRect.containsRect(rect)) {
+                        if (!stageRect.intersects(rect)) {
+                            continue;
+                        }
+                        
+                        // TODO: optimize here
+                        rect = stageRect.intersection(rect);
+                    }
+                    
+                    //convert float's to int's
+                    var x = rect.x, y = rect.y, nx = Math.floor(x), ny = Math.floor(y);
+                    rect.x = nx;
+                    rect.y = ny;
+                    rect.width = (rect.width + (x - nx) + 1) | 0;
+                    rect.height = (rect.height + (y - ny) + 1) | 0;
+                    
+                    // union to existing rect if necessary
+                    var ti = tempLength;
+                    var addRect = true;
+                    while (ti--)
+                    {
+                        var rect2 = temp[ti];
+                        if (rect2.intersects(rect)) {
+                            //var intersection = region.intersection(rect);
+                            //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
+                                temp[ti] = rect2.union(rect);
+                                addRect = false;
+                                break;
+                            //}
+                        }
+                    }
+                    
+                    if (addRect) { temp[tempLength++] = rect; }
+                }
+                
+                redrawRegions = temp;
+                redrawRegionsLength = tempLength;
+                
+                // clear and clip the redraw regions.
+                context.save();
+                context.beginPath();
+                
+                for (i = 0; i < redrawRegionsLength; ++i)
+                {
+                    rect = redrawRegions[i];
+                    context.clearRect(rect.x, rect.y, rect.width, rect.height);
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                }
+                
+                context.clip();
+                this.__render(context);
+                context.restore();
+                
+                // debug
+                if (this.showRedrawRegions) {
+                    context.save();
+                    context.strokeStyle = "#FF0000";
+                    context.lineWidth = 1;
+                    context.beginPath();
+                    for (i = 0; i < redrawRegionsLength; ++i)
+                    {
+                        rect = redrawRegions[i];
+                        context.rect(rect.x, rect.y, rect.width, rect.height);
+                    }
+                    context.stroke();
+                    context.restore();
+                }
+            }
             
             // catch mouse events
             this.__updateObjectUnderMouse();
-            
-            // debug
-            if (this.showRedrawRegions) {
-                context.save();
-                context.strokeStyle = "#FF0000";
-                context.lineWidth = 1;
-                context.beginPath();
-                for (i = 0, l = redrawRegions.length; i < l; ++i)
-                {
-                    rect = redrawRegions[i];
-                    context.rect(rect.x, rect.y, rect.width, rect.height);
-                }
-                context.stroke();
-                context.restore();
-            }
         }
         
         // clean up

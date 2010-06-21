@@ -30,8 +30,8 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         var width = sourceRect.width;
         var height = sourceRect.height;
-        var srcImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-        var dstImageData = sourceBitmapData.__context.createImageData(sourceRect.width, sourceRect.height);
+        var srcImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
+        var dstImageData = sourceBitmapData.__context.createImageData(width, height);
         
         for (var i = 0; i < this.quality; ++i)
         {
@@ -58,12 +58,13 @@ var BlurFilter = new Class(BitmapFilter, function()
         var srcIndex = 0;
         var dstIndex;
         var divide = [];
-        var clamp = this.__clamp;
+        //var clamp = this.__clamp;
         var i, l, p, p2;
         
         for (i = 0, l = 256 * tableSize; i < l; ++i)
         {
-            divide[i] = i / tableSize;
+            //Firefox doesn't accept floats
+            divide[i] = (i / tableSize) | 0;
         }
         
         for (var y = 0; y < height; ++y)
@@ -73,21 +74,21 @@ var BlurFilter = new Class(BitmapFilter, function()
 
             for (i = -radius; i <= radius; ++i)
             {
-                p = (srcIndex + clamp(i, 0, widthMinus1)) * 4;
+                //p = (srcIndex + clamp(i, 0, widthMinus1)) * 4;
+                p = (srcIndex + ((i < 0) ? 0 : (i > widthMinus1) ? widthMinus1 : i)) * 4;
                 tr += src[p];
-                tg += src[p+1];
-                tb += src[p+2];
-                ta += src[p+3];
+                tg += src[++p];
+                tb += src[++p];
+                ta += src[++p];
             }
 
             for (var x = 0; x < width; ++x)
             {
                 p = dstIndex * 4;
-                //Firefox doesn't accept floats
-                dst[p]   = Math.floor(divide[tr]);
-                dst[p+1] = Math.floor(divide[tg]);
-                dst[p+2] = Math.floor(divide[tb]);
-                dst[p+3] = Math.floor(divide[ta]);
+                dst[p]   = divide[tr];
+                dst[++p] = divide[tg];
+                dst[++p] = divide[tb];
+                dst[++p] = divide[ta];
 
                 var i1 = x + radius + 1;
                 if (i1 > widthMinus1) {
@@ -98,13 +99,13 @@ var BlurFilter = new Class(BitmapFilter, function()
                     i2 = 0;
                 }
                 
-                p = (srcIndex + i1) * 4;
+                p  = (srcIndex + i1) * 4;
                 p2 = (srcIndex + i2) * 4;
                 
                 tr += src[p]   - src[p2];
-                tg += src[p+1] - src[p2+1];
-                tb += src[p+2] - src[p2+2];
-                ta += src[p+3] - src[p2+3];
+                tg += src[++p] - src[++p2];
+                tb += src[++p] - src[++p2];
+                ta += src[++p] - src[++p2];
                 
                 dstIndex += height;
             }

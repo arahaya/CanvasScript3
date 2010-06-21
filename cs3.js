@@ -1012,7 +1012,7 @@ var DisplayObject = new Class(EventDispatcher, function()
                 matrix.d,
                 matrix.tx,
                 matrix.ty);
-            this.__render(context, matrix, new ColorTransform());
+            this.__render(context, new ColorTransform());
             context.restore();
         }
         
@@ -1068,7 +1068,7 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
     };
     
-    this.__applyContextFilters = function(context, matrix, colorTransform)
+    this.__applyContextFilters = function(context)
     {
         var filters = this.__filters;
         for (var i = 0, l = filters.length; i < l; ++i)
@@ -1079,7 +1079,7 @@ var DisplayObject = new Class(EventDispatcher, function()
         }
     };
     
-    this.__applyMask = function(context, matrix, colorTransform)
+    this.__applyMask = function()
     {
         /*** experimental ***/
         var selfBitmap = this.__getAsBitmap();
@@ -1117,7 +1117,8 @@ var DisplayObject = new Class(EventDispatcher, function()
         
         //create the mask's matrix
         var maskMatrix = mask.__transform.__get__concatenatedMatrix();
-        var deltaMatrix = matrix.clone();
+        //var deltaMatrix = matrix.clone();
+        var deltaMatrix = this.__transform.__get__concatenatedMatrix();
         deltaMatrix.invert();
         maskMatrix.concat(deltaMatrix);
         
@@ -1135,46 +1136,42 @@ var DisplayObject = new Class(EventDispatcher, function()
             maskMatrix.d,
             maskMatrix.tx,
             maskMatrix.ty);
-        maskBitmapData.__render(bitmapDataContext, maskMatrix, null);
+        maskBitmapData.__render(bitmapDataContext, null);
         bitmapDataContext.restore();
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__filters.length) {
-            this.__applyContextFilters(context, matrix, colorTransform);
+            this.__applyContextFilters(context);
         }
         if (this.__mask) {
-            this.__applyMask(context, matrix, colorTransform);
+            this.__applyMask();
         }
         
         if (this.__cache) {
-            this.__cache.__render(context, matrix, colorTransform);
+            this.__cache.__render(context, colorTransform);
         }
         else {
-            this.__render(context, matrix, colorTransform);
+            this.__render(context, colorTransform);
         }
     };
     
-    this.__update = function(matrix, forceUpdate)
+    this.__update = function(matrix, forceUpdate, summary)
     {
+        summary.total++;
+        
         if (forceUpdate || this.__getModified()) {
-            var stage = this.__stage;
+            summary.modified++;
+            
+            // collect redraw regions
+            var redrawRegions = this.__stage.__redrawRegions;
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             var lastGlobalBounds = this.__globalBounds;
             
-            // collect redraw regions
-            if (!lastGlobalBounds) {
-                stage.__addRedrawRegion(globalBounds);
-            }
-            else {
-                if (globalBounds.intersects(lastGlobalBounds)) {
-                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
-                }
-                else {
-                    stage.__addRedrawRegion(globalBounds);
-                    stage.__addRedrawRegion(lastGlobalBounds);
-                }
+            redrawRegions[redrawRegions.length] = globalBounds;
+            if (lastGlobalBounds) {
+                redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
             // save the global bounds for the next update
@@ -1515,8 +1512,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     };
     
     /* @override DisplayObject.__update */
-    this.__update = function(matrix, forceUpdate)
+    this.__update = function(matrix, forceUpdate, summary)
     {
+        summary.total++;
+        
         var update = forceUpdate || this.__getModified();
         
         // update children first
@@ -1526,27 +1525,21 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
             childMatrix.concat(matrix);
-            child.__update(childMatrix, update);
+            child.__update(childMatrix, update, summary);
         }
         
         // update your self
         if (update) {
-            var stage = this.__stage;
+            summary.modified++;
+            
+            // collect redraw regions
+            var redrawRegions = this.__stage.__redrawRegions;
             var globalBounds = matrix.transformRect(this.__getContentBounds());
             var lastGlobalBounds = this.__globalBounds;
             
-            // collect redraw regions
-            if (!lastGlobalBounds) {
-                stage.__addRedrawRegion(globalBounds);
-            }
-            else {
-                if (globalBounds.intersects(lastGlobalBounds)) {
-                    stage.__addRedrawRegion(globalBounds.union(lastGlobalBounds));
-                }
-                else {
-                    stage.__addRedrawRegion(globalBounds);
-                    stage.__addRedrawRegion(lastGlobalBounds);
-                }
+            redrawRegions[redrawRegions.length] = globalBounds;
+            if (lastGlobalBounds) {
+                redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
             // save the global bounds for the next update
@@ -1557,9 +1550,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
     };
     
-    this.__renderChildren = function(context, matrix, colorTransform)
+    this.__renderChildren = function(context, colorTransform)
     {
-        var alpha = context.globalAlpha;
         var children = this.__children;
         var render = DisplayObject.prototype.__render;
         for (var i = 0, l = children.length; i < l; ++i)
@@ -1569,16 +1561,17 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             if (child.__visible === false) { continue; }
             if (child.__maskee !== null) { continue; }
             
-            var childMatrix = child.__transform.__matrix.clone();
-            childMatrix.concat(matrix);
-            
+            var childMatrix = child.__transform.__matrix;
             var childColor = child.__transform.__colorTransform.clone();
             childColor.concat(colorTransform);
             
-            context.globalAlpha = alpha * child.__alpha;
-            context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
+            context.save();
+            context.globalAlpha *= child.__alpha;
+            context.transform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            render.call(child, context, childMatrix, childColor);
+            render.call(child, context, childColor);
+            
+            context.restore();
         }
     };
     
@@ -1613,7 +1606,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         var child = this.__children[index];
         
         // add redraw regions
-        child.__update(child.__transform.__get__concatenatedMatrix(), true);
+        child.__update(child.__transform.__get__concatenatedMatrix(), true, {total:0, modified:0});
         
         this.__children.splice(index, 1);
         child.__parent = null;
@@ -1628,6 +1621,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         return child;
     };
+    
     this.contains = function(object)
     {
         var children = this.__children;
@@ -1827,10 +1821,10 @@ var Bitmap = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__render(context, matrix, colorTransform);
+            this.__bitmapData.__render(context, colorTransform);
         }
     };
     
@@ -2001,7 +1995,7 @@ var BitmapData = new Class(Object, function()
         if (fillColor) { this.fillRect(this.__rect, fillColor); }
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__canvas) {
             context.drawImage(this.__canvas, 0, 0);
@@ -2224,7 +2218,7 @@ var BitmapData = new Class(Object, function()
             matrix.d,
             matrix.tx,
             matrix.ty);
-        source.__render(context, matrix, new ColorTransform());
+        source.__render(context, new ColorTransform());
         context.restore();
         this.__modified = true;
     };
@@ -2903,13 +2897,14 @@ var Graphics = new Class(Object, function()
         }
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
         var doStroke = false;
         var strokeAlpha = 1;
+        var hasStroke = false;
         //this is the position where the last graphics.beginFill was called
         //it is used to close stroke path.
         var sx = 0, sy = 0;
@@ -2959,6 +2954,7 @@ var Graphics = new Class(Object, function()
                             __toRGB(cmd[1]);
                     break;
                 case LINE_STYLE:
+                    hasStroke = true;
                     break;
                 case CURVE_TO:
                     ax = cmd[3];
@@ -3041,6 +3037,7 @@ var Graphics = new Class(Object, function()
         if (doFill) { this.__fill(context, fillAlpha); }
         
         //stroke phase
+        if (!hasStroke) { return; }
         sx = sy = ax = ay = 0;
         context.beginPath();
         context.moveTo(0, 0);
@@ -3213,13 +3210,13 @@ var Loader = new Class(DisplayObjectContainer, function()
     };
     
     /* @override DisplayObject */
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (!this.__content) {
             return;
         }
         
-        this.__renderChildren(context, matrix, colorTransform);
+        this.__renderChildren(context, colorTransform);
     };
     
     this.load = function(request)
@@ -3374,10 +3371,10 @@ var Shape = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__graphics) {
-            this.__graphics.__render(context, matrix, colorTransform);
+            this.__graphics.__render(context, colorTransform);
         }
     };
     
@@ -3393,7 +3390,7 @@ var Shape = new Class(DisplayObject, function()
             var localPoint = invertedMatrix.transformPoint(point);
             
             if (bounds.containsPoint(localPoint)) {
-                this.__graphics.__render(context, matrix, null);
+                this.__graphics.__render(context, null);
                 return (context.getImageData(point.x, point.y, 1, 1).data[3] !== 0);
             }
         }
@@ -3437,13 +3434,13 @@ var Sprite = new Class(DisplayObjectContainer, function()
     this.__setModified = Shape.prototype.__setModified;
     
     /* @override DisplayObject */
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__graphics) {
-            this.__graphics.__render(context, matrix, colorTransform);
+            this.__graphics.__render(context, colorTransform);
         }
         
-        this.__renderChildren(context, matrix, colorTransform);
+        this.__renderChildren(context, colorTransform);
     };
     
     /* @override DisplayObject.__hitTestPoint */
@@ -3573,40 +3570,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         //start frame loops
         this.__initialized = true;
         this.__enterFrame();
-    };
-    
-    this.__addRedrawRegion = function(rect)
-    {
-        rect = rect.clone();
-        
-        //only add parts inside of the stage rect
-        if (!this.__rect.containsRect(rect)) {
-            if (!this.__rect.intersects(rect)) {
-                return;
-            }
-            rect = this.__rect.intersection(rect);
-        }
-        //rect = this.__rect.intersection(rect);
-        //if (rect.isEmpty()) { return; }
-        
-        //convert float's to int's
-        __ceilRect(rect);
-        
-        var redrawRegions = this.__redrawRegions;
-        var i = redrawRegions.length;
-        while (i--)
-        {
-            var region = redrawRegions[i];
-            if (region.intersects(rect)) {
-                //var intersection = region.intersection(rect);
-                //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
-                    redrawRegions[i] = region.union(rect);
-                    return;
-                //}
-            }
-        }
-        
-        redrawRegions.push(rect);
     };
     
     this.__focusHandler = function(e)
@@ -3848,12 +3811,12 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__enterFrame = function()
     {
-        //reserve next frame
+        // reserve next frame
         var self = this;
         clearTimeout(this.__timer);
         this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
         
-        //run user ENTER_FRAME event code
+        // run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
         
         this.__updateStage();
@@ -3884,7 +3847,19 @@ var Stage = new Class(DisplayObjectContainer, function()
             context.globalAlpha = child.__alpha;
             context.setTransform(childMatrix.a, childMatrix.b, childMatrix.c, childMatrix.d, childMatrix.tx, childMatrix.ty);
             
-            render.call(child, context, childMatrix, childColor);
+            render.call(child, context, childColor);
+        }
+    };
+    
+    /* @override DisplayObjectContainer */
+    this.__update = function(matrix, forceUpdate, summary)
+    {
+        var children = this.__children;
+        for (var i = 0, l = children.length; i < l; ++i)
+        {
+            var child = children[i];
+            var childMatrix = child.__transform.__matrix.clone();
+            child.__update(childMatrix, forceUpdate, summary);
         }
     };
     
@@ -3892,58 +3867,115 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (!this.__initialized) { return; }
         var context = this.__context;
-        var stageRect = this.__rect;
         
         // update the display list
-        var redrawRegions;
-        if (this.__renderMode == 'all') {
-            // force to render the entire stage
-            redrawRegions = [stageRect];
-        }
-        else {
-            // update modified objects and collect redraw regions
-            this.__update(new Matrix(), false);
-            redrawRegions = this.__redrawRegions;
-            
-            if (this.__renderAll || (this.__renderMode == 'auto' && redrawRegions.length > 50)) {
-                redrawRegions = [stageRect];
-            }
-        }
+        var summary = {total:0, modified:0};
+        this.__update(new Matrix(), false, summary);
+        var redrawRegions = this.__redrawRegions;
+        var redrawRegionsLength = redrawRegions.length;
+        var renderAll = this.__renderAll;
+        var renderMode = this.__renderMode;
         
-        if (redrawRegions.length) {
-            // begin rendering
-            context.save();
+        if (redrawRegionsLength) {
+            // render required
+            var stageRect = this.__rect;
+            var i;
             
-            // clear the redraw regions and clip for rendering
-            context.beginPath();
-            for (i = 0, l = redrawRegions.length; i < l; ++i)
-            {
-                var rect = redrawRegions[i];
-                context.clearRect(rect.x, rect.y, rect.width, rect.height);
-                context.rect(rect.x, rect.y, rect.width, rect.height);
+            // render mode
+            if (!renderAll && renderMode == StageRenderMode.AUTO) {
+                // TODO: better algorithm to detect the appropriate render mode
+                renderAll = (redrawRegionsLength > 50 || (summary.modified / summary.total) > 0.7);
             }
-            context.clip();
             
-            this.__render(context);
-            context.restore();
+            if (renderAll || renderMode == StageRenderMode.ALL) {
+                // render the entire stage
+                context.save();
+                context.clearRect(stageRect.x, stageRect.y, stageRect.width, stageRect.height);
+                this.__render(context);
+                context.restore();
+            }
+            else {
+                // optimize the redraw regions
+                var temp = [];
+                var tempLength = 0;
+                
+                for (i = 0; i < redrawRegionsLength; ++i)
+                {
+                    var rect = redrawRegions[i].clone();
+                    if (rect.width <= 0 || rect.height <= 0) { continue; }
+                    
+                    //only add parts inside of the stage rect
+                    if (!stageRect.containsRect(rect)) {
+                        if (!stageRect.intersects(rect)) {
+                            continue;
+                        }
+                        
+                        // TODO: optimize here
+                        rect = stageRect.intersection(rect);
+                    }
+                    
+                    //convert float's to int's
+                    var x = rect.x, y = rect.y, nx = Math.floor(x), ny = Math.floor(y);
+                    rect.x = nx;
+                    rect.y = ny;
+                    rect.width = (rect.width + (x - nx) + 1) | 0;
+                    rect.height = (rect.height + (y - ny) + 1) | 0;
+                    
+                    // union to existing rect if necessary
+                    var ti = tempLength;
+                    var addRect = true;
+                    while (ti--)
+                    {
+                        var rect2 = temp[ti];
+                        if (rect2.intersects(rect)) {
+                            //var intersection = region.intersection(rect);
+                            //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
+                                temp[ti] = rect2.union(rect);
+                                addRect = false;
+                                break;
+                            //}
+                        }
+                    }
+                    
+                    if (addRect) { temp[tempLength++] = rect; }
+                }
+                
+                redrawRegions = temp;
+                redrawRegionsLength = tempLength;
+                
+                // clear and clip the redraw regions.
+                context.save();
+                context.beginPath();
+                
+                for (i = 0; i < redrawRegionsLength; ++i)
+                {
+                    rect = redrawRegions[i];
+                    context.clearRect(rect.x, rect.y, rect.width, rect.height);
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                }
+                
+                context.clip();
+                this.__render(context);
+                context.restore();
+                
+                // debug
+                if (this.showRedrawRegions) {
+                    context.save();
+                    context.strokeStyle = "#FF0000";
+                    context.lineWidth = 1;
+                    context.beginPath();
+                    for (i = 0; i < redrawRegionsLength; ++i)
+                    {
+                        rect = redrawRegions[i];
+                        context.rect(rect.x, rect.y, rect.width, rect.height);
+                    }
+                    context.stroke();
+                    context.restore();
+                }
+            }
             
             // catch mouse events
             this.__updateObjectUnderMouse();
-            
-            // debug
-            if (this.showRedrawRegions) {
-                context.save();
-                context.strokeStyle = "#FF0000";
-                context.lineWidth = 1;
-                context.beginPath();
-                for (i = 0, l = redrawRegions.length; i < l; ++i)
-                {
-                    rect = redrawRegions[i];
-                    context.rect(rect.x, rect.y, rect.width, rect.height);
-                }
-                context.stroke();
-                context.restore();
-            }
         }
         
         // clean up
@@ -4225,8 +4257,8 @@ var BlurFilter = new Class(BitmapFilter, function()
     {
         var width = sourceRect.width;
         var height = sourceRect.height;
-        var srcImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-        var dstImageData = sourceBitmapData.__context.createImageData(sourceRect.width, sourceRect.height);
+        var srcImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height);
+        var dstImageData = sourceBitmapData.__context.createImageData(width, height);
         
         for (var i = 0; i < this.quality; ++i)
         {
@@ -4253,12 +4285,13 @@ var BlurFilter = new Class(BitmapFilter, function()
         var srcIndex = 0;
         var dstIndex;
         var divide = [];
-        var clamp = this.__clamp;
+        //var clamp = this.__clamp;
         var i, l, p, p2;
         
         for (i = 0, l = 256 * tableSize; i < l; ++i)
         {
-            divide[i] = i / tableSize;
+            //Firefox doesn't accept floats
+            divide[i] = (i / tableSize) | 0;
         }
         
         for (var y = 0; y < height; ++y)
@@ -4268,21 +4301,21 @@ var BlurFilter = new Class(BitmapFilter, function()
 
             for (i = -radius; i <= radius; ++i)
             {
-                p = (srcIndex + clamp(i, 0, widthMinus1)) * 4;
+                //p = (srcIndex + clamp(i, 0, widthMinus1)) * 4;
+                p = (srcIndex + ((i < 0) ? 0 : (i > widthMinus1) ? widthMinus1 : i)) * 4;
                 tr += src[p];
-                tg += src[p+1];
-                tb += src[p+2];
-                ta += src[p+3];
+                tg += src[++p];
+                tb += src[++p];
+                ta += src[++p];
             }
 
             for (var x = 0; x < width; ++x)
             {
                 p = dstIndex * 4;
-                //Firefox doesn't accept floats
-                dst[p]   = Math.floor(divide[tr]);
-                dst[p+1] = Math.floor(divide[tg]);
-                dst[p+2] = Math.floor(divide[tb]);
-                dst[p+3] = Math.floor(divide[ta]);
+                dst[p]   = divide[tr];
+                dst[++p] = divide[tg];
+                dst[++p] = divide[tb];
+                dst[++p] = divide[ta];
 
                 var i1 = x + radius + 1;
                 if (i1 > widthMinus1) {
@@ -4293,13 +4326,13 @@ var BlurFilter = new Class(BitmapFilter, function()
                     i2 = 0;
                 }
                 
-                p = (srcIndex + i1) * 4;
+                p  = (srcIndex + i1) * 4;
                 p2 = (srcIndex + i2) * 4;
                 
                 tr += src[p]   - src[p2];
-                tg += src[p+1] - src[p2+1];
-                tb += src[p+2] - src[p2+2];
-                ta += src[p+3] - src[p2+3];
+                tg += src[++p] - src[++p2];
+                tb += src[++p] - src[++p2];
+                ta += src[++p] - src[++p2];
                 
                 dstIndex += height;
             }
@@ -5382,7 +5415,7 @@ var Video = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__media) {
             context.drawImage(this.__media, 0, 0);
@@ -5769,6 +5802,7 @@ var TextField;
             this.border = false;
             this.borderColor = 0;
         };
+        
         //override
         this.__getContentBounds = function()
         {
@@ -5778,11 +5812,13 @@ var TextField;
             }
             return new Rectangle(0, 0, this.__textWidth, this.__textHeight);
         };
+        
         //override
         this.__getModified = function()
         {
             return this.__modified || this.__transform.__modified;
         };
+        
         //override
         this.__setModified = function(v)
         {
@@ -5822,7 +5858,7 @@ var TextField;
         
         
         //override
-        this.__render = function(context, matrix, colorTransform)
+        this.__render = function(context, colorTransform)
         {
             var bounds = this.__getContentBounds();
             var buffer = this.__buffer;
@@ -5914,6 +5950,7 @@ var TextField;
             
             context.restore();
         };
+        
         //override
         this.__hitTestPoint = function(context, matrix, point)
         {

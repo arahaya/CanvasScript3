@@ -35,13 +35,13 @@ var Loader = new Class(DisplayObjectContainer, function()
     };
     
     /* @override DisplayObject */
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (!this.__content) {
             return;
         }
         
-        this.__renderChildren(context, matrix, colorTransform);
+        this.__renderChildren(context, colorTransform);
     };
     
     this.load = function(request)

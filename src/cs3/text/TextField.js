@@ -32,6 +32,7 @@ var TextField;
             this.border = false;
             this.borderColor = 0;
         };
+        
         //override
         this.__getContentBounds = function()
         {
@@ -41,11 +42,13 @@ var TextField;
             }
             return new Rectangle(0, 0, this.__textWidth, this.__textHeight);
         };
+        
         //override
         this.__getModified = function()
         {
             return this.__modified || this.__transform.__modified;
         };
+        
         //override
         this.__setModified = function(v)
         {
@@ -85,7 +88,7 @@ var TextField;
         
         
         //override
-        this.__render = function(context, matrix, colorTransform)
+        this.__render = function(context, colorTransform)
         {
             var bounds = this.__getContentBounds();
             var buffer = this.__buffer;
@@ -177,6 +180,7 @@ var TextField;
             
             context.restore();
         };
+        
         //override
         this.__hitTestPoint = function(context, matrix, point)
         {

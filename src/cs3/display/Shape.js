@@ -34,10 +34,10 @@ var Shape = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__graphics) {
-            this.__graphics.__render(context, matrix, colorTransform);
+            this.__graphics.__render(context, colorTransform);
         }
     };
     
@@ -53,7 +53,7 @@ var Shape = new Class(DisplayObject, function()
             var localPoint = invertedMatrix.transformPoint(point);
             
             if (bounds.containsPoint(localPoint)) {
-                this.__graphics.__render(context, matrix, null);
+                this.__graphics.__render(context, null);
                 return (context.getImageData(point.x, point.y, 1, 1).data[3] !== 0);
             }
         }

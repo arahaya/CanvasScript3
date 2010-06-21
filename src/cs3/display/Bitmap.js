@@ -48,10 +48,10 @@ var Bitmap = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__bitmapData) {
-            this.__bitmapData.__render(context, matrix, colorTransform);
+            this.__bitmapData.__render(context, colorTransform);
         }
     };
     

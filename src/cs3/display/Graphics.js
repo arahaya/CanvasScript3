@@ -179,13 +179,14 @@ var Graphics = new Class(Object, function()
         }
     };
     
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
         var doStroke = false;
         var strokeAlpha = 1;
+        var hasStroke = false;
         //this is the position where the last graphics.beginFill was called
         //it is used to close stroke path.
         var sx = 0, sy = 0;
@@ -235,6 +236,7 @@ var Graphics = new Class(Object, function()
                             __toRGB(cmd[1]);
                     break;
                 case LINE_STYLE:
+                    hasStroke = true;
                     break;
                 case CURVE_TO:
                     ax = cmd[3];
@@ -317,6 +319,7 @@ var Graphics = new Class(Object, function()
         if (doFill) { this.__fill(context, fillAlpha); }
         
         //stroke phase
+        if (!hasStroke) { return; }
         sx = sy = ax = ay = 0;
         context.beginPath();
         context.moveTo(0, 0);

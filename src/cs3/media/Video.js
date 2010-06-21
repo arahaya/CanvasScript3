@@ -43,7 +43,7 @@ var Video = new Class(DisplayObject, function()
     };
     
     //override
-    this.__render = function(context, matrix, colorTransform)
+    this.__render = function(context, colorTransform)
     {
         if (this.__media) {
             context.drawImage(this.__media, 0, 0);
