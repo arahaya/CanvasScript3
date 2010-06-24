@@ -59,6 +59,29 @@ var cs3 = {
             
             window.onresize = this.resizeHandler;
             
+            //mouse events
+            var closure = cs3.utils.closure;
+            var stages = this.stages;
+            cs3.utils.addEventListener(document, 'mousemove', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    var stage = stages[i];
+                    setTimeout(closure(stage, stage.__mouseMoveHandler, [e]), 1);
+                }
+            });
+            cs3.utils.addEventListener(document, 'mousedown', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    stages[i].__mouseDownHandler(e);
+                }
+            });
+            cs3.utils.addEventListener(document, 'mouseup', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    stages[i].__mouseUpHandler(e);
+                }
+            });
+            
             this.startTime = new Date().getTime();
             this.initialized = true;
         },
@@ -81,27 +104,50 @@ var cs3 = {
             this.init();
             var canvas = stage.canvas;
             
-            //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(cs3.utils.closure(stage, stage.__mouseMoveHandler, [e]), 1); });
-            cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
-            
-            //Firefox
+            //mouse wheel Firefox
             if (window.addEventListener) {
-                canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
+                canvas.addEventListener('DOMMouseScroll', stage.__mouseWheelHandler, false);
             }
-            //Opera, Chrome
-            cs3.utils.addEventListener(canvas, 'mousewheel', function(e) { stage.__mouseWheelHandler(e); });
+            //mouse wheel Opera, Chrome
+            cs3.utils.addEventListener(canvas, 'mousewheel', stage.__mouseWheelHandler);
             
             //focus events
-            cs3.utils.addEventListener(canvas, 'focus', function(e) { stage.__focusHandler(e); });
-            cs3.utils.addEventListener(canvas, 'blur', function(e) { stage.__blurHandler(e); });
+            cs3.utils.addEventListener(canvas, 'focus', stage.__focusHandler);
+            cs3.utils.addEventListener(canvas, 'blur', stage.__blurHandler);
             
             //key events
-            cs3.utils.addEventListener(canvas, 'keydown', function(e) { stage.__keyDownHandler(e); });
-            cs3.utils.addEventListener(canvas, 'keyup', function(e) { stage.__keyUpHandler(e); });
+            cs3.utils.addEventListener(canvas, 'keydown', stage.__keyDownHandler);
+            cs3.utils.addEventListener(canvas, 'keyup', stage.__keyUpHandler);
             
             this.stages.push(stage);
+        },
+        removeStage: function(stage)
+        {
+            var canvas = stage.canvas;
+            
+            //mouse wheel Firefox
+            if (window.removeEventListener) {
+                canvas.removeEventListener('DOMMouseScroll', stage.__mouseWheelHandler, false);
+            }
+            //mouse wheel Opera, Chrome
+            cs3.utils.removeEventListener(canvas, 'mousewheel', stage.__mouseWheelHandler);
+            
+            //focus events
+            cs3.utils.removeEventListener(canvas, 'focus', stage.__focusHandler);
+            cs3.utils.removeEventListener(canvas, 'blur', stage.__blurHandler);
+            
+            //key events
+            cs3.utils.removeEventListener(canvas, 'keydown', stage.__keyDownHandler);
+            cs3.utils.removeEventListener(canvas, 'keyup', stage.__keyUpHandler);
+            
+            var stages = this.stages;
+            for (var i = 0, l = stages.length; i < l; i++)
+            {
+                if (stages[i] == stage) {
+                    stages.splice(i, 1);
+                    break;
+                }
+            }
         }
     },
     config: {
@@ -313,6 +359,27 @@ var cs3 = {
         }
     }
 };
+/*
+ * debugging utility
+ * adds a trace(arguments) inside each context method.
+ * only works for chrome. Firefox doesn't allow overriding and Opera crashes.
+ */
+function __debugContext(context)
+{
+    if (!context.__debug) {
+        for (property in context) {
+            if (typeof(context[property]) == 'function') {
+                context[property] = (function(methodName) {
+                    return function() {
+                        trace(methodName + "(" + Array.prototype.slice.apply(arguments) + ");");
+                        this.constructor.prototype[methodName].apply(this, arguments);
+                    };
+                })(property);
+            }
+        }
+        context.__debug = true;
+    }
+}
 var __clearContext = (function()
 {
     if (cs3.core.isChrome) {
@@ -392,8 +459,8 @@ function __noImp(name)
 var trace = (function()
 {
     if (window.console) {
-        return function(msg) {
-            console.log(msg);
+        return function() {
+            console.log(Array.prototype.join.apply(arguments));
         };
     }
     else {

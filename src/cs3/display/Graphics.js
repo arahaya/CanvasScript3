@@ -5,15 +5,16 @@ var Graphics = new Class(Object, function()
     var BIGIN_GRADIENT_FILL = 2;
     var CLEAR = 3;
     var CURVE_TO = 4;
-    var DRAW_CIRCLE = 5;
-    var DRAW_ELLIPSE = 6;
-    var DRAW_RECT = 7;
-    var DRAW_ROUND_RECT = 8;
-    var END_FILL = 9;
-    var LINE_GRADIENT_STYLE = 10;
-    var LINE_STYLE = 11;
-    var LINE_TO = 12;
-    var MOVE_TO = 13;
+    var DRAW_ARC = 5;
+    var DRAW_CIRCLE = 6;
+    var DRAW_ELLIPSE = 7;
+    var DRAW_RECT = 8;
+    var DRAW_ROUND_RECT = 9;
+    var END_FILL = 10;
+    var LINE_GRADIENT_STYLE = 11;
+    var LINE_STYLE = 12;
+    var LINE_TO = 13;
+    var MOVE_TO = 14;
     
     this.__init__ = function()
     {
@@ -57,6 +58,20 @@ var Graphics = new Class(Object, function()
         this.__x = anchorX;
         this.__y = anchorY;
         this.__commands.push([CURVE_TO, controlX, controlY, anchorX, anchorY]);
+        this.__modified = true;
+    };
+    
+    this.drawArc = function(x, y, radius, startAngle, endAngle, anticlockwise)
+    {
+        var startX = x + Math.cos(startAngle * 6.283185307179586) * radius;
+        var startY = y + Math.sin(startAngle * 6.283185307179586) * radius;
+        var endX   = x + Math.cos(endAngle   * 6.283185307179586) * radius;
+        var endY   = y + Math.sin(endAngle   * 6.283185307179586) * radius;
+
+        this.__updateRect(startX, startY, startX + endX, startY + endY);
+        this.__x = endX;
+        this.__y = endY;
+        this.__commands.push([DRAW_ARC, x, y, radius, startAngle, endAngle, anticlockwise, startX, startY, endX, endY]);
         this.__modified = true;
     };
     
@@ -181,6 +196,7 @@ var Graphics = new Class(Object, function()
     
     this.__render = function(context, colorTransform)
     {
+        //__debugContext(context);
         //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
@@ -207,8 +223,8 @@ var Graphics = new Class(Object, function()
         var right, bottom;
         
         //fill phase
-        context.beginPath();
-        context.moveTo(0, 0);
+        //context.beginPath();
+        //context.moveTo(0, 0);
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
@@ -218,11 +234,13 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
@@ -241,6 +259,7 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
+                    if (!doFill) { continue; }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
@@ -251,8 +270,9 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.rect(ax, ay, cmd[3], cmd[4]);
-                    context.moveTo(ax, ay);
+                    //context.moveTo(ax, ay);
                     break;
                 case DRAW_CIRCLE:
                     //anchor at the right edge
@@ -260,23 +280,31 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     ax = x + radius;
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
+                case DRAW_ARC:
+                    ax = cmd[9];
+                    ay = cmd[10];
+                    if (!doFill) { continue; }
+                    context.moveTo(cmd[7], cmd[8]);
+                    context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
+                    break;
+                    //context.moveTo(ax, ay);
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
                     width  = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5];
-                    ellipseHeight = cmd[6];
+                    ellipseWidth  = cmd[5] / 2;
+                    ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
-                    ellipseWidth  /= 2;
-                    ellipseHeight /= 2;
                     ax = right;
                     ay = bottom - ellipseHeight;
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -295,13 +323,16 @@ var Graphics = new Class(Object, function()
                     height = cmd[4];
                     xRadius = width / 2;
                     yRadius = height / 2;
+                    ax = x + width;
+                    ay = y + yRadius;
+                    if (!doFill) { continue; }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
                     xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
-                    context.moveTo(x + width, y + yRadius);
+                    context.moveTo(ax, ay);
                     for (ii = 0; ii < 8; ii++)
                     {
                         angle += angleDelta;
@@ -321,8 +352,8 @@ var Graphics = new Class(Object, function()
         //stroke phase
         if (!hasStroke) { return; }
         sx = sy = ax = ay = 0;
-        context.beginPath();
-        context.moveTo(0, 0);
+        //context.beginPath();
+        //context.moveTo(0, 0);
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
@@ -332,11 +363,13 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
@@ -365,6 +398,7 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
+                    if (!doStroke) { continue; }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
@@ -377,6 +411,7 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     context.moveTo(ax, ay);
                     break;
@@ -386,8 +421,18 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     sx = ax = x + radius;
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
+                    break;
+                case DRAW_ARC:
+                    sx = cmd[7];
+                    sy = cmd[8];
+                    ax = cmd[9];
+                    ay = cmd[10];
+                    if (!doStroke) { continue; }
+                    context.moveTo(sx, sy);
+                    context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
@@ -395,14 +440,13 @@ var Graphics = new Class(Object, function()
                     y = cmd[2];
                     width  = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5];
-                    ellipseHeight = cmd[6];
+                    ellipseWidth  = cmd[5] / 2;
+                    ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
-                    ellipseWidth  /= 2;
-                    ellipseHeight /= 2;
-                    ax = right;
-                    ay = bottom - ellipseHeight;
+                    sx = ax = right;
+                    sy = ay = bottom - ellipseHeight;
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -412,8 +456,6 @@ var Graphics = new Class(Object, function()
                     context.lineTo(right - ellipseWidth, y);
                     context.quadraticCurveTo(right, y, right, y + ellipseHeight);
                     context.lineTo(ax, ay);
-                    sx = ax;
-                    sy = ay;
                     break;
                 case DRAW_ELLIPSE:
                     //anchor at the right edge
@@ -423,6 +465,9 @@ var Graphics = new Class(Object, function()
                     height = cmd[4];
                     xRadius = width / 2;
                     yRadius = height / 2;
+                    sx = ax = x + width;
+                    sy = ay = y + yRadius;
+                    if (!doStroke) { continue; }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -439,8 +484,6 @@ var Graphics = new Class(Object, function()
                         ay = centerY + Math.sin(angle) * yRadius;
                         context.quadraticCurveTo(rx, ry, ax, ay);
                     }
-                    sx = ax;
-                    sy = ay;
                     break;
                 default:
                     break;

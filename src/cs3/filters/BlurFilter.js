@@ -6,6 +6,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         this.blurY   = blurY   || 4;
         this.quality = quality || 1;
     };
+    
     //override
     this.__filter = function(displayObject)
     {
@@ -25,6 +26,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         displayObject.__cache = bitmapData;
         */
     };
+    
     //override
     this.__filterBitmapData = function(sourceBitmapData, sourceRect, distBitmapData, distPoint)
     {
@@ -41,6 +43,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         
         distBitmapData.__context.putImageData(srcImageData, distPoint.x, distPoint.y);
     };
+    
     //override
     this.__generateRect = function(sourceRect)
     {
@@ -50,6 +53,11 @@ var BlurFilter = new Class(BitmapFilter, function()
         newRect.inflate(inflateX, inflateY);
         return newRect;
     };
+    
+    /*
+     * http://www.jhlabs.com/ip/BoxBlurFilter.java
+     * Copyright 2005 Huxtable.com. All rights reserved.
+     */
     this.__blur = function(src, dst, width, height, radius)
     {
         var length = src.length;
@@ -63,7 +71,6 @@ var BlurFilter = new Class(BitmapFilter, function()
         
         for (i = 0, l = 256 * tableSize; i < l; ++i)
         {
-            //Firefox doesn't accept floats
             divide[i] = (i / tableSize) | 0;
         }
         

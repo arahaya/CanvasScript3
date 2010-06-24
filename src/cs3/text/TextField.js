@@ -58,35 +58,6 @@ var TextField;
         
         
         
-        
-        
-        this.__getBlocks = function()
-        {
-            //TODO: add word wrap
-            var buffer = this.__buffer;
-            var blocks = [];
-            var cursor = 0;
-            var index;
-            var block;
-            
-            while (1)
-            {
-                index = buffer.indexOf("\n");
-                if (index !== -1) {
-                    blocks.push(buffer.slice(cursor, index));
-                    cursor = index + 1;
-                }
-                else {
-                    blocks.push(buffer.slice(cursor));
-                    break;
-                }
-            }
-            
-            return blocks;
-        };
-
-        
-        
         //override
         this.__render = function(context, colorTransform)
         {
@@ -261,6 +232,10 @@ var TextField;
                     temp = [];
                 }
                 
+                //if (chr !== "\n") {
+                    temp.push(chr);
+                //}
+                
                 if (chr === "\n" || i == (l - 1)) {
                     //EOL or EOF
                     if (temp.length) {
@@ -271,7 +246,7 @@ var TextField;
                     }
                     
                     //close the block
-                    block.end = i - 1;
+                    block.end = i;
                     line.blocks.push(block);
                     
                     //close the line
@@ -289,9 +264,6 @@ var TextField;
                     block = new Block(format, i + 1, 0, 0, line.y, 0, format.size);
                     
                     temp = [];
-                }
-                else {
-                    temp.push(chr);
                 }
             }
             

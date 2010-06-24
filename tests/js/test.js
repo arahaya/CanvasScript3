@@ -1,25 +1,39 @@
-//override the trace function
-var startTime;
 cs3.utils.addOnload(function()
 {
-    startTime = (new Date()).getTime();
-    
-    trace = function(msg)
+    //override the trace function
+    trace = function()
     {
-        var panel = document.getElementById('trace-panel');
-        if (!panel) {
-            panel = document.createElement('textarea');
-            panel.id = 'trace-panel';
-            panel.readOnly = true;
-            document.body.appendChild(panel);
+        var msg = Array.prototype.join.apply(arguments);
+        
+        var output = document.getElementById('output');
+        if (output) {
+            output.value += msg + "\n";
         }
         
-        var time = (new Date()).getTime();
-        //msg = (time - startTime) + "ms: " + msg;
-        panel.value += msg + "\n";
         try {
             console.log(msg);
         }
-        catch (e){}
+        catch (e) {}
     }
 });
+
+function runCode()
+{
+    var output = document.getElementById('output');
+    if (output) {
+        output.value = "";
+    }
+    
+    var codePanel = document.getElementById('code');
+    if (codePanel) {
+        var code = codePanel.value;
+        try {
+            (function(){
+                eval(code);
+            }).apply(window);
+        }
+        catch (e) {
+            trace(e);
+        }
+    }
+}

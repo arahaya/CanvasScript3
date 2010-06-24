@@ -1,3 +1,7 @@
+/*
+ * http://www.canadahealthinfoway.com/flash/infoway/AllProjects/lib/fl/motion/MatrixTransformer.as
+ * Copyright c 2007. Adobe Systems Incorporated. All Rights Reserved.
+ */
 var MatrixTransformer = new Class(Object, function()
 {
     this.toString = function()

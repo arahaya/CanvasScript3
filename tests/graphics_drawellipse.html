@@ -7,49 +7,47 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var shape;
-        
-        //draw a oval
-        shape = new Shape();
-        shape.x = 0;
-        shape.y = 0;
-        shape.graphics.lineStyle(0);
-        shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawEllipse(50, 50, 200, 100);
-        shape.graphics.endFill();
-        this.addChild(shape);
-        
-        //draw a oval with strokes
-        shape = new Shape();
-        shape.x = 250;
-        shape.y = 0;
-        shape.graphics.lineStyle(10, 0x00FF00);
-        shape.graphics.drawEllipse(50, 50, 200, 100);
-        this.addChild(shape);
-        
-        //draw a oval with strokes and fill
-        shape = new Shape();
-        shape.x = 500;
-        shape.y = 0;
-        shape.graphics.lineStyle(10, 0x00FF00);
-        shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawEllipse(50, 50, 200, 100);
-        shape.graphics.endFill();
-        this.addChild(shape);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+var shape;
+
+//draw a oval
+shape = new Shape();
+shape.x = 100;
+shape.y = 20;
+shape.graphics.lineStyle(0);
+shape.graphics.beginFill(0x0000FF);
+shape.graphics.drawEllipse(0, 0, 200, 100);
+shape.graphics.endFill();
+stage.addChild(shape);
+
+//draw a oval with strokes
+shape = new Shape();
+shape.x = 100;
+shape.y = 140;
+shape.graphics.lineStyle(10, 0x00FF00);
+shape.graphics.drawEllipse(0, 0, 200, 100);
+stage.addChild(shape);
+
+//draw a oval with strokes and fill
+shape = new Shape();
+shape.x = 100;
+shape.y = 260;
+shape.graphics.lineStyle(10, 0x00FF00);
+shape.graphics.beginFill(0x0000FF);
+shape.graphics.drawEllipse(0, 0, 200, 100);
+shape.graphics.endFill();
+stage.addChild(shape);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

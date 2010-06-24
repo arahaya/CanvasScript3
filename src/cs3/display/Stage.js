@@ -80,10 +80,17 @@ var Stage = new Class(DisplayObjectContainer, function()
             document.body.appendChild(this.canvas);
         }
         
+        if (this.canvas.__stage) {
+            //stage already exists
+            this.canvas.__stage.__destroy();
+        }
+        
         this.__context = cs3.utils.getContext2d(this.canvas);
         this.__hiddenCanvas = cs3.utils.createCanvas(0, 0);
         this.__hiddenContext = cs3.utils.getContext2d(this.__hiddenCanvas);
         
+        this.canvas.__stage = this;
+        this.canvas.width = this.canvas.width;// clear the current content
         this.canvas.style.cursor = 'default';
         this.canvas.tabIndex = 1;// enable focus events
         this.canvas.style.outline = "none";// remove focus rects
@@ -106,29 +113,47 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__enterFrame();
     };
     
+    this.__destroy = function()
+    {
+        //call children REMOVED_FROM_STAGE events
+        __applyDown(this, function(stage, event)
+        {
+            this.__stage = this.__root = null;
+            this.dispatchEvent(event);
+        }, [this, new Event(Event.REMOVED_FROM_STAGE, false, false)]);
+        
+        clearTimeout(this.__keyPressTimer);
+        clearTimeout(this.__timer);
+        cs3.core.removeStage(this);
+    };
+    
     this.__focusHandler = function(e)
     {
+        var stage = e.target.__stage;
     };
     
     this.__blurHandler = function(e)
     {
+        var stage = e.target.__stage;
     };
     
     this.__keyDownHandler = function(e)
     {
-        clearTimeout(this.__keyPressTimer);
-        this.__isKeyDown = true;
+        var stage = e.target.__stage;
+        
+        clearTimeout(stage.__keyPressTimer);
+        stage.__isKeyDown = true;
         
         if (cs3.core.isOpera) {
-            this.__keyPressTimer = setTimeout(function(){ this.__keyPressHandler(e); }, 500);
+            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 500);
         }
         
         var keyCode = e.keyCode;
         var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
-        this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
+        stage.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
         
-        if (this.__preventTabKey && keyCode === 9) {
+        if (stage.__preventTabKey && keyCode === 9) {
             //disable tab focusing
             if (e.preventDefault) { e.preventDefault(); }
             e.returnValue = false;
@@ -137,32 +162,49 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__keyPressHandler = function(e)
     {
-        clearTimeout(this.__keyPressTimer);
-        if (!this.__isKeyDown) { return; }
+        var stage = this;
         
-        this.__keyDownHandler(e);
+        clearTimeout(stage.__keyPressTimer);
+        if (!stage.__isKeyDown) { return; }
+        
+        stage.__keyDownHandler(e);
         
         if (cs3.core.isOpera) {
-            this.__keyPressTimer = setTimeout(function(){ this.__keyPressHandler(e); }, 33);
+            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 33);
         }
     };
     
     this.__keyUpHandler = function(e)
     {
-        this.__isKeyDown = false;
-        clearTimeout(this.__keyPressTimer);
+        var stage = e.target.__stage;
+        
+        stage.__isKeyDown = false;
+        clearTimeout(stage.__keyPressTimer);
         
         var keyCode = e.keyCode;
         var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
-        this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_UP, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
+        stage.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_UP, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
     };
     
     this.__mouseMoveHandler = function(e)
     {
-        var canvas = this.canvas;
-        var x = e.pageX - canvas.offsetLeft;
-        var y = e.pageY - canvas.offsetTop;
+        var stage = this;
+        var canvas = stage.canvas;
+        
+        //get the absolute position of the canvas
+        var element = canvas;
+        var offsetLeft = 0;
+        var offsetTop  = 0;
+        while (element)
+        {
+            offsetLeft += element.offsetLeft;
+            offsetTop  += element.offsetTop;
+            element = element.offsetParent;
+        }
+        
+        var x = e.pageX - offsetLeft;
+        var y = e.pageY - offsetTop;
         
         /*
         if (this.__scaleX || this.__scaleY) {
@@ -171,49 +213,50 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         */
         
-        if (x === this.__mouseX && y === this.__mouseY) {
+        if (x === stage.__mouseX && y === stage.__mouseY) {
             return;
         }
         
+        
+        
         // mouse move events
-        this.__mouseOverStage = false;
-        if (this.__rect.contains(x, y) === true) {
-            this.__mouseX = x;
-            this.__mouseY = y;
+        stage.__mouseOverStage = false;
+        if (stage.__rect.contains(x, y) === true) {
+            stage.__mouseX = x;
+            stage.__mouseY = y;
+            stage.__mouseOverStage = true;
+            stage.__updateObjectUnderMouse();
             
-            this.__mouseOverStage = true;
-            this.__updateObjectUnderMouse();
-            
-            if (this.__objectUnderMouse) {
-                this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            if (stage.__objectUnderMouse) {
+                stage.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
             else {
                 //if there is no abject under the mouse point,
                 //stage's mousemove event gets called
-                this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+                stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
         }
-        else if (this.__mouseDownObject) {
+        else if (stage.__mouseDownObject) {
             //if the mouse is out of the stage but the mouse is down
             //stage's mousemove event gets called
-            this.__mouseX = x;
-            this.__mouseY = y;
-            this.__objectUnderMouse = null;
-            this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            stage.__mouseX = x;
+            stage.__mouseY = y;
+            stage.__objectUnderMouse = null;
+            stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
         }
         else {
             //mouse is out of the stage and mouse is not down
-            this.__objectUnderMouse = null;
+            stage.__objectUnderMouse = null;
             return;
         }
         
         
         //handle startDrag
-        var target = this.__dragTarget;
+        var target = stage.__dragTarget;
         if (target) {
-            var newX = x - this.__dragOffsetX;
-            var newY = y - this.__dragOffsetY;
-            var bounds = this.__dragBounds;
+            var newX = x - stage.__dragOffsetX;
+            var newY = y - stage.__dragOffsetY;
+            var bounds = stage.__dragBounds;
             
             if (bounds) {
                 if (newX < bounds.x) {
@@ -237,18 +280,20 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseDownHandler = function(e)
     {
+        var stage = this;
+        
         //FIXED in opera and chrome we can't capture mousemove events while the contextmenu is open.
         //so without the code bellow if you right click then left click, the mouse position will not be updated.
-        this.__mouseMoveHandler(e);
+        stage.__mouseMoveHandler(e);
         
-        var target = this.__objectUnderMouse;
+        var target = stage.__objectUnderMouse;
         if (!target) { return; }
         
         if (e.which === 1) {
             //left click
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-            this.__mouseDownObject = target;
+            stage.__mouseDownObject = target;
         }
         else if (e.which === 2) {
             //middle click
@@ -262,11 +307,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseUpHandler = function(e)
     {
-        this.__mouseMoveHandler(e);
         var stage = this;
-        var target = this.__objectUnderMouse;
+        
+        stage.__mouseMoveHandler(e);
+        
+        var target = stage.__objectUnderMouse;
         if (!target) {
-            if (this.__mouseDownObject) {
+            if (stage.__mouseDownObject) {
                 target = stage;
             }
             else {
@@ -277,21 +324,21 @@ var Stage = new Class(DisplayObjectContainer, function()
         if (e.which === 1) {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_UP, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-            if (this.__mouseDownObject === target) {
+            if (stage.__mouseDownObject === target) {
                 target.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                 
                 //double click
-                clearTimeout(this.__doubleClickTimer);
-                if (this.__mouseClickObject === target) {
+                clearTimeout(stage.__doubleClickTimer);
+                if (stage.__mouseClickObject === target) {
                     target.dispatchEvent(new MouseEvent(MouseEvent.DOUBLE_CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-                    this.__mouseClickObject = null;
+                    stage.__mouseClickObject = null;
                 }
                 else {
-                    this.__mouseClickObject = target;
-                    this.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
+                    stage.__mouseClickObject = target;
+                    stage.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
                 }
             }
-            this.__mouseDownObject = null;
+            stage.__mouseDownObject = null;
         }
         else if (e.which === 2) {
             //middle click
@@ -305,7 +352,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseWheelHandler = function(e)
     {
-        var target = this.__objectUnderMouse;
+        var stage = e.target.__stage;
+        var target = stage.__objectUnderMouse;
         
         var delta = 0;
         if (e.wheelDelta) { /* IE/Opera. */
@@ -320,7 +368,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             target.dispatchEvent(new MouseEvent(
                 MouseEvent.MOUSE_WHEEL, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, delta));
         }
-        if (this.__preventMouseWheel) {
+        if (stage.__preventMouseWheel) {
             //disable browser scrolling
             if (e.preventDefault) { e.preventDefault(); }
             e.returnValue = false;
@@ -632,11 +680,11 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (lockCenter) {
             var localPoint = target.globalToLocal(new Point(this.__mouseX, this.__mouseY));
-            target.setX(target.getX() + localPoint.x);
-            target.setY(target.getY() + localPoint.y);
+            target.__set__x(target.__get__x() + localPoint.x);
+            target.__set__y(target.__get__y() + localPoint.y);
         }
-        this.__dragOffsetX = this.__mouseX - target.getX();
-        this.__dragOffsetY = this.__mouseY - target.getY();
+        this.__dragOffsetX = this.__mouseX - target.__get__x();
+        this.__dragOffsetY = this.__mouseY - target.__get__y();
         this.__dragTarget = target;
         this.__dragBounds = bounds;
     };
@@ -692,6 +740,26 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         this.__renderMode = v;
         this.__renderAll = true;
+    };
+    
+    this.__get__preventMouseWheel = function(v)
+    {
+        return this.__preventMouseWheel;
+    };
+    
+    this.__set__preventMouseWheel = function(v)
+    {
+        this.__preventMouseWheel = v;
+    };
+    
+    this.__get__preventTabKey = function(v)
+    {
+        return this.__preventTabKey;
+    };
+    
+    this.__set__preventTabKey = function(v)
+    {
+        this.__preventTabKey = v;
     };
     
     this.toString = function()

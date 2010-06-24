@@ -7,105 +7,119 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var shape;
-        var g = this.graphics;
-        
-        //thickness
-        shape = new Shape();
-        shape.x = 50;
-        shape.y = 50;
-        shape.graphics.lineStyle(1);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.lineTo(100, 0);
-        shape.graphics.lineStyle(10);
-        shape.graphics.moveTo(0, 100);
-        shape.graphics.lineTo(100, 100);
-        shape.graphics.lineStyle(20);
-        shape.graphics.moveTo(0, 200);
-        shape.graphics.lineTo(100, 200);
-        this.addChild(shape);
-        
-        //color
-        shape = new Shape();
-        shape.x = 200;
-        shape.y = 50;
-        shape.graphics.lineStyle(20, 0xFF0000);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.lineTo(100, 0);
-        shape.graphics.lineStyle(20, 0x00FF00);
-        shape.graphics.moveTo(0, 100);
-        shape.graphics.lineTo(100, 100);
-        shape.graphics.lineStyle(20, 0x0000FF);
-        shape.graphics.moveTo(0, 200);
-        shape.graphics.lineTo(100, 200);
-        this.addChild(shape);
-        
-        //alpha
-        shape = new Shape();
-        shape.x = 350;
-        shape.y = 50;
-        shape.graphics.lineStyle(20, 0x000000, 1);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.lineTo(100, 0);
-        shape.graphics.lineStyle(20, 0x000000, 0.5);
-        shape.graphics.moveTo(0, 100);
-        shape.graphics.lineTo(100, 100);
-        shape.graphics.lineStyle(20, 0x000000, 0);
-        shape.graphics.moveTo(0, 200);
-        shape.graphics.lineTo(100, 200);
-        this.addChild(shape);
-        
-        //pixelHinting not supported
-        
-        //scaleMode not supported
-        
-        //caps
-        shape = new Shape();
-        shape.x = 500;
-        shape.y = 50;
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.lineTo(100, 0);
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.ROUND);
-        shape.graphics.moveTo(0, 100);
-        shape.graphics.lineTo(100, 100);
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.SQUARE);
-        shape.graphics.moveTo(0, 200);
-        shape.graphics.lineTo(100, 200);
-        this.addChild(shape);
-        
-        //joints
-        shape = new Shape();
-        shape.x = 650;
-        shape.y = 50;
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.BEVEL);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.lineTo(50, 50);
-        shape.graphics.lineTo(100, 0);
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.ROUND);
-        shape.graphics.moveTo(0, 100);
-        shape.graphics.lineTo(50, 150);
-        shape.graphics.lineTo(100, 100);
-        shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.MITER);
-        shape.graphics.moveTo(0, 200);
-        shape.graphics.lineTo(50, 250);
-        shape.graphics.lineTo(100, 200);
-        this.addChild(shape);
-        
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+var shape;
+
+//thickness
+shape = new Shape();
+shape.x = 20;
+shape.y = 20;
+shape.graphics.lineStyle(1);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(10);
+shape.graphics.moveTo(0, 80);
+shape.graphics.lineTo(80, 80);
+shape.graphics.lineStyle(20);
+shape.graphics.moveTo(0, 160);
+shape.graphics.lineTo(80, 160);
+stage.addChild(shape);
+
+//color
+shape = new Shape();
+shape.x = 140;
+shape.y = 20;
+shape.graphics.lineStyle(20, 0xFF0000);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(20, 0x00FF00);
+shape.graphics.moveTo(0, 80);
+shape.graphics.lineTo(80, 80);
+shape.graphics.lineStyle(20, 0x0000FF);
+shape.graphics.moveTo(0, 160);
+shape.graphics.lineTo(80, 160);
+stage.addChild(shape);
+
+//alpha
+shape = new Shape();
+shape.x = 260;
+shape.y = 20;
+shape.graphics.lineStyle(20, 0x000000, 1);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(20, 0x000000, 0.5);
+shape.graphics.moveTo(0, 80);
+shape.graphics.lineTo(80, 80);
+shape.graphics.lineStyle(20, 0x000000, 0);
+shape.graphics.moveTo(0, 160);
+shape.graphics.lineTo(80, 160);
+stage.addChild(shape);
+
+//pixelHinting not supported
+
+//scaleMode not supported
+
+//caps
+shape = new Shape();
+shape.x = 20;
+shape.y = 280;
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.ROUND);
+shape.graphics.moveTo(0, 80);
+shape.graphics.lineTo(80, 80);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.SQUARE);
+shape.graphics.moveTo(0, 160);
+shape.graphics.lineTo(80, 160);
+stage.addChild(shape);
+
+//joints
+shape = new Shape();
+shape.x = 140;
+shape.y = 280;
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.BEVEL);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(40, 40);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.ROUND);
+shape.graphics.moveTo(0, 60);
+shape.graphics.lineTo(40, 100);
+shape.graphics.lineTo(80, 60);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.MITER);
+shape.graphics.moveTo(0, 120);
+shape.graphics.lineTo(40, 160);
+shape.graphics.lineTo(80, 120);
+stage.addChild(shape);
+
+//miterLimit
+shape = new Shape();
+shape.x = 260;
+shape.y = 280;
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.MITER, 0.5);
+shape.graphics.moveTo(0, 0);
+shape.graphics.lineTo(40, 40);
+shape.graphics.lineTo(80, 0);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.MITER, 1.0);
+shape.graphics.moveTo(0, 60);
+shape.graphics.lineTo(40, 100);
+shape.graphics.lineTo(80, 60);
+shape.graphics.lineStyle(20, 0x000000, 1, false, 'normal', CapsStyle.NONE, JointStyle.MITER, 2.0);
+shape.graphics.moveTo(0, 120);
+shape.graphics.lineTo(40, 160);
+shape.graphics.lineTo(80, 120);
+stage.addChild(shape);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

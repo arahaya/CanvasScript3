@@ -18,17 +18,19 @@ var Sound = new Class(EventDispatcher, function()
     
     this.__onCanPlay = function()
     {
+        trace("onCanPlay");
         this.__canPlay = true;
         if (this.__isPlaying) {
             this.__media.currentTime = this.__startTime;
+            
             this.__media.play();
+            this.__media.volume = this.__volume;
         }
     };
     
     this.__onEnded = function()
     {
-        if (this.__loops === -1 || this.__loops > this.__loopCount) {
-            this.__loopCount++;
+        if (this.__loops > this.__loopCount++) {
             this.__media.currentTime = this.__startTime;
             this.__media.play();
         }
@@ -75,6 +77,10 @@ var Sound = new Class(EventDispatcher, function()
             self.__onCanPlay();
             cs3.utils.removeEventListener(media, 'canplay', arguments.callee);
         });
+        cs3.utils.addEventListener(media, 'load', function(e)
+        {
+            trace("onLoad");
+        });
         cs3.utils.addEventListener(media, 'ended', function(e)
         {
             self.__onEnded();
@@ -102,6 +108,7 @@ var Sound = new Class(EventDispatcher, function()
         
         if (this.__canPlay) {
             media.currentTime = this.__startTime;
+            media.volume = this.__volume;
             media.play();
         }
     };

@@ -7,112 +7,103 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
-    }
-    
-    this.init = function()
-    {
-        var parent_box = new Sprite();
-        parent_box.x = 300;
-        parent_box.y = 300;
-        parent_box.graphics.beginFill(0x0000FF);
-        parent_box.graphics.drawRect(0, 0, 100, 100);
-        parent_box.graphics.endFill();
-        this.addChild(parent_box);
-        
-        var target_box = new Sprite();
-        target_box.x = -200;
-        target_box.y = 50;
-        target_box.graphics.beginFill(0x000000);
-        target_box.graphics.drawRect(0, 0, 100, 100);
-        target_box.graphics.endFill();
-        parent_box.addChild(target_box);
-        
-        var child_box = new Sprite();
-        child_box.x = 100;
-        child_box.y = -150;
-        child_box.graphics.beginFill(0xFF0000);
-        child_box.graphics.drawRect(0, 0, 50, 50);
-        child_box.graphics.endFill();
-        target_box.addChild(child_box);
-        
-        var transform_box = new Sprite();
-        transform_box.x = 400;
-        transform_box.y = 100;
-        transform_box.rotation = 90;
-        transform_box.scaleX = 2;
-        transform_box.scaleY = 1.5;
-        transform_box.graphics.beginFill(0x00FF00);
-        transform_box.graphics.drawRect(0, 0, 100, 100);
-        transform_box.graphics.endFill();
-        this.addChild(transform_box);
-        
-        var transform_child_box = new Sprite();
-        transform_child_box.x = 20;
-        transform_child_box.y = -50;
-        transform_child_box.graphics.beginFill(0xFF00FF);
-        transform_child_box.graphics.drawRect(0, 0, 50, 50);
-        transform_child_box.graphics.endFill();
-        transform_box.addChild(transform_child_box);
-        
-        var notadded_box = new Sprite();
-        notadded_box.x = 500;
-        notadded_box.y = 500;
-        notadded_box.graphics.beginFill(0xFFFF00);
-        notadded_box.graphics.drawRect(0, 0, 100, 100);
-        notadded_box.graphics.endFill();
-        
-        //transform_box and transform_child_box results are a little different but it's good enough for me
-        //I think the reason is how we are calculating the Matrix.invert()
-        trace("target");
-        trace("result");
-        trace("answer");
-        trace("---------------------");
-        trace("stage");
-        trace(target_box.getBounds(this.stage));
-        trace(new Rectangle(100, 200, 150, 250));
-        trace("---------------------");
-        trace("parent_box");
-        trace(target_box.getBounds(parent_box));
-        trace(new Rectangle(-200, -100, 150, 250));
-        trace("---------------------");
-        trace("self");
-        trace(target_box.getBounds(target_box));
-        trace(new Rectangle(0, -150, 150, 250));
-        trace("---------------------");
-        trace("child_box");
-        trace(target_box.getBounds(child_box));
-        trace(new Rectangle(-100, 0, 150, 250));
-        trace("---------------------");
-        trace("transform_box");
-        trace(target_box.getBounds(transform_box));
-        trace(new Rectangle(50, 100, 125, 100));
-        trace("---------------------");
-        trace("transform_child_box");
-        trace(target_box.getBounds(transform_child_box));
-        trace(new Rectangle(30, 150, 125, 100));
-        trace("---------------------");
-        trace("notadded_box");
-        trace(target_box.getBounds(notadded_box));
-        trace(new Rectangle(-400, -300, 150, 250));
-        trace("---------------------");
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+
+var parent_box = new Sprite();
+parent_box.x = 100;
+parent_box.y = 100;
+parent_box.graphics.beginFill(0x0000FF);
+parent_box.graphics.drawRect(0, 0, 100, 100);
+parent_box.graphics.endFill();
+stage.addChild(parent_box);
+
+var target_box = new Sprite();
+target_box.x = -50;
+target_box.y = 50;
+target_box.graphics.beginFill(0x000000);
+target_box.graphics.drawRect(0, 0, 100, 100);
+target_box.graphics.endFill();
+parent_box.addChild(target_box);
+
+var child_box = new Sprite();
+child_box.x = 0;
+child_box.y = -100;
+child_box.graphics.beginFill(0xFF0000);
+child_box.graphics.drawRect(0, 0, 50, 50);
+child_box.graphics.endFill();
+target_box.addChild(child_box);
+
+var transform_box = new Sprite();
+transform_box.x = 300;
+transform_box.y = 200;
+transform_box.rotation = 90;
+transform_box.scaleX = 2;
+transform_box.scaleY = 1.5;
+transform_box.graphics.beginFill(0x00FF00);
+transform_box.graphics.drawRect(0, 0, 100, 100);
+transform_box.graphics.endFill();
+stage.addChild(transform_box);
+
+var transform_child_box = new Sprite();
+transform_child_box.x = 20;
+transform_child_box.y = -50;
+transform_child_box.graphics.beginFill(0xFF00FF);
+transform_child_box.graphics.drawRect(0, 0, 50, 50);
+transform_child_box.graphics.endFill();
+transform_box.addChild(transform_child_box);
+
+var notadded_box = new Sprite();
+notadded_box.x = 500;
+notadded_box.y = 500;
+notadded_box.graphics.beginFill(0xFFFF00);
+notadded_box.graphics.drawRect(0, 0, 100, 100);
+notadded_box.graphics.endFill();
+
+//transform_box and transform_child_box results are a little different but it's good enough for me
+//I think the reason is how we are calculating the Matrix.invert()
+trace("target");
+trace("result");
+trace("answer");
+trace("---------------------");
+trace("stage");
+trace(target_box.getBounds(this.stage));
+trace(new Rectangle(50, 50, 100, 200));
+trace("---------------------");
+trace("parent_box");
+trace(target_box.getBounds(parent_box));
+trace(new Rectangle(-50, -50, 100, 200));
+trace("---------------------");
+trace("self");
+trace(target_box.getBounds(target_box));
+trace(new Rectangle(0, -100, 100, 200));
+trace("---------------------");
+trace("child_box");
+trace(target_box.getBounds(child_box));
+trace(new Rectangle(0, 0, 100, 200));
+trace("---------------------");
+trace("transform_box");
+trace(target_box.getBounds(transform_box));
+trace(new Rectangle(-75, 100, 100, 66.65));
+trace("---------------------");
+trace("transform_child_box");
+trace(target_box.getBounds(transform_child_box));
+trace(new Rectangle(-95, 150, 100, 66.65));
+trace("---------------------");
+trace("notadded_box");
+trace(target_box.getBounds(notadded_box));
+trace(new Rectangle(-450, -450, 100, 200));
+trace("---------------------");
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

@@ -7,86 +7,67 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        
-        
-        //add a bitmap
-        var maskee = new Loader();
-        maskee.load(new URLRequest("./img/photo01.jpg"));
-        this.addChild(maskee);
-        
-        
-        var mask = new Sprite();
-        mask.x = 200;
-        mask.y = 200;
-        mask.graphics.lineStyle(0);
-        mask.graphics.beginFill(0xFF0000);
-        mask.graphics.drawCircle(0, 0, 100);
-        mask.graphics.endFill();
-        this.addChild(mask);
-        
-        
-        //add a child to the mask
-        var mask_child = new Sprite();
-        mask_child.x = 50;
-        mask_child.y = 50;
-        mask_child.graphics.lineStyle(0);
-        mask_child.graphics.beginFill(0x000FF);
-        mask_child.graphics.drawRect(0, 0, 200, 200);
-        mask_child.graphics.endFill();
-        mask.addChild(mask_child);
-        
-        
-        //add a transparent bitmap to the mask
-        var mask_child2 = new Loader();
-        mask_child2.x = 100;
-        mask_child2.y = -100;
-        mask_child2.load(new URLRequest("./img/Flap.png"));
-        mask.addChild(mask_child2);
-        
-        
-        //add a child that animates
-        var mask_child3 = new Sprite();
-        mask_child3.x = -50;
-        mask_child3.y = 200;
-        mask_child3.graphics.lineStyle(0);
-        mask_child3.graphics.beginFill(0x000FF);
-        mask_child3.graphics.drawRect(0, 0, 200, 200);
-        mask_child3.graphics.endFill();
-        mask.addChild(mask_child3);
-        
-        
-        //set the mask
-        maskee.mask = mask;
-        
-        
-        var fps = 0;
-        this.addEventListener(Event.ENTER_FRAME, function(e)
-        {
-            fps++;
-            mask_child3.rotation += 1;
-        });
-        
-        setInterval(function()
-        {
-            document.getElementById('fps').innerHTML = fps;
-            fps = 0;
-        }, 1000);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<p>This test should only work in Opera.</p>
-<p>FPS: <span id="fps">0</span>/30</p>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+
+//add a bitmap
+var maskee = new Loader();
+maskee.load(new URLRequest("./img/photo01.jpg"));
+stage.addChild(maskee);
+
+var mask = new Sprite();
+mask.x = 100;
+mask.y = 100;
+mask.graphics.lineStyle(0);
+mask.graphics.beginFill(0xFF0000);
+mask.graphics.drawCircle(0, 0, 100);
+mask.graphics.endFill();
+stage.addChild(mask);
+
+//add a child to the mask
+var mask_child = new Sprite();
+mask_child.x = 50;
+mask_child.y = 50;
+mask_child.graphics.lineStyle(0);
+mask_child.graphics.beginFill(0x000FF);
+mask_child.graphics.drawRect(0, 0, 150, 150);
+mask_child.graphics.endFill();
+mask.addChild(mask_child);
+
+//add a transparent bitmap to the mask
+var mask_child2 = new Loader();
+mask_child2.x = 100;
+mask_child2.y = -100;
+mask_child2.load(new URLRequest("./img/Flap.png"));
+mask.addChild(mask_child2);
+
+//add a child that animates
+var mask_child3 = new Sprite();
+mask_child3.x = 50;
+mask_child3.y = 200;
+mask_child3.graphics.lineStyle(0);
+mask_child3.graphics.beginFill(0x000FF);
+mask_child3.graphics.drawRect(0, 0, 200, 200);
+mask_child3.graphics.endFill();
+mask.addChild(mask_child3);
+
+//set the mask
+maskee.mask = mask;
+
+mask_child3.addEventListener(Event.ENTER_FRAME, function(e)
+{
+    this.rotation += 1;
+});
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

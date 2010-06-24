@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="Content-Style-Type" content="text/css" />
-<title>BitmapData - ColorTransform</title>
+<title>BitmapData - Noise</title>
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
@@ -14,18 +14,11 @@
 <textarea id="code">
 var stage = new Stage("canvas", 420, 500, 30);
 
-var loader = new Loader();
-loader.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e)
-{
-    var bitmap = loader.content;
-    var bitmapdata = bitmap.bitmapData;
-    var bottomHalf = new Rectangle(0, 250, 420, 250);
-    var color = new ColorTransform(1, 2, 1, 1, 0, 0, 0, 0);
-    
-    bitmapdata.colorTransform(bottomHalf, color);
-});
-loader.load(new URLRequest('img/photo01.jpg'));
-stage.addChild(loader);
+var bitmapData = new BitmapData(420, 500, false, 0xFFFFFFFF);
+var bitmap = new Bitmap(bitmapData);
+stage.addChild(bitmap);
+
+bitmapData.noise(Math.random());
 </textarea>
 <input type="button" id="run" value="Run Code" onclick="runCode()" />
 <p id="canvas-label">Canvas</p>

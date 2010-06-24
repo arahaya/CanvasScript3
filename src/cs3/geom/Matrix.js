@@ -35,14 +35,46 @@ var Matrix = new Class(Object, function()
     {
         return new Matrix(this.a, this.b, this.c, this.d, this.tx, this.ty);
     };
+    this.createBox = function(scaleX, scaleY, rotation, tx, ty)
+    {
+        if (rotation === undefined) { rotation = 0; }
+        if (tx === undefined) { tx = 0; }
+        if (ty === undefined) { ty = 0; }
+        
+        var cos = Math.cos(rotation);
+        var sin = Math.sin(rotation);
+        
+        this.a  = cos * scaleX;
+        this.b  = sin * scaleY;
+        this.c  = sin * scaleX;
+        this.d  = cos * scaleY;
+        this.tx = tx;
+        this.ty = ty;
+    };
+    this.createGradientBox = function(width, height, rotation, tx, ty)
+    {
+        if (rotation === undefined) { rotation = 0; }
+        if (tx === undefined) { tx = 0; }
+        if (ty === undefined) { ty = 0; }
+        
+        //this.createBox((width / 1638.4) , (height / 1638.4) , rotation, tx + width / 2, ty + height / 2);
+        var scaleX = width / 1638.4;
+        var scaleY = height / 1638.4;
+        
+        var cos = Math.cos(rotation);
+        var sin = Math.sin(rotation);
+        
+        this.a  = cos * scaleX;
+        this.b  = sin * scaleY;
+        this.c  = sin * scaleX;
+        this.d  = cos * scaleY;
+        this.tx = tx + width / 2;
+        this.ty = ty + height / 2;
+    };
     this.identity = function()
     {
-        this.a  = 1;
-        this.b  = 0;
-        this.c  = 0;
-        this.d  = 1;
-        this.tx = 0;
-        this.ty = 0;
+        this.a = this.d = 1;
+        this.b = this.c = this.tx = this.ty = 0;
     };
     this.invert = function()
     {
@@ -52,7 +84,7 @@ var Matrix = new Class(Object, function()
         var d  = this.d;
         var tx = this.tx;
         var ty = this.ty;
-        var det  = a * d - b * c;
+        var det = a * d - b * c;
         
         this.a  =  d / det;
         this.b  = -b / det;
@@ -72,12 +104,12 @@ var Matrix = new Class(Object, function()
         var tx = this.tx;
         var ty = this.ty;
 
-        this.a  =  a  * cos - b  * sin;
-        this.b  =  b  * cos + a  * sin;
-        this.c  =  c  * cos - d  * sin;
-        this.d  =  d  * cos + c  * sin;
-        this.tx =  tx * cos - ty * sin;
-        this.ty =  ty * cos + tx * sin;
+        this.a  = a  * cos - b  * sin;
+        this.b  = b  * cos + a  * sin;
+        this.c  = c  * cos - d  * sin;
+        this.d  = d  * cos + c  * sin;
+        this.tx = tx * cos - ty * sin;
+        this.ty = ty * cos + tx * sin;
     };
     this.scale = function(sx, sy)
     {

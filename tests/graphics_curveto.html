@@ -7,66 +7,64 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var shape;
-        
-        //simple curve
-        shape = new Shape();
-        shape.x = 50;
-        shape.y = 50;
-        shape.graphics.lineStyle(10, 0xFF0000);
-        shape.graphics.moveTo(0, 0);
-        shape.graphics.curveTo(100, 50, 0, 100);
-        this.addChild(shape);
-        
-        //try to draw a circle
-        //http://board.flashkit.com/board/archive/index.php/t-369672.html
-        var r = 50;
-        shape = new Shape();
-        shape.x = 250;
-        shape.y = 100;
-        shape.graphics.lineStyle(10, 0x0000FF);
-        shape.graphics.moveTo(r, 0); 
-        shape.graphics.curveTo(r, -0.4142 * r, 0.7071 * r, -0.7071 * r);
-        shape.graphics.curveTo(0.4142 * r, -r, 0, -r);
-        shape.graphics.curveTo(-0.4142 * r, -r, -0.7071 * r, -0.7071 * r);
-        shape.graphics.curveTo(-r, -0.4142 * r, -r, 0);
-        shape.graphics.curveTo(-r, 0.4142 * r, -0.7071 * r, 0.7071 * r);
-        shape.graphics.curveTo(-0.4142 * r, r, 0, r);
-        shape.graphics.curveTo(0.4142 * r, r, 0.7071 * r, 0.7071 * r) ;
-        shape.graphics.curveTo(r, 0.4142 * r, r, 0);
-        this.addChild(shape);
-        
-        //round rect
-        var w = 100;
-        var h = 100;
-        shape = new Shape();
-        shape.x = 400;
-        shape.y = 50;
-        shape.graphics.lineStyle(10, 0x00FF00);
-        shape.graphics.moveTo(10, 0);
-        shape.graphics.lineTo(w - 10, 0);
-        shape.graphics.curveTo(w, 0, w, 10);
-        shape.graphics.lineTo(w, h - 10);
-        shape.graphics.curveTo(w, h, w - 10, h);
-        shape.graphics.lineTo(10, h);
-        shape.graphics.curveTo(0, h, 0, h - 10);
-        shape.graphics.lineTo(0, 10);
-        shape.graphics.curveTo(0, 0, 10, 0);
-        this.addChild(shape);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+var shape;
+
+//simple curve
+shape = new Shape();
+shape.x = 20;
+shape.y = 20;
+shape.graphics.lineStyle(10, 0xFF0000);
+shape.graphics.moveTo(0, 0);
+shape.graphics.curveTo(100, 50, 0, 100);
+stage.addChild(shape);
+
+//try to draw a circle
+//http://board.flashkit.com/board/archive/index.php/t-369672.html
+var r = 50;
+shape = new Shape();
+shape.x = 170;
+shape.y = 70;
+shape.graphics.lineStyle(10, 0x0000FF);
+shape.graphics.moveTo(r, 0); 
+shape.graphics.curveTo(r, -0.4142 * r, 0.7071 * r, -0.7071 * r);
+shape.graphics.curveTo(0.4142 * r, -r, 0, -r);
+shape.graphics.curveTo(-0.4142 * r, -r, -0.7071 * r, -0.7071 * r);
+shape.graphics.curveTo(-r, -0.4142 * r, -r, 0);
+shape.graphics.curveTo(-r, 0.4142 * r, -0.7071 * r, 0.7071 * r);
+shape.graphics.curveTo(-0.4142 * r, r, 0, r);
+shape.graphics.curveTo(0.4142 * r, r, 0.7071 * r, 0.7071 * r) ;
+shape.graphics.curveTo(r, 0.4142 * r, r, 0);
+stage.addChild(shape);
+
+//round rect
+var w = 100;
+var h = 100;
+shape = new Shape();
+shape.x = 260;
+shape.y = 20;
+shape.graphics.lineStyle(10, 0x00FF00);
+shape.graphics.moveTo(10, 0);
+shape.graphics.lineTo(w - 10, 0);
+shape.graphics.curveTo(w, 0, w, 10);
+shape.graphics.lineTo(w, h - 10);
+shape.graphics.curveTo(w, h, w - 10, h);
+shape.graphics.lineTo(10, h);
+shape.graphics.curveTo(0, h, 0, h - 10);
+shape.graphics.lineTo(0, 10);
+shape.graphics.curveTo(0, 0, 10, 0);
+stage.addChild(shape);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

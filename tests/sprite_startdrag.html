@@ -7,78 +7,78 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var sprite = new Sprite();
-        sprite.x = 100;
-        sprite.y = 100;
-        sprite.graphics.lineStyle(0);
-        sprite.graphics.beginFill(0xFF0000);
-        sprite.graphics.drawCircle(0, 0, 50);
-        sprite.graphics.endFill();
-        sprite.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
-        {
-            sprite.startDrag();
-        });
-        sprite.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            sprite.stopDrag();
-        });
-        this.addChild(sprite);
-        
-        
-        var sprite2 = new Sprite();
-        sprite2.x = 300;
-        sprite2.y = 100;
-        sprite2.graphics.lineStyle(0);
-        sprite2.graphics.beginFill(0x00FF00);
-        sprite2.graphics.drawCircle(0, 0, 50);
-        sprite2.graphics.endFill();
-        sprite2.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
-        {
-            //lock center
-            sprite2.startDrag(true);
-        });
-        sprite2.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            sprite2.stopDrag();
-        });
-        this.addChild(sprite2);
-        
-        
-        var rect = new Rectangle(500, 100, 300, 300);
-        this.graphics.lineStyle(1, 0x999999);
-        this.graphics.drawRect(500, 100, 300, 300);
-        
-        var sprite3 = new Sprite();
-        sprite3.x = 500;
-        sprite3.y = 100;
-        sprite3.graphics.lineStyle(0);
-        sprite3.graphics.beginFill(0x0000FF);
-        sprite3.graphics.drawCircle(0, 0, 50);
-        sprite3.graphics.endFill();
-        sprite3.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
-        {
-            //limit drag area
-            sprite3.startDrag(false, rect);
-        });
-        sprite3.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            sprite3.stopDrag();
-        });
-        this.addChild(sprite3);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 60);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+
+var sprite = new Sprite();
+sprite.x = 50;
+sprite.y = 50;
+sprite.graphics.lineStyle(0);
+sprite.graphics.beginFill(0xFF0000);
+sprite.graphics.drawCircle(0, 0, 30);
+sprite.graphics.endFill();
+sprite.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
+{
+    sprite.startDrag();
+});
+sprite.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    sprite.stopDrag();
+});
+stage.addChild(sprite);
+
+//lock center
+var sprite2 = new Sprite();
+sprite2.x = 50;
+sprite2.y = 150;
+sprite2.graphics.lineStyle(0);
+sprite2.graphics.beginFill(0x00FF00);
+sprite2.graphics.drawCircle(0, 0, 30);
+sprite2.graphics.endFill();
+sprite2.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
+{
+    //lock center
+    sprite2.startDrag(true);
+});
+sprite2.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    sprite2.stopDrag();
+});
+stage.addChild(sprite2);
+
+//bounds
+var container = new Sprite();
+container.x = 50;
+container.y = 250;
+container.graphics.lineStyle(1, 0x999999);
+container.graphics.drawRect(0, 0, 300, 200);
+stage.addChild(container);
+
+var sprite3 = new Sprite();
+sprite3.graphics.lineStyle(0);
+sprite3.graphics.beginFill(0x0000FF);
+sprite3.graphics.drawCircle(0, 0, 30);
+sprite3.graphics.endFill();
+sprite3.addEventListener(MouseEvent.MOUSE_DOWN, function(e)
+{
+    //limit drag area
+    sprite3.startDrag(false, new Rectangle(0, 0, 300, 200));
+});
+sprite3.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    sprite3.stopDrag();
+});
+container.addChild(sprite3);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

@@ -5,6 +5,10 @@ var BitmapData = new Class(Object, function()
         throw new ArgumentError("Invalid BitmapData.");
     };
     
+    /*
+     * http://www.student.kuleuven.be/~m0216922/CG/floodfill.html
+     * Copyright (c) 2004-2007 by Lode Vandevenne. All rights reserved.
+     */
     var floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
@@ -496,9 +500,89 @@ var BitmapData = new Class(Object, function()
         this.__modified = true;
     };
     
-    this.noise = function()
+    this.noise = function(randomSeed, low, high, channelOptions, grayScale)
     {
-        //alert("HELP!");
+        var imageData = this.__context.createImageData(this.__width, this.__height);
+        var data = imageData.data;
+        var length = data.length;
+        
+        if (randomSeed === undefined) {
+            randomSeed = Math.random();
+        }
+        if (low === undefined) {
+            low = 0;
+        }
+        if (high === undefined) {
+            high = 255;
+        }
+        if (high < low) {
+            high = low;
+        }
+        var range = high - low + 1;
+        
+        var channelRed   = BitmapDataChannel.RED;
+        var channelGreen = BitmapDataChannel.GREEN;
+        var channelBlue  = BitmapDataChannel.BLUE;
+        var channelAlpha = BitmapDataChannel.ALPHA;
+        
+        if (channelOptions === undefined) {
+            channelOptions = channelRed | channelGreen | channelBlue;
+        }
+        
+        // makes it a little faster in Firefox
+        channelRed   = (channelOptions & channelRed)   === channelRed;
+        channelGreen = (channelOptions & channelGreen) === channelGreen;
+        channelBlue  = (channelOptions & channelBlue)  === channelBlue;
+        channelAlpha = (channelOptions & channelAlpha) === channelAlpha;
+        
+        var i;
+        if (grayScale) {
+            var randomValue;
+            for (i = 0; i < length;)
+            {
+                randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                data[i++] = data[i++] = data[i++] = ((randomSeed / 233280) * range + low) | 0;
+                
+                if (channelAlpha) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i++] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                else {
+                    data[i++] = 255;
+                }
+            }
+        }
+        else {
+            for (i = 0; i < length;)
+            {
+                if (channelRed) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelGreen) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelBlue) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelAlpha) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                else {
+                    data[i] = 255;
+                }
+                ++i;
+            }
+        }
+        
+        this.__context.putImageData(imageData, 0, 0);
+        this.__modified = true;
     };
     
     this.paletteMap = function(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray)
@@ -618,6 +702,7 @@ var BitmapData = new Class(Object, function()
     this.scroll = function(x, y)
     {
         var sourceX, sourceY, sourceWidth, sourceHeight;
+        
         if (x < 0) {
             sourceX = -x;
             sourceWidth = this.__width + x;
@@ -626,14 +711,16 @@ var BitmapData = new Class(Object, function()
             sourceX = 0;
             sourceWidth = this.__width - x;
         }
+        
         if (y < 0) {
             sourceY = -y;
             sourceHeight = this.__height + y;
         }
         else {
             sourceY = 0;
-            sourceHeight = this.__height + y;
+            sourceHeight = this.__height - y;
         }
+        
         var imageData = this.__context.getImageData(sourceX, sourceY, sourceWidth, sourceHeight);
         this.__context.putImageData(imageData, x, y);
         this.__modified = true;

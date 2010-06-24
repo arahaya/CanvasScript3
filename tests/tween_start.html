@@ -7,66 +7,45 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
-    }
-    
-    var colors = [0xcc0000, 0xffcc00, 0xaaff00, 0x0099cc, 0x194c99, 0x661999];
-    
-    var createBox = function()
-    {
-        var box = new Shape();
-        box.graphics.beginFill(colors[Math.floor(Math.random() * colors.length)]);
-        box.graphics.drawRect(0, 0, 20, 20);
-        box.graphics.endFill();
-        return box;
-    }
-    
-    var createTween = function(obj, func)
-    {
-        var tween = new Tween(obj, 'x', func, 200, 800, 60, false);
-        return tween;
-    }
-    
-    this.init = function()
-    {
-        var box, tween;
-        var cnt = 0;
-        
-        var funcs = ['Linear', 'Back', 'Bounce', 'Circ', 'Cubic', 'Elastic', 'Quad', 'Quart', 'Quint', 'Sine'];
-        
-        for (n in funcs) {
-            box = createBox();
-            box.y = cnt++ * 20;
-            tween = createTween(box, Tween[funcs[n]].easeIn);
-            this.addChild(box);
-            
-            box = createBox();
-            box.y = cnt++ * 20;
-            tween = createTween(box, Tween[funcs[n]].easeOut);
-            this.addChild(box);
-            
-            box = createBox();
-            box.y = cnt++ * 20;
-            tween = createTween(box, Tween[funcs[n]].easeInOut);
-            this.addChild(box);
-        }
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+    
+var colors = [0xcc0000, 0xffcc00, 0xaaff00, 0x0099cc, 0x194c99, 0x661999];
+var funcs = ['Linear', 'Back', 'Bounce', 'Circ', 'Cubic', 'Elastic', 'Quad', 'Quart', 'Quint', 'Sine'];
+var cnt = 0;
+
+var createBox = function()
+{
+    var box = new Shape();
+    box.y = (cnt++ * 15);
+    box.graphics.beginFill(colors[Math.floor(Math.random() * colors.length)]);
+    box.graphics.drawRect(0, 0, 15, 15);
+    box.graphics.endFill();
+    stage.addChild(box);
+    return box;
+}
+
+var createTween = function(obj, func)
+{
+    var tween = new Tween(obj, 'x', func, 0, 405, 60, false);
+    return tween;
+}
+
+for (n in funcs) {
+    createTween(createBox(), Tween[funcs[n]].easeIn);
+    createTween(createBox(), Tween[funcs[n]].easeOut);
+    createTween(createBox(), Tween[funcs[n]].easeInOut);
+}
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

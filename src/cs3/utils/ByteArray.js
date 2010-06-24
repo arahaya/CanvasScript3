@@ -9,6 +9,9 @@ var ByteArray = new Class(Array, function()
     var DOUBLE_POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
     var DOUBLE_NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY;
     
+    /*
+     * http://with-love-from-siberia.blogspot.com/2009/11/ieee754-converter.html
+     */
     function floatToBytes(n)
     {
         if (isNaN(n)) {

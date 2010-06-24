@@ -7,75 +7,73 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var shape;
-        
-        //draw a rectangle
-        shape = new Shape();
-        shape.x = 50;
-        shape.y = 50;
-        shape.graphics.lineStyle(0);
-        shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        shape.graphics.endFill();
-        this.addChild(shape);
-        
-        //draw a rectangle with strokes
-        shape = new Shape();
-        shape.x = 200;
-        shape.y = 50;
-        shape.graphics.lineStyle(10, 0xFF0000);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        this.addChild(shape);
-        
-        //draw a rectangle with strokes and fill
-        shape = new Shape();
-        shape.x = 350;
-        shape.y = 50;
-        shape.graphics.lineStyle(10, 0xFF0000);
-        shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        this.addChild(shape);
-        
-        //draw a rectangle with alpha fill
-        shape = new Shape();
-        shape.x = 50;
-        shape.y = 200;
-        shape.graphics.lineStyle(10, 0xFF0000);
-        shape.graphics.beginFill(0x0000FF, 0.5);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        this.addChild(shape);
-        
-        //draw a rectangle with alpha stroke
-        shape = new Shape();
-        shape.x = 200;
-        shape.y = 200;
-        shape.graphics.lineStyle(10, 0xFF0000, 0.5);
-        shape.graphics.beginFill(0x0000FF);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        this.addChild(shape);
-        
-        //draw a rectangle with alpha fill and stroke
-        shape = new Shape();
-        shape.x = 350;
-        shape.y = 200;
-        shape.graphics.lineStyle(10, 0xFF0000, 0.5);
-        shape.graphics.beginFill(0x0000FF, 0.5);
-        shape.graphics.drawRect(0, 0, 100, 100);
-        this.addChild(shape);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+var shape;
+
+//draw a rectangle
+shape = new Shape();
+shape.x = 20;
+shape.y = 20;
+shape.graphics.lineStyle(0);
+shape.graphics.beginFill(0x0000FF);
+shape.graphics.drawRect(0, 0, 100, 100);
+shape.graphics.endFill();
+stage.addChild(shape);
+
+//draw a rectangle with strokes
+shape = new Shape();
+shape.x = 140;
+shape.y = 20;
+shape.graphics.lineStyle(10, 0xFF0000);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
+
+//draw a rectangle with strokes and fill
+shape = new Shape();
+shape.x = 260;
+shape.y = 20;
+shape.graphics.lineStyle(10, 0xFF0000);
+shape.graphics.beginFill(0x0000FF);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
+
+//draw a rectangle with alpha fill
+shape = new Shape();
+shape.x = 20;
+shape.y = 140;
+shape.graphics.lineStyle(10, 0xFF0000);
+shape.graphics.beginFill(0x0000FF, 0.5);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
+
+//draw a rectangle with alpha stroke
+shape = new Shape();
+shape.x = 140;
+shape.y = 140;
+shape.graphics.lineStyle(10, 0xFF0000, 0.5);
+shape.graphics.beginFill(0x0000FF);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
+
+//draw a rectangle with alpha fill and stroke
+shape = new Shape();
+shape.x = 260;
+shape.y = 140;
+shape.graphics.lineStyle(10, 0xFF0000, 0.5);
+shape.graphics.beginFill(0x0000FF, 0.5);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

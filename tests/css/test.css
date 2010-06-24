@@ -1,19 +1,82 @@
+@charset "utf-8";
+html{color:#000;background:#FFF;}body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,button,textarea,p,blockquote,th,td{margin:0;padding:0;}table{border-collapse:collapse;border-spacing:0;}fieldset,img{border:0;}address,caption,cite,code,dfn,em,strong,th,var,optgroup{font-style:inherit;font-weight:inherit;}del,ins{text-decoration:none;}li{list-style:none;}caption,th{text-align:left;}h1,h2,h3,h4,h5,h6{font-size:100%;font-weight:normal;}q:before,q:after{content:'';}abbr,acronym{border:0;font-variant:normal;}sup{vertical-align:baseline;}sub{vertical-align:baseline;}legend{color:#000;}input,button,textarea,select,optgroup,option{font-family:inherit;font-size:inherit;font-style:inherit;font-weight:inherit;}input,button,textarea,select{*font-size:100%;}body{font:13px/1.231 arial,helvetica,clean,sans-serif;*font-size:small;*font:x-small;}select,input,button,textarea,button{font:99% arial,helvetica,clean,sans-serif;}table{font-size:inherit;font:100%;}pre,code,kbd,samp,tt{font-family:monospace;*font-size:108%;line-height:100%;}
+
 html, body {
     margin:0;
     padding:0;
     border:0;
-}
-html, body, #stage {
     width:100%;
     height:100%;
 }
-#trace-panel {
-    display: block;
-    position:absolute;
-    width:280px;
-    height:99%;
-    top:0;
-    right:0;
+
+body, textarea {
     font-size:13px;
-    font-family: "Bitstream Vera Sans Mono", "Courier", monospace;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+textarea {
+	font-size:13px;
+	font-family:"Bitstream Vera Sans Mono", "Courier", monospace;
+	padding:10px;
+}
+
+p {
+    margin:6px 10px;
+    font-size:14px;
+}
+
+#layout {
+	position:relative;
+	margin:0 12px;
+	height:900px;
+}
+
+#code-label {
+	position:absolute;
+	top:0;
+	left:0;
+	font-weight:bold;
+}
+#code {
+	position:absolute;
+	top:30px;
+	left:0;
+	width:460px;
+	height:480px;
+}
+
+#canvas-label {
+	position:absolute;
+	top:0;
+	left:500px;
+	font-weight:bold;
+}
+#canvas {
+	position:absolute;
+	top:30px;
+	left:500px;
+	border:1px solid #ccc;
+	width:420px;
+	height:500px;
+}
+
+#run {
+	position:absolute;
+	top:538px;
+	left:0;
+	padding:3px;
+}
+
+#output-label {
+	position:absolute;
+	top:540px;
+	left:860px;
+	font-weight:bold;
+}
+#output {
+	position:absolute;
+	top:570px;
+	left:0;
+	width:900px;
+	height:280px;
 }

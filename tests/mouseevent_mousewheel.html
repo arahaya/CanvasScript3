@@ -7,33 +7,35 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var sprite = new Sprite();
-        sprite.x = 100;
-        sprite.y = 0;
-        sprite.graphics.lineStyle(0);
-        sprite.graphics.beginFill(0xFF0000);
-        sprite.graphics.drawRect(0, 0, 200, 200);
-        sprite.graphics.endFill();
-        sprite.addEventListener(MouseEvent.MOUSE_WHEEL, function(e)
-        {
-            trace('delta=' + e.delta);
-            sprite.y -= e.delta;
-        });
-        this.addChild(sprite);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+
+//prevent the browser to scroll.
+stage.preventMouseWheel = true;
+
+var sprite = new Sprite();
+sprite.x = 100;
+sprite.y = 100;
+sprite.graphics.lineStyle(0);
+sprite.graphics.beginFill(0xFF0000);
+sprite.graphics.drawRect(0, 0, 200, 200);
+sprite.graphics.endFill();
+sprite.addEventListener(MouseEvent.MOUSE_WHEEL, function(e)
+{
+    trace('delta=' + e.delta);
+    sprite.y -= e.delta;
+});
+stage.addChild(sprite);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

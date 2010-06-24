@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<title>Rendering - Layers</title>
+<link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript" src="./js/test.js"></script>
+</head>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+/*
+ * A test for basic rendering and layers
+ */
+var stage = new Stage("canvas", 420, 500, 30);
+
+//root
+var root = new Sprite();
+stage.addChild(root);
+
+//draw graphics on root
+//this should be the deapest
+root.graphics.beginFill(0);
+root.graphics.drawRect(0, 0, 300, 300);
+root.graphics.endFill();
+
+//add a bitmap
+var child1 = new Loader();
+child1.x = 50;
+child1.y = 50;
+child1.load(new URLRequest("./img/photo01.jpg"));
+root.addChild(child1);
+
+//red circle
+var child2 = new Sprite();
+child2.x = 100;
+child2.y = 100;
+child2.graphics.lineStyle(0);
+child2.graphics.beginFill(0xFF0000);
+child2.graphics.drawCircle(50, 50, 50);
+child2.graphics.endFill();
+root.addChild(child2);
+
+
+//blue circle
+var child3 = new Sprite();
+child3.x = 150;
+child3.y = 150;
+child3.graphics.lineStyle(0);
+child3.graphics.beginFill(0x000FF);
+child3.graphics.drawCircle(50, 50, 50);
+child3.graphics.endFill();
+root.addChild(child3);
+
+
+//an empty sprite with children
+var child4 = new Sprite();
+child4.x = 200;
+child4.y = 200;
+root.addChild(child4);
+
+//green rect
+var child4_child1 = new Sprite();
+child4_child1.x = 0;
+child4_child1.y = 0;
+child4_child1.graphics.lineStyle(0);
+child4_child1.graphics.beginFill(0x00FF00);
+child4_child1.graphics.drawRect(0, 0, 100, 100);
+child4_child1.graphics.endFill();
+child4.addChild(child4_child1);
+
+//yellow rect
+var child4_child2 = new Sprite();
+child4_child2.x = 50;
+child4_child2.y = 50;
+child4_child2.graphics.lineStyle(0);
+child4_child2.graphics.beginFill(0xFFFF00);
+child4_child2.graphics.drawRect(0, 0, 100, 100);
+child4_child2.graphics.endFill();
+child4.addChild(child4_child2);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
+</body>
+</html>

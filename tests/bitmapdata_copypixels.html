@@ -7,30 +7,32 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        var loader = new Loader();
-        loader.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e)
-        {
-            var bitmap = loader.content;
-            var bitmapdata = bitmap.bitmapData;
-            //copy top half to bottom half
-            bitmapdata.copyPixels(bitmapdata, new Rectangle(0, 0, bitmapdata.width, bitmapdata.height / 2), new Point(0, bitmapdata.height / 2));
-        });
-        loader.load(new URLRequest('img/photo01.jpg'));
-        this.addChild(loader);
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 12);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+
+var loader = new Loader();
+loader.contentLoaderInfo.addEventListener(Event.COMPLETE, function(e)
+{
+    var bitmap = loader.content;
+    var bitmapdata = bitmap.bitmapData;
+    var topHalf = new Rectangle(0, 0, 420, 250);
+    var dstPoint = new Point(0, topHalf.height);
+    
+    //copy top half to bottom half
+    bitmapdata.copyPixels(bitmapdata, topHalf, dstPoint);
+});
+loader.load(new URLRequest('img/photo01.jpg'));
+stage.addChild(loader);
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

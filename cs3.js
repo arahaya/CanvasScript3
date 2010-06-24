@@ -59,6 +59,29 @@ var cs3 = {
             
             window.onresize = this.resizeHandler;
             
+            //mouse events
+            var closure = cs3.utils.closure;
+            var stages = this.stages;
+            cs3.utils.addEventListener(document, 'mousemove', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    var stage = stages[i];
+                    setTimeout(closure(stage, stage.__mouseMoveHandler, [e]), 1);
+                }
+            });
+            cs3.utils.addEventListener(document, 'mousedown', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    stages[i].__mouseDownHandler(e);
+                }
+            });
+            cs3.utils.addEventListener(document, 'mouseup', function(e) {
+                for (var i = 0, l = stages.length; i < l; ++i)
+                {
+                    stages[i].__mouseUpHandler(e);
+                }
+            });
+            
             this.startTime = new Date().getTime();
             this.initialized = true;
         },
@@ -81,27 +104,50 @@ var cs3 = {
             this.init();
             var canvas = stage.canvas;
             
-            //mouse events
-            cs3.utils.addEventListener(document, 'mousemove', function(e) { setTimeout(cs3.utils.closure(stage, stage.__mouseMoveHandler, [e]), 1); });
-            cs3.utils.addEventListener(document, 'mousedown', function(e) { stage.__mouseDownHandler(e); });
-            cs3.utils.addEventListener(document, 'mouseup', function(e) { stage.__mouseUpHandler(e); });
-            
-            //Firefox
+            //mouse wheel Firefox
             if (window.addEventListener) {
-                canvas.addEventListener('DOMMouseScroll', function(e) { stage.__mouseWheelHandler(e); }, false);
+                canvas.addEventListener('DOMMouseScroll', stage.__mouseWheelHandler, false);
             }
-            //Opera, Chrome
-            cs3.utils.addEventListener(canvas, 'mousewheel', function(e) { stage.__mouseWheelHandler(e); });
+            //mouse wheel Opera, Chrome
+            cs3.utils.addEventListener(canvas, 'mousewheel', stage.__mouseWheelHandler);
             
             //focus events
-            cs3.utils.addEventListener(canvas, 'focus', function(e) { stage.__focusHandler(e); });
-            cs3.utils.addEventListener(canvas, 'blur', function(e) { stage.__blurHandler(e); });
+            cs3.utils.addEventListener(canvas, 'focus', stage.__focusHandler);
+            cs3.utils.addEventListener(canvas, 'blur', stage.__blurHandler);
             
             //key events
-            cs3.utils.addEventListener(canvas, 'keydown', function(e) { stage.__keyDownHandler(e); });
-            cs3.utils.addEventListener(canvas, 'keyup', function(e) { stage.__keyUpHandler(e); });
+            cs3.utils.addEventListener(canvas, 'keydown', stage.__keyDownHandler);
+            cs3.utils.addEventListener(canvas, 'keyup', stage.__keyUpHandler);
             
             this.stages.push(stage);
+        },
+        removeStage: function(stage)
+        {
+            var canvas = stage.canvas;
+            
+            //mouse wheel Firefox
+            if (window.removeEventListener) {
+                canvas.removeEventListener('DOMMouseScroll', stage.__mouseWheelHandler, false);
+            }
+            //mouse wheel Opera, Chrome
+            cs3.utils.removeEventListener(canvas, 'mousewheel', stage.__mouseWheelHandler);
+            
+            //focus events
+            cs3.utils.removeEventListener(canvas, 'focus', stage.__focusHandler);
+            cs3.utils.removeEventListener(canvas, 'blur', stage.__blurHandler);
+            
+            //key events
+            cs3.utils.removeEventListener(canvas, 'keydown', stage.__keyDownHandler);
+            cs3.utils.removeEventListener(canvas, 'keyup', stage.__keyUpHandler);
+            
+            var stages = this.stages;
+            for (var i = 0, l = stages.length; i < l; i++)
+            {
+                if (stages[i] == stage) {
+                    stages.splice(i, 1);
+                    break;
+                }
+            }
         }
     },
     config: {
@@ -313,6 +359,27 @@ var cs3 = {
         }
     }
 };
+/*
+ * debugging utility
+ * adds a trace(arguments) inside each context method.
+ * only works for chrome. Firefox doesn't allow overriding and Opera crashes.
+ */
+function __debugContext(context)
+{
+    if (!context.__debug) {
+        for (property in context) {
+            if (typeof(context[property]) == 'function') {
+                context[property] = (function(methodName) {
+                    return function() {
+                        trace(methodName + "(" + Array.prototype.slice.apply(arguments) + ");");
+                        this.constructor.prototype[methodName].apply(this, arguments);
+                    };
+                })(property);
+            }
+        }
+        context.__debug = true;
+    }
+}
 var __clearContext = (function()
 {
     if (cs3.core.isChrome) {
@@ -392,8 +459,8 @@ function __noImp(name)
 var trace = (function()
 {
     if (window.console) {
-        return function(msg) {
-            console.log(msg);
+        return function() {
+            console.log(Array.prototype.join.apply(arguments));
         };
     }
     else {
@@ -1902,6 +1969,10 @@ var BitmapData = new Class(Object, function()
         throw new ArgumentError("Invalid BitmapData.");
     };
     
+    /*
+     * http://www.student.kuleuven.be/~m0216922/CG/floodfill.html
+     * Copyright (c) 2004-2007 by Lode Vandevenne. All rights reserved.
+     */
     var floodFillScanlineStack = function(data, x, y, width, height, targetColor, replacementColor)
     {
         var T0 = targetColor[0];
@@ -2393,9 +2464,89 @@ var BitmapData = new Class(Object, function()
         this.__modified = true;
     };
     
-    this.noise = function()
+    this.noise = function(randomSeed, low, high, channelOptions, grayScale)
     {
-        //alert("HELP!");
+        var imageData = this.__context.createImageData(this.__width, this.__height);
+        var data = imageData.data;
+        var length = data.length;
+        
+        if (randomSeed === undefined) {
+            randomSeed = Math.random();
+        }
+        if (low === undefined) {
+            low = 0;
+        }
+        if (high === undefined) {
+            high = 255;
+        }
+        if (high < low) {
+            high = low;
+        }
+        var range = high - low + 1;
+        
+        var channelRed   = BitmapDataChannel.RED;
+        var channelGreen = BitmapDataChannel.GREEN;
+        var channelBlue  = BitmapDataChannel.BLUE;
+        var channelAlpha = BitmapDataChannel.ALPHA;
+        
+        if (channelOptions === undefined) {
+            channelOptions = channelRed | channelGreen | channelBlue;
+        }
+        
+        // makes it a little faster in Firefox
+        channelRed   = (channelOptions & channelRed)   === channelRed;
+        channelGreen = (channelOptions & channelGreen) === channelGreen;
+        channelBlue  = (channelOptions & channelBlue)  === channelBlue;
+        channelAlpha = (channelOptions & channelAlpha) === channelAlpha;
+        
+        var i;
+        if (grayScale) {
+            var randomValue;
+            for (i = 0; i < length;)
+            {
+                randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                data[i++] = data[i++] = data[i++] = ((randomSeed / 233280) * range + low) | 0;
+                
+                if (channelAlpha) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i++] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                else {
+                    data[i++] = 255;
+                }
+            }
+        }
+        else {
+            for (i = 0; i < length;)
+            {
+                if (channelRed) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelGreen) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelBlue) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                ++i;
+                if (channelAlpha) {
+                    randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                    data[i] = ((randomSeed / 233280) * range + low) | 0;
+                }
+                else {
+                    data[i] = 255;
+                }
+                ++i;
+            }
+        }
+        
+        this.__context.putImageData(imageData, 0, 0);
+        this.__modified = true;
     };
     
     this.paletteMap = function(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray)
@@ -2515,6 +2666,7 @@ var BitmapData = new Class(Object, function()
     this.scroll = function(x, y)
     {
         var sourceX, sourceY, sourceWidth, sourceHeight;
+        
         if (x < 0) {
             sourceX = -x;
             sourceWidth = this.__width + x;
@@ -2523,14 +2675,16 @@ var BitmapData = new Class(Object, function()
             sourceX = 0;
             sourceWidth = this.__width - x;
         }
+        
         if (y < 0) {
             sourceY = -y;
             sourceHeight = this.__height + y;
         }
         else {
             sourceY = 0;
-            sourceHeight = this.__height + y;
+            sourceHeight = this.__height - y;
         }
+        
         var imageData = this.__context.getImageData(sourceX, sourceY, sourceWidth, sourceHeight);
         this.__context.putImageData(imageData, x, y);
         this.__modified = true;
@@ -2723,15 +2877,16 @@ var Graphics = new Class(Object, function()
     var BIGIN_GRADIENT_FILL = 2;
     var CLEAR = 3;
     var CURVE_TO = 4;
-    var DRAW_CIRCLE = 5;
-    var DRAW_ELLIPSE = 6;
-    var DRAW_RECT = 7;
-    var DRAW_ROUND_RECT = 8;
-    var END_FILL = 9;
-    var LINE_GRADIENT_STYLE = 10;
-    var LINE_STYLE = 11;
-    var LINE_TO = 12;
-    var MOVE_TO = 13;
+    var DRAW_ARC = 5;
+    var DRAW_CIRCLE = 6;
+    var DRAW_ELLIPSE = 7;
+    var DRAW_RECT = 8;
+    var DRAW_ROUND_RECT = 9;
+    var END_FILL = 10;
+    var LINE_GRADIENT_STYLE = 11;
+    var LINE_STYLE = 12;
+    var LINE_TO = 13;
+    var MOVE_TO = 14;
     
     this.__init__ = function()
     {
@@ -2775,6 +2930,20 @@ var Graphics = new Class(Object, function()
         this.__x = anchorX;
         this.__y = anchorY;
         this.__commands.push([CURVE_TO, controlX, controlY, anchorX, anchorY]);
+        this.__modified = true;
+    };
+    
+    this.drawArc = function(x, y, radius, startAngle, endAngle, anticlockwise)
+    {
+        var startX = x + Math.cos(startAngle * 6.283185307179586) * radius;
+        var startY = y + Math.sin(startAngle * 6.283185307179586) * radius;
+        var endX   = x + Math.cos(endAngle   * 6.283185307179586) * radius;
+        var endY   = y + Math.sin(endAngle   * 6.283185307179586) * radius;
+
+        this.__updateRect(startX, startY, startX + endX, startY + endY);
+        this.__x = endX;
+        this.__y = endY;
+        this.__commands.push([DRAW_ARC, x, y, radius, startAngle, endAngle, anticlockwise, startX, startY, endX, endY]);
         this.__modified = true;
     };
     
@@ -2899,6 +3068,7 @@ var Graphics = new Class(Object, function()
     
     this.__render = function(context, colorTransform)
     {
+        //__debugContext(context);
         //TODO: optimize
         var doFill = false;
         var fillAlpha = 1;
@@ -2925,8 +3095,8 @@ var Graphics = new Class(Object, function()
         var right, bottom;
         
         //fill phase
-        context.beginPath();
-        context.moveTo(0, 0);
+        //context.beginPath();
+        //context.moveTo(0, 0);
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
@@ -2936,11 +3106,13 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
@@ -2959,6 +3131,7 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
+                    if (!doFill) { continue; }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
@@ -2969,8 +3142,9 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.rect(ax, ay, cmd[3], cmd[4]);
-                    context.moveTo(ax, ay);
+                    //context.moveTo(ax, ay);
                     break;
                 case DRAW_CIRCLE:
                     //anchor at the right edge
@@ -2978,23 +3152,31 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     ax = x + radius;
                     ay = cmd[2];
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
+                case DRAW_ARC:
+                    ax = cmd[9];
+                    ay = cmd[10];
+                    if (!doFill) { continue; }
+                    context.moveTo(cmd[7], cmd[8]);
+                    context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
+                    break;
+                    //context.moveTo(ax, ay);
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
                     width  = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5];
-                    ellipseHeight = cmd[6];
+                    ellipseWidth  = cmd[5] / 2;
+                    ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
-                    ellipseWidth  /= 2;
-                    ellipseHeight /= 2;
                     ax = right;
                     ay = bottom - ellipseHeight;
+                    if (!doFill) { continue; }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -3013,13 +3195,16 @@ var Graphics = new Class(Object, function()
                     height = cmd[4];
                     xRadius = width / 2;
                     yRadius = height / 2;
+                    ax = x + width;
+                    ay = y + yRadius;
+                    if (!doFill) { continue; }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
                     xCtrlDist = xRadius / 0.9238795325112867;/*Math.cos(angleDelta/2)*/
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
-                    context.moveTo(x + width, y + yRadius);
+                    context.moveTo(ax, ay);
                     for (ii = 0; ii < 8; ii++)
                     {
                         angle += angleDelta;
@@ -3039,8 +3224,8 @@ var Graphics = new Class(Object, function()
         //stroke phase
         if (!hasStroke) { return; }
         sx = sy = ax = ay = 0;
-        context.beginPath();
-        context.moveTo(0, 0);
+        //context.beginPath();
+        //context.moveTo(0, 0);
         for (i = 0, l = commandLength; i < l; ++i)
         {
             cmd = commands[i];
@@ -3050,11 +3235,13 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
@@ -3083,6 +3270,7 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
+                    if (!doStroke) { continue; }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
@@ -3095,6 +3283,7 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     context.moveTo(ax, ay);
                     break;
@@ -3104,8 +3293,18 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     sx = ax = x + radius;
                     sy = ay = cmd[2];
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
+                    break;
+                case DRAW_ARC:
+                    sx = cmd[7];
+                    sy = cmd[8];
+                    ax = cmd[9];
+                    ay = cmd[10];
+                    if (!doStroke) { continue; }
+                    context.moveTo(sx, sy);
+                    context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
@@ -3113,14 +3312,13 @@ var Graphics = new Class(Object, function()
                     y = cmd[2];
                     width  = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5];
-                    ellipseHeight = cmd[6];
+                    ellipseWidth  = cmd[5] / 2;
+                    ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
-                    ellipseWidth  /= 2;
-                    ellipseHeight /= 2;
-                    ax = right;
-                    ay = bottom - ellipseHeight;
+                    sx = ax = right;
+                    sy = ay = bottom - ellipseHeight;
+                    if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -3130,8 +3328,6 @@ var Graphics = new Class(Object, function()
                     context.lineTo(right - ellipseWidth, y);
                     context.quadraticCurveTo(right, y, right, y + ellipseHeight);
                     context.lineTo(ax, ay);
-                    sx = ax;
-                    sy = ay;
                     break;
                 case DRAW_ELLIPSE:
                     //anchor at the right edge
@@ -3141,6 +3337,9 @@ var Graphics = new Class(Object, function()
                     height = cmd[4];
                     xRadius = width / 2;
                     yRadius = height / 2;
+                    sx = ax = x + width;
+                    sy = ay = y + yRadius;
+                    if (!doStroke) { continue; }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -3157,8 +3356,6 @@ var Graphics = new Class(Object, function()
                         ay = centerY + Math.sin(angle) * yRadius;
                         context.quadraticCurveTo(rx, ry, ax, ay);
                     }
-                    sx = ax;
-                    sy = ay;
                     break;
                 default:
                     break;
@@ -3546,10 +3743,17 @@ var Stage = new Class(DisplayObjectContainer, function()
             document.body.appendChild(this.canvas);
         }
         
+        if (this.canvas.__stage) {
+            //stage already exists
+            this.canvas.__stage.__destroy();
+        }
+        
         this.__context = cs3.utils.getContext2d(this.canvas);
         this.__hiddenCanvas = cs3.utils.createCanvas(0, 0);
         this.__hiddenContext = cs3.utils.getContext2d(this.__hiddenCanvas);
         
+        this.canvas.__stage = this;
+        this.canvas.width = this.canvas.width;// clear the current content
         this.canvas.style.cursor = 'default';
         this.canvas.tabIndex = 1;// enable focus events
         this.canvas.style.outline = "none";// remove focus rects
@@ -3572,29 +3776,47 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__enterFrame();
     };
     
+    this.__destroy = function()
+    {
+        //call children REMOVED_FROM_STAGE events
+        __applyDown(this, function(stage, event)
+        {
+            this.__stage = this.__root = null;
+            this.dispatchEvent(event);
+        }, [this, new Event(Event.REMOVED_FROM_STAGE, false, false)]);
+        
+        clearTimeout(this.__keyPressTimer);
+        clearTimeout(this.__timer);
+        cs3.core.removeStage(this);
+    };
+    
     this.__focusHandler = function(e)
     {
+        var stage = e.target.__stage;
     };
     
     this.__blurHandler = function(e)
     {
+        var stage = e.target.__stage;
     };
     
     this.__keyDownHandler = function(e)
     {
-        clearTimeout(this.__keyPressTimer);
-        this.__isKeyDown = true;
+        var stage = e.target.__stage;
+        
+        clearTimeout(stage.__keyPressTimer);
+        stage.__isKeyDown = true;
         
         if (cs3.core.isOpera) {
-            this.__keyPressTimer = setTimeout(function(){ this.__keyPressHandler(e); }, 500);
+            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 500);
         }
         
         var keyCode = e.keyCode;
         var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
-        this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
+        stage.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
         
-        if (this.__preventTabKey && keyCode === 9) {
+        if (stage.__preventTabKey && keyCode === 9) {
             //disable tab focusing
             if (e.preventDefault) { e.preventDefault(); }
             e.returnValue = false;
@@ -3603,32 +3825,49 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__keyPressHandler = function(e)
     {
-        clearTimeout(this.__keyPressTimer);
-        if (!this.__isKeyDown) { return; }
+        var stage = this;
         
-        this.__keyDownHandler(e);
+        clearTimeout(stage.__keyPressTimer);
+        if (!stage.__isKeyDown) { return; }
+        
+        stage.__keyDownHandler(e);
         
         if (cs3.core.isOpera) {
-            this.__keyPressTimer = setTimeout(function(){ this.__keyPressHandler(e); }, 33);
+            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 33);
         }
     };
     
     this.__keyUpHandler = function(e)
     {
-        this.__isKeyDown = false;
-        clearTimeout(this.__keyPressTimer);
+        var stage = e.target.__stage;
+        
+        stage.__isKeyDown = false;
+        clearTimeout(stage.__keyPressTimer);
         
         var keyCode = e.keyCode;
         var charCode = e.charCode;//todo
         var keyLocation = 0;//not supported
-        this.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_UP, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
+        stage.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_UP, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
     };
     
     this.__mouseMoveHandler = function(e)
     {
-        var canvas = this.canvas;
-        var x = e.pageX - canvas.offsetLeft;
-        var y = e.pageY - canvas.offsetTop;
+        var stage = this;
+        var canvas = stage.canvas;
+        
+        //get the absolute position of the canvas
+        var element = canvas;
+        var offsetLeft = 0;
+        var offsetTop  = 0;
+        while (element)
+        {
+            offsetLeft += element.offsetLeft;
+            offsetTop  += element.offsetTop;
+            element = element.offsetParent;
+        }
+        
+        var x = e.pageX - offsetLeft;
+        var y = e.pageY - offsetTop;
         
         /*
         if (this.__scaleX || this.__scaleY) {
@@ -3637,49 +3876,50 @@ var Stage = new Class(DisplayObjectContainer, function()
         }
         */
         
-        if (x === this.__mouseX && y === this.__mouseY) {
+        if (x === stage.__mouseX && y === stage.__mouseY) {
             return;
         }
         
+        
+        
         // mouse move events
-        this.__mouseOverStage = false;
-        if (this.__rect.contains(x, y) === true) {
-            this.__mouseX = x;
-            this.__mouseY = y;
+        stage.__mouseOverStage = false;
+        if (stage.__rect.contains(x, y) === true) {
+            stage.__mouseX = x;
+            stage.__mouseY = y;
+            stage.__mouseOverStage = true;
+            stage.__updateObjectUnderMouse();
             
-            this.__mouseOverStage = true;
-            this.__updateObjectUnderMouse();
-            
-            if (this.__objectUnderMouse) {
-                this.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            if (stage.__objectUnderMouse) {
+                stage.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
             else {
                 //if there is no abject under the mouse point,
                 //stage's mousemove event gets called
-                this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+                stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
         }
-        else if (this.__mouseDownObject) {
+        else if (stage.__mouseDownObject) {
             //if the mouse is out of the stage but the mouse is down
             //stage's mousemove event gets called
-            this.__mouseX = x;
-            this.__mouseY = y;
-            this.__objectUnderMouse = null;
-            this.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
+            stage.__mouseX = x;
+            stage.__mouseY = y;
+            stage.__objectUnderMouse = null;
+            stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
         }
         else {
             //mouse is out of the stage and mouse is not down
-            this.__objectUnderMouse = null;
+            stage.__objectUnderMouse = null;
             return;
         }
         
         
         //handle startDrag
-        var target = this.__dragTarget;
+        var target = stage.__dragTarget;
         if (target) {
-            var newX = x - this.__dragOffsetX;
-            var newY = y - this.__dragOffsetY;
-            var bounds = this.__dragBounds;
+            var newX = x - stage.__dragOffsetX;
+            var newY = y - stage.__dragOffsetY;
+            var bounds = stage.__dragBounds;
             
             if (bounds) {
                 if (newX < bounds.x) {
@@ -3703,18 +3943,20 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseDownHandler = function(e)
     {
+        var stage = this;
+        
         //FIXED in opera and chrome we can't capture mousemove events while the contextmenu is open.
         //so without the code bellow if you right click then left click, the mouse position will not be updated.
-        this.__mouseMoveHandler(e);
+        stage.__mouseMoveHandler(e);
         
-        var target = this.__objectUnderMouse;
+        var target = stage.__objectUnderMouse;
         if (!target) { return; }
         
         if (e.which === 1) {
             //left click
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-            this.__mouseDownObject = target;
+            stage.__mouseDownObject = target;
         }
         else if (e.which === 2) {
             //middle click
@@ -3728,11 +3970,13 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseUpHandler = function(e)
     {
-        this.__mouseMoveHandler(e);
         var stage = this;
-        var target = this.__objectUnderMouse;
+        
+        stage.__mouseMoveHandler(e);
+        
+        var target = stage.__objectUnderMouse;
         if (!target) {
-            if (this.__mouseDownObject) {
+            if (stage.__mouseDownObject) {
                 target = stage;
             }
             else {
@@ -3743,21 +3987,21 @@ var Stage = new Class(DisplayObjectContainer, function()
         if (e.which === 1) {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_UP, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-            if (this.__mouseDownObject === target) {
+            if (stage.__mouseDownObject === target) {
                 target.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                 
                 //double click
-                clearTimeout(this.__doubleClickTimer);
-                if (this.__mouseClickObject === target) {
+                clearTimeout(stage.__doubleClickTimer);
+                if (stage.__mouseClickObject === target) {
                     target.dispatchEvent(new MouseEvent(MouseEvent.DOUBLE_CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-                    this.__mouseClickObject = null;
+                    stage.__mouseClickObject = null;
                 }
                 else {
-                    this.__mouseClickObject = target;
-                    this.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
+                    stage.__mouseClickObject = target;
+                    stage.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
                 }
             }
-            this.__mouseDownObject = null;
+            stage.__mouseDownObject = null;
         }
         else if (e.which === 2) {
             //middle click
@@ -3771,7 +4015,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__mouseWheelHandler = function(e)
     {
-        var target = this.__objectUnderMouse;
+        var stage = e.target.__stage;
+        var target = stage.__objectUnderMouse;
         
         var delta = 0;
         if (e.wheelDelta) { /* IE/Opera. */
@@ -3786,7 +4031,7 @@ var Stage = new Class(DisplayObjectContainer, function()
             target.dispatchEvent(new MouseEvent(
                 MouseEvent.MOUSE_WHEEL, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, delta));
         }
-        if (this.__preventMouseWheel) {
+        if (stage.__preventMouseWheel) {
             //disable browser scrolling
             if (e.preventDefault) { e.preventDefault(); }
             e.returnValue = false;
@@ -4098,11 +4343,11 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         if (lockCenter) {
             var localPoint = target.globalToLocal(new Point(this.__mouseX, this.__mouseY));
-            target.setX(target.getX() + localPoint.x);
-            target.setY(target.getY() + localPoint.y);
+            target.__set__x(target.__get__x() + localPoint.x);
+            target.__set__y(target.__get__y() + localPoint.y);
         }
-        this.__dragOffsetX = this.__mouseX - target.getX();
-        this.__dragOffsetY = this.__mouseY - target.getY();
+        this.__dragOffsetX = this.__mouseX - target.__get__x();
+        this.__dragOffsetY = this.__mouseY - target.__get__y();
         this.__dragTarget = target;
         this.__dragBounds = bounds;
     };
@@ -4158,6 +4403,26 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         this.__renderMode = v;
         this.__renderAll = true;
+    };
+    
+    this.__get__preventMouseWheel = function(v)
+    {
+        return this.__preventMouseWheel;
+    };
+    
+    this.__set__preventMouseWheel = function(v)
+    {
+        this.__preventMouseWheel = v;
+    };
+    
+    this.__get__preventTabKey = function(v)
+    {
+        return this.__preventTabKey;
+    };
+    
+    this.__set__preventTabKey = function(v)
+    {
+        this.__preventTabKey = v;
     };
     
     this.toString = function()
@@ -4233,6 +4498,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         this.blurY   = blurY   || 4;
         this.quality = quality || 1;
     };
+    
     //override
     this.__filter = function(displayObject)
     {
@@ -4252,6 +4518,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         displayObject.__cache = bitmapData;
         */
     };
+    
     //override
     this.__filterBitmapData = function(sourceBitmapData, sourceRect, distBitmapData, distPoint)
     {
@@ -4268,6 +4535,7 @@ var BlurFilter = new Class(BitmapFilter, function()
         
         distBitmapData.__context.putImageData(srcImageData, distPoint.x, distPoint.y);
     };
+    
     //override
     this.__generateRect = function(sourceRect)
     {
@@ -4277,6 +4545,11 @@ var BlurFilter = new Class(BitmapFilter, function()
         newRect.inflate(inflateX, inflateY);
         return newRect;
     };
+    
+    /*
+     * http://www.jhlabs.com/ip/BoxBlurFilter.java
+     * Copyright 2005 Huxtable.com. All rights reserved.
+     */
     this.__blur = function(src, dst, width, height, radius)
     {
         var length = src.length;
@@ -4290,7 +4563,6 @@ var BlurFilter = new Class(BitmapFilter, function()
         
         for (i = 0, l = 256 * tableSize; i < l; ++i)
         {
-            //Firefox doesn't accept floats
             divide[i] = (i / tableSize) | 0;
         }
         
@@ -4559,14 +4831,46 @@ var Matrix = new Class(Object, function()
     {
         return new Matrix(this.a, this.b, this.c, this.d, this.tx, this.ty);
     };
+    this.createBox = function(scaleX, scaleY, rotation, tx, ty)
+    {
+        if (rotation === undefined) { rotation = 0; }
+        if (tx === undefined) { tx = 0; }
+        if (ty === undefined) { ty = 0; }
+        
+        var cos = Math.cos(rotation);
+        var sin = Math.sin(rotation);
+        
+        this.a  = cos * scaleX;
+        this.b  = sin * scaleY;
+        this.c  = sin * scaleX;
+        this.d  = cos * scaleY;
+        this.tx = tx;
+        this.ty = ty;
+    };
+    this.createGradientBox = function(width, height, rotation, tx, ty)
+    {
+        if (rotation === undefined) { rotation = 0; }
+        if (tx === undefined) { tx = 0; }
+        if (ty === undefined) { ty = 0; }
+        
+        //this.createBox((width / 1638.4) , (height / 1638.4) , rotation, tx + width / 2, ty + height / 2);
+        var scaleX = width / 1638.4;
+        var scaleY = height / 1638.4;
+        
+        var cos = Math.cos(rotation);
+        var sin = Math.sin(rotation);
+        
+        this.a  = cos * scaleX;
+        this.b  = sin * scaleY;
+        this.c  = sin * scaleX;
+        this.d  = cos * scaleY;
+        this.tx = tx + width / 2;
+        this.ty = ty + height / 2;
+    };
     this.identity = function()
     {
-        this.a  = 1;
-        this.b  = 0;
-        this.c  = 0;
-        this.d  = 1;
-        this.tx = 0;
-        this.ty = 0;
+        this.a = this.d = 1;
+        this.b = this.c = this.tx = this.ty = 0;
     };
     this.invert = function()
     {
@@ -4576,7 +4880,7 @@ var Matrix = new Class(Object, function()
         var d  = this.d;
         var tx = this.tx;
         var ty = this.ty;
-        var det  = a * d - b * c;
+        var det = a * d - b * c;
         
         this.a  =  d / det;
         this.b  = -b / det;
@@ -4596,12 +4900,12 @@ var Matrix = new Class(Object, function()
         var tx = this.tx;
         var ty = this.ty;
 
-        this.a  =  a  * cos - b  * sin;
-        this.b  =  b  * cos + a  * sin;
-        this.c  =  c  * cos - d  * sin;
-        this.d  =  d  * cos + c  * sin;
-        this.tx =  tx * cos - ty * sin;
-        this.ty =  ty * cos + tx * sin;
+        this.a  = a  * cos - b  * sin;
+        this.b  = b  * cos + a  * sin;
+        this.c  = c  * cos - d  * sin;
+        this.d  = d  * cos + c  * sin;
+        this.tx = tx * cos - ty * sin;
+        this.ty = ty * cos + tx * sin;
     };
     this.scale = function(sx, sy)
     {
@@ -4684,6 +4988,10 @@ var Matrix = new Class(Object, function()
         return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
     };
 });
+/*
+ * http://www.canadahealthinfoway.com/flash/infoway/AllProjects/lib/fl/motion/MatrixTransformer.as
+ * Copyright c 2007. Adobe Systems Incorporated. All Rights Reserved.
+ */
 var MatrixTransformer = new Class(Object, function()
 {
     this.toString = function()
@@ -5233,17 +5541,19 @@ var Sound = new Class(EventDispatcher, function()
     
     this.__onCanPlay = function()
     {
+        trace("onCanPlay");
         this.__canPlay = true;
         if (this.__isPlaying) {
             this.__media.currentTime = this.__startTime;
+            
             this.__media.play();
+            this.__media.volume = this.__volume;
         }
     };
     
     this.__onEnded = function()
     {
-        if (this.__loops === -1 || this.__loops > this.__loopCount) {
-            this.__loopCount++;
+        if (this.__loops > this.__loopCount++) {
             this.__media.currentTime = this.__startTime;
             this.__media.play();
         }
@@ -5290,6 +5600,10 @@ var Sound = new Class(EventDispatcher, function()
             self.__onCanPlay();
             cs3.utils.removeEventListener(media, 'canplay', arguments.callee);
         });
+        cs3.utils.addEventListener(media, 'load', function(e)
+        {
+            trace("onLoad");
+        });
         cs3.utils.addEventListener(media, 'ended', function(e)
         {
             self.__onEnded();
@@ -5317,6 +5631,7 @@ var Sound = new Class(EventDispatcher, function()
         
         if (this.__canPlay) {
             media.currentTime = this.__startTime;
+            media.volume = this.__volume;
             media.play();
         }
     };
@@ -5828,35 +6143,6 @@ var TextField;
         
         
         
-        
-        
-        this.__getBlocks = function()
-        {
-            //TODO: add word wrap
-            var buffer = this.__buffer;
-            var blocks = [];
-            var cursor = 0;
-            var index;
-            var block;
-            
-            while (1)
-            {
-                index = buffer.indexOf("\n");
-                if (index !== -1) {
-                    blocks.push(buffer.slice(cursor, index));
-                    cursor = index + 1;
-                }
-                else {
-                    blocks.push(buffer.slice(cursor));
-                    break;
-                }
-            }
-            
-            return blocks;
-        };
-
-        
-        
         //override
         this.__render = function(context, colorTransform)
         {
@@ -6031,6 +6317,10 @@ var TextField;
                     temp = [];
                 }
                 
+                //if (chr !== "\n") {
+                    temp.push(chr);
+                //}
+                
                 if (chr === "\n" || i == (l - 1)) {
                     //EOL or EOF
                     if (temp.length) {
@@ -6041,7 +6331,7 @@ var TextField;
                     }
                     
                     //close the block
-                    block.end = i - 1;
+                    block.end = i;
                     line.blocks.push(block);
                     
                     //close the line
@@ -6059,9 +6349,6 @@ var TextField;
                     block = new Block(format, i + 1, 0, 0, line.y, 0, format.size);
                     
                     temp = [];
-                }
-                else {
-                    temp.push(chr);
                 }
             }
             
@@ -6562,6 +6849,9 @@ var ByteArray = new Class(Array, function()
     var DOUBLE_POSITIVE_INFINITY = Number.POSITIVE_INFINITY;
     var DOUBLE_NEGATIVE_INFINITY = Number.NEGATIVE_INFINITY;
     
+    /*
+     * http://with-love-from-siberia.blogspot.com/2009/11/ieee754-converter.html
+     */
     function floatToBytes(n)
     {
         if (isNaN(n)) {

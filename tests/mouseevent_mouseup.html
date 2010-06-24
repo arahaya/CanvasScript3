@@ -7,71 +7,66 @@
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
-<script type="text/javascript">
-var Main = new Class(Sprite, function()
-{
-    this.__init__ = function()
-    {
-        Sprite.call(this);
-        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
-        {
-            this.init();
-        });
-    }
-    
-    this.init = function()
-    {
-        var red = new Sprite();
-        red.x = 300;
-        red.y = 300;
-        red.graphics.lineStyle(0);
-        red.graphics.beginFill(0xFF0000);
-        red.graphics.drawCircle(0, 0, 200);
-        red.graphics.endFill();
-        red.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            trace('red mouseup');
-        });
-        this.addChild(red);
-        
-        var blue = new Sprite();
-        blue.x = 0;
-        blue.y = 0;
-        blue.graphics.lineStyle(0);
-        blue.graphics.beginFill(0x0000FF);
-        blue.graphics.drawCircle(0, 0, 140);
-        blue.graphics.endFill();
-        blue.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            trace('blue mouseup');
-        });
-        red.addChild(blue);
-        
-        var green = new Sprite();
-        green.x = 0;
-        green.y = 0;
-        green.graphics.lineStyle(0);
-        green.graphics.beginFill(0x00FF00);
-        green.graphics.drawCircle(0, 0, 80);
-        green.graphics.endFill();
-        green.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            trace('green mouseup');
-        });
-        blue.addChild(green);
-        
-        this.stage.addEventListener(MouseEvent.MOUSE_UP, function(e)
-        {
-            trace("stage mouseup");
-        });
-    }
-});
-
-var stage = new Stage("stage", 640, 480, 30);
-stage.addChild(new Main());
-</script>
 </head>
-<body>
-<canvas id="stage"></canvas>
+<body onload="runCode()">
+<div id="layout">
+<p id="code-label">Code</p>
+<textarea id="code">
+var stage = new Stage("canvas", 420, 500, 30);
+stage.name = "stage";
+
+var red = new Sprite();
+red.name = "red";
+red.x = 200;
+red.y = 200;
+red.graphics.lineStyle(0);
+red.graphics.beginFill(0xFF0000);
+red.graphics.drawCircle(0, 0, 180);
+red.graphics.endFill();
+red.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    trace('type=' + e.type + ', target=' + e.target.name + ", currentTarget=" + e.currentTarget.name);
+});
+stage.addChild(red);
+
+var blue = new Sprite();
+blue.name = "blue";
+blue.x = 0;
+blue.y = 0;
+blue.graphics.lineStyle(0);
+blue.graphics.beginFill(0x0000FF);
+blue.graphics.drawCircle(0, 0, 130);
+blue.graphics.endFill();
+blue.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    trace('type=' + e.type + ', target=' + e.target.name + ", currentTarget=" + e.currentTarget.name);
+});
+red.addChild(blue);
+
+var green = new Sprite();
+green.name = "green";
+green.x = 0;
+green.y = 0;
+green.graphics.lineStyle(0);
+green.graphics.beginFill(0x00FF00);
+green.graphics.drawCircle(0, 0, 80);
+green.graphics.endFill();
+green.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    trace('type=' + e.type + ', target=' + e.target.name + ", currentTarget=" + e.currentTarget.name);
+});
+blue.addChild(green);
+
+stage.addEventListener(MouseEvent.MOUSE_UP, function(e)
+{
+    trace('type=' + e.type + ', target=' + e.target.name + ", currentTarget=" + e.currentTarget.name);
+});
+</textarea>
+<input type="button" id="run" value="Run Code" onclick="runCode()" />
+<p id="canvas-label">Canvas</p>
+<canvas id="canvas"></canvas>
+<p id="output-label">Output</p>
+<textarea id="output"></textarea>
+</div>
 </body>
 </html>

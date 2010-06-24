@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Particles IE9</title>
+<script type="text/javascript" src="../cs3.js"></script>
+<script type="text/javascript">
+var MAX_PARTICLES = 500;
+var MAX_VELOCITY = 500;
+var PARTICLE_RADIUS = 6;
+var STAGE_WIDTH = 1024;
+var STAGE_HEIGHT = 768;
+var COLORS = [0xcc0000, 0xffcc00, 0xaaff00, 0x0099cc, 0x194c99, 0x661999];
+var SHADOWS = false;
+
+var Main = new Class(Sprite, function()
+{
+    this.__init__ = function()
+    {
+        Sprite.call(this);
+        this.particles = [];
+        this.addEventListener(Event.ADDED_TO_STAGE, function(e)
+        {
+            this.init();
+        });
+    }
+    
+    this.init = function()
+    {
+        var stage = this.getStage();
+        var particles = this.particles;
+        var location = window.location.href;
+        
+        //disable mouse events for performance
+        stage.mouseChildren = false;
+        
+        // If shadows are turned on
+        if (location.match(/shadows=true/))
+        {
+            SHADOWS = true;
+        }
+        
+        // If max_particles is specified
+        if (location.match(/particles=/))
+        {
+            var maxParticles = location.match(/particles=([^&]+)/)[1];
+            maxParticles = parseInt(maxParticles);
+            
+            if (!isNaN(maxParticles))
+            {
+                MAX_PARTICLES = maxParticles;
+            }
+        }
+        
+        STAGE_WIDTH  = stage.getStageWidth();
+        STAGE_HEIGHT = stage.getStageHeight();
+        
+        for (var i = 0; i < MAX_PARTICLES; ++i)
+        {
+            var particle = new Particle();
+            particles.push(particle);
+            this.addChildAt(particle, 0);
+        }
+        
+        stage.addEventListener(Event.RESIZE, function(e)
+        {
+            STAGE_WIDTH  = stage.getStageWidth();
+            STAGE_HEIGHT = stage.getStageHeight();
+        });
+        
+        var fps = 0;
+        var lastTime = new Date().getTime();
+        this.addEventListener(Event.ENTER_FRAME, function(e)
+        {
+            fps++;
+            
+            var currentTime = new Date().getTime();
+            var timeDelta = currentTime - lastTime;
+            
+            for (var i = 0; i < MAX_PARTICLES; ++i)
+            {
+                particles[i].update(timeDelta);
+            }
+            
+            lastTime = currentTime;
+        });
+        
+        setInterval(function()
+        {
+            document.getElementById('fps').innerHTML = fps;
+            fps = 0;
+        }, 1000);
+    };
+});
+
+var Particle = new Class(Shape, function()
+{
+    this.__init__ = function()
+    {
+        Shape.call(this);
+        this.angle = Math.PI * 2 * Math.random();
+        this.velocity = MAX_VELOCITY / 8 * 7 * Math.random() + MAX_VELOCITY / 8;
+        var x = STAGE_WIDTH / 2 - PARTICLE_RADIUS;
+        var y = STAGE_HEIGHT / 2 - PARTICLE_RADIUS;
+        
+        // Create visual element for the particle
+        this.getGraphics().beginFill(COLORS[Math.floor(Math.random() * COLORS.length)]);
+        this.getGraphics().drawCircle(0, 0, PARTICLE_RADIUS);
+        this.getGraphics().endFill();
+        
+        if (SHADOWS) {
+            this.setFilters([new DropShadowFilter(6, 45, 0x000000, 0.33, 3)]);
+        }
+        
+        this.setX(x);
+        this.setY(y);
+    };
+    
+    this.update = function(timeDelta)
+    {
+        var x = this.getX();
+        var y = this.getY();
+        var angle = this.angle;
+        var velocity = this.velocity;
+        
+        // Calculate next position of particle
+        var nextX = x + Math.cos(angle) * velocity * (timeDelta / 1000);
+        var nextY = y + Math.sin(angle) * velocity * (timeDelta / 1000);
+        
+        // If particle is going to move off right side of screen
+        if (nextX + PARTICLE_RADIUS * 2 > STAGE_WIDTH)
+        {
+            // If angle is between 3 o'clock and 6 o'clock
+            if ((angle >= 0 && angle < Math.PI / 2))
+            {
+                angle = Math.PI - angle;
+            }
+            // If angle is between 12 o'clock and 3 o'clock
+            else if (angle > Math.PI / 2 * 3)
+            {
+                angle = angle - (angle - Math.PI / 2 * 3) * 2
+            }
+        }
+        
+        // If particle is going to move off left side of screen
+        if (nextX < 0)
+        {
+            // If angle is between 6 o'clock and 9 o'clock
+            if ((angle > Math.PI / 2 && angle < Math.PI))
+            {
+                angle = Math.PI - angle;
+            }
+            // If angle is between 9 o'clock and 12 o'clock
+            else if (angle > Math.PI && angle < Math.PI / 2 * 3)
+            {
+                angle = angle + (Math.PI / 2 * 3 - angle) * 2
+            }
+        }
+        
+        // If particle is going to move off bottom side of screen
+        if (nextY + PARTICLE_RADIUS * 2 > STAGE_HEIGHT)
+        {
+            // If angle is between 3 o'clock and 9 o'clock
+            if ((angle > 0 && angle < Math.PI))
+            {
+                angle = Math.PI * 2 - angle;
+            }
+        }
+        
+        // If particle is going to move off top side of screen
+        if (nextY < 0)
+        {
+            // If angle is between 9 o'clock and 3 o'clock
+            if ((angle > Math.PI && angle < Math.PI * 2))
+            {
+                angle = angle - (angle - Math.PI) * 2;
+            }
+        }
+        
+        this.angle = angle;
+        this.setX(nextX);
+        this.setY(nextY);
+    };
+});
+
+var stage = new Stage("stage", STAGE_WIDTH, STAGE_HEIGHT, 60);
+stage.setRenderMode(StageRenderMode.ALL);
+stage.addChild(new Main());
+</script>
+<style type="text/css">
+* {
+    margin:0;
+    padding:0;
+    border:0;
+}
+html, body, #stage {
+    width:100%;
+    height:100%;
+}
+#fps-counter {
+    position:absolute;
+    top:10px;
+    left:10px;
+}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="fps-counter">FPS: <span id="fps"></span></div>
+</body>
+</html>
