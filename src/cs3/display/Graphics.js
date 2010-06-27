@@ -15,8 +15,8 @@ var Graphics = new Class(Object, function()
     var LINE_STYLE = 12;
     var LINE_TO = 13;
     var MOVE_TO = 14;
-    var BEGIN_LINEAR_GRADIENT = 15;
-    var BEGIN_RADIAL_GRADIENT = 16;
+    var BEGIN_LINEAR_GRADIENT_FILL = 15;
+    var BEGIN_RADIAL_GRADIENT_FILL = 16;
     
     this.__init__ = function()
     {
@@ -37,9 +37,16 @@ var Graphics = new Class(Object, function()
         this.__rect = this.__rect.union(rect);
     };
     
-    this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
+    //this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
+    this.beginBitmapFill = function(bitmap, repeat)
     {
-        //TODO:
+        if (!repeat) { repeat = "repeat"; }
+        
+        // chrome (5.0.375.70) crashes when repeat is 'no-repeat' or 'repeat-y'
+        // so for know force repeat='repeat'
+        repeat = "repeat";
+        
+        this.__commands.push([BEGIN_BITMAP_FILL, bitmap, repeat]);
     };
     
     this.beginFill = function(color, alpha)
@@ -51,7 +58,7 @@ var Graphics = new Class(Object, function()
     this.beginGradientFill = function(type, colors, alphas, ratios, matrix,
             spreadMethod, interpolationMethod, focalPointRatio)
     {
-        throw new Error('Graphics.beginGradientFill is not implemented. use beginLinearGradient and beginRadialGradient instead.');
+        throw new Error('Graphics.beginGradientFill is not implemented. use beginLinearGradientFill and beginRadialGradientFill instead.');
         /*
         var length = colors.length;
         var newColors = colors.splice(0);
@@ -101,7 +108,7 @@ var Graphics = new Class(Object, function()
         */
     };
     
-    this.beginLinearGradient = function(colors, alphas, ratios, x0, y0, x1, y1)
+    this.beginLinearGradientFill = function(colors, alphas, ratios, x0, y0, x1, y1)
     {
         var length = colors.length;
         var newColors = colors.splice(0);
@@ -114,10 +121,10 @@ var Graphics = new Class(Object, function()
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
         }
-        this.__commands.push([BEGIN_LINEAR_GRADIENT, length, newColors, newRatios, x0, y0, x1, y1]);
+        this.__commands.push([BEGIN_LINEAR_GRADIENT_FILL, length, newColors, newRatios, x0, y0, x1, y1]);
     };
     
-    this.beginRadialGradient = function(colors, alphas, ratios, x0, y0, r0, x1, y1, r1)
+    this.beginRadialGradientFill = function(colors, alphas, ratios, x0, y0, r0, x1, y1, r1)
     {
         var length = colors.length;
         var newColors = colors.splice(0);
@@ -130,7 +137,7 @@ var Graphics = new Class(Object, function()
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
         }
-        this.__commands.push([BEGIN_RADIAL_GRADIENT, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
+        this.__commands.push([BEGIN_RADIAL_GRADIENT_FILL, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
     };
     
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
@@ -366,7 +373,16 @@ var Graphics = new Class(Object, function()
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
-                case BEGIN_LINEAR_GRADIENT:
+                case BEGIN_BITMAP_FILL:
+                    if (doFill) { this.__fill(context, fillAlpha); }
+                    var pattern = context.createPattern(cmd[1].__canvas, cmd[2]);
+                    doFill = true;
+                    fillAlpha = 1;
+                    context.beginPath();
+                    context.moveTo(ax, ay);
+                    context.fillStyle = pattern;
+                    break;
+                case BEGIN_LINEAR_GRADIENT_FILL:
                     var length = cmd[1];
                     var colors = cmd[2];
                     var ratios = cmd[3];
@@ -384,7 +400,7 @@ var Graphics = new Class(Object, function()
                     context.moveTo(ax, ay);
                     context.fillStyle = gradient;
                     break;
-                case BEGIN_RADIAL_GRADIENT:
+                case BEGIN_RADIAL_GRADIENT_FILL:
                     var length = cmd[1];
                     var colors = cmd[2];
                     var ratios = cmd[3];
@@ -490,8 +506,9 @@ var Graphics = new Class(Object, function()
                     if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     break;
-                case BEGIN_LINEAR_GRADIENT:
-                case BEGIN_RADIAL_GRADIENT:
+                case BEGIN_BITMAP_FILL:
+                case BEGIN_LINEAR_GRADIENT_FILL:
+                case BEGIN_RADIAL_GRADIENT_FILL:
                 case BEGIN_FILL:
                     if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;

@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="Content-Style-Type" content="text/css" />
-<title>Graphics - BeginLinearGradient</title>
+<title>Graphics - BeginLinearGradientFill</title>
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
@@ -20,7 +20,7 @@ var shape;
 shape = new Shape();
 shape.x = 20;
 shape.y = 20;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 100, 0);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 100, 0);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
@@ -29,7 +29,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 140;
 shape.y = 20;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 100, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 100, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
@@ -38,7 +38,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 260;
 shape.y = 20;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 0, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF], [1, 1], [0, 255], 0, 0, 0, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
@@ -47,7 +47,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 20;
 shape.y = 140;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 100, 0);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 100, 0);
 shape.graphics.drawRect(0, 0, 100, 100);
 stage.addChild(shape);
 
@@ -55,7 +55,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 140;
 shape.y = 140;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 100, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 100, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 stage.addChild(shape);
 
@@ -63,7 +63,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 260;
 shape.y = 140;
-shape.graphics.beginLinearGradient([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 0, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 0, 0, 0, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 stage.addChild(shape);
 
@@ -71,7 +71,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 20;
 shape.y = 260;
-shape.graphics.beginLinearGradient([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 100, 0);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 100, 0);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
@@ -80,7 +80,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 140;
 shape.y = 260;
-shape.graphics.beginLinearGradient([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 100, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 100, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
@@ -89,7 +89,7 @@ stage.addChild(shape);
 shape = new Shape();
 shape.x = 260;
 shape.y = 260;
-shape.graphics.beginLinearGradient([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 0, 100);
+shape.graphics.beginLinearGradientFill([0xFF0000, 0xFF0000], [1, 0], [0, 255], 0, 0, 0, 100);
 shape.graphics.drawRect(0, 0, 100, 100);
 shape.graphics.endFill();
 stage.addChild(shape);
