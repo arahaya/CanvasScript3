@@ -3,27 +3,44 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="Content-Style-Type" content="text/css" />
-<title>BitmapData - Noise</title>
+<title>Graphics - BeginLinearGradient</title>
 <link type="text/css" href="./css/test.css" media="all" rel="Stylesheet" />
 <script type="text/javascript" src="../cs3.js"></script>
 <script type="text/javascript" src="./js/test.js"></script>
 </head>
 <body onload="runCode()">
+<p>Replacement for Graphics.beginGradientFill(type=GradientType.RADIAL)</p>
 <div id="layout">
 <p id="code-label">Code</p>
 <textarea id="code">
 var stage = new Stage("canvas", 420, 500, 30);
+var shape;
 
-var bitmapData = new BitmapData(420, 500, false, 0xFFFFFFFF);
-var bitmap = new Bitmap(bitmapData);
-stage.addChild(bitmap);
+// 2 colors
+shape = new Shape();
+shape.x = 20;
+shape.y = 20;
+shape.graphics.beginRadialGradient([0xFF0000, 0x0000FF], [1, 1], [0, 255], 50, 50, 0, 50, 50, 50);
+shape.graphics.drawRect(0, 0, 100, 100);
+shape.graphics.endFill();
+stage.addChild(shape);
 
-var seed = Math.random();
-var low = 0;
-var high = 255;
-var channel = BitmapDataChannel.RED | BitmapDataChannel.BLUE | BitmapDataChannel.GREEN;
+// 3 colors
+shape = new Shape();
+shape.x = 20;
+shape.y = 140;
+shape.graphics.beginRadialGradient([0xFF0000, 0x0000FF, 0x00FF00], [1, 1, 1], [0, 127, 255], 50, 50, 0, 50, 50, 50);
+shape.graphics.drawRect(0, 0, 100, 100);
+stage.addChild(shape);
 
-bitmapData.noise(seed, low, high, channel, false);
+// alpha
+shape = new Shape();
+shape.x = 20;
+shape.y = 260;
+shape.graphics.beginRadialGradient([0xFF0000, 0xFF0000], [1, 0], [0, 255], 50, 50, 0, 50, 50, 50);
+shape.graphics.drawRect(0, 0, 100, 100);
+shape.graphics.endFill();
+stage.addChild(shape);
 </textarea>
 <input type="button" id="run" value="Run Code" onclick="runCode()" />
 <p id="canvas-label">Canvas</p>

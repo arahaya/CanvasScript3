@@ -2,7 +2,7 @@ var Graphics = new Class(Object, function()
 {
     var BEGIN_BITMAP_FILL = 0;
     var BEGIN_FILL = 1;
-    var BIGIN_GRADIENT_FILL = 2;
+    var BEGIN_GRADIENT_FILL = 2;
     var CLEAR = 3;
     var CURVE_TO = 4;
     var DRAW_ARC = 5;
@@ -15,6 +15,8 @@ var Graphics = new Class(Object, function()
     var LINE_STYLE = 12;
     var LINE_TO = 13;
     var MOVE_TO = 14;
+    var BEGIN_LINEAR_GRADIENT = 15;
+    var BEGIN_RADIAL_GRADIENT = 16;
     
     this.__init__ = function()
     {
@@ -46,9 +48,89 @@ var Graphics = new Class(Object, function()
         this.__commands.push([BEGIN_FILL, color, alpha]);
     };
     
-    this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
+    this.beginGradientFill = function(type, colors, alphas, ratios, matrix,
+            spreadMethod, interpolationMethod, focalPointRatio)
     {
-        //TODO:
+        throw new Error('Graphics.beginGradientFill is not implemented. use beginLinearGradient and beginRadialGradient instead.');
+        /*
+        var length = colors.length;
+        var newColors = colors.splice(0);
+        var newRatios = ratios.splice(0);
+        
+        // convert colors and alphas to argb
+        // convert ratios range to 0-1
+        for (var i = 0; i < length; ++i)
+        {
+            newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
+            newRatios[i] /= 255;
+        }
+        
+        // convert matrix back to createGradientBox parameters
+        // width, height, rotation, tx, ty
+        var a  = matrix.a;
+        var b  = matrix.b;
+        var c  = matrix.c;
+        var d  = matrix.d;
+        var tx = matrix.tx;
+        var ty = matrix.ty;
+        var ac = a * c;
+        var bd = b * d;
+        var amb = (a - b);
+        var cpd = (c + d);
+        
+        var sin = (ac + bd) / (amb * amb + cpd * cpd);
+        var width = Math.sqrt(ac / sin) * 1638.4;
+        var height = Math.sqrt(bd / sin) * 1638.4;
+        var rotation = Math.asin(sin);
+        tx = tx - width / 2.0;
+        ty = ty - height / 2.0;
+        
+        var x0, y0, r0, x1, y1, r1;
+        if (type == GradientType.RADIAL) {
+            // calculate x0, y0, r0, x1, y1, r1
+        }
+        else {
+            // calculate x0, y0, x1, y1
+            x0 = tx;
+            y0 = ty;
+            x1 = height * Math.cos(rotation) + tx;
+            y1 = width  * Math.sin(rotation) + ty;
+        }
+        
+        this.__commands.push([BEGIN_GRADIENT_FILL, type, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
+        */
+    };
+    
+    this.beginLinearGradient = function(colors, alphas, ratios, x0, y0, x1, y1)
+    {
+        var length = colors.length;
+        var newColors = colors.splice(0);
+        var newRatios = ratios.splice(0);
+        
+        // convert colors and alphas to argb
+        // convert ratios range to 0-1
+        for (var i = 0; i < length; ++i)
+        {
+            newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
+            newRatios[i] /= 255;
+        }
+        this.__commands.push([BEGIN_LINEAR_GRADIENT, length, newColors, newRatios, x0, y0, x1, y1]);
+    };
+    
+    this.beginRadialGradient = function(colors, alphas, ratios, x0, y0, r0, x1, y1, r1)
+    {
+        var length = colors.length;
+        var newColors = colors.splice(0);
+        var newRatios = ratios.splice(0);
+        
+        // convert colors and alphas to argb
+        // convert ratios range to 0-1
+        for (var i = 0; i < length; ++i)
+        {
+            newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
+            newRatios[i] /= 255;
+        }
+        this.__commands.push([BEGIN_RADIAL_GRADIENT, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
     };
     
     this.curveTo = function(controlX, controlY, anchorX, anchorY)
@@ -284,6 +366,42 @@ var Graphics = new Class(Object, function()
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
+                case BEGIN_LINEAR_GRADIENT:
+                    var length = cmd[1];
+                    var colors = cmd[2];
+                    var ratios = cmd[3];
+                    var gradient = context.createLinearGradient(cmd[4], cmd[5], cmd[6], cmd[7]);
+                    for (ii = 0; ii < length; ++ii)
+                    {
+                        gradient.addColorStop(ratios[ii], (colorTransform) ?
+                            __toRGBA(colorTransform.transformColor(colors[ii])) :
+                            __toRGBA(colors[ii]));
+                    }
+                    if (doFill) { this.__fill(context, fillAlpha); }
+                    doFill = true;
+                    fillAlpha = 1;
+                    context.beginPath();
+                    context.moveTo(ax, ay);
+                    context.fillStyle = gradient;
+                    break;
+                case BEGIN_RADIAL_GRADIENT:
+                    var length = cmd[1];
+                    var colors = cmd[2];
+                    var ratios = cmd[3];
+                    var gradient = context.createRadialGradient(cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
+                    for (ii = 0; ii < length; ++ii)
+                    {
+                        gradient.addColorStop(ratios[ii], (colorTransform) ?
+                            __toRGBA(colorTransform.transformColor(colors[ii])) :
+                            __toRGBA(colors[ii]));
+                    }
+                    if (doFill) { this.__fill(context, fillAlpha); }
+                    doFill = true;
+                    fillAlpha = 1;
+                    context.beginPath();
+                    context.moveTo(ax, ay);
+                    context.fillStyle = gradient;
+                    break;
                 case DRAW_ARC:
                     ax = cmd[9];
                     ay = cmd[10];
@@ -372,6 +490,8 @@ var Graphics = new Class(Object, function()
                     if (!doStroke) { continue; }
                     context.moveTo(ax, ay);
                     break;
+                case BEGIN_LINEAR_GRADIENT:
+                case BEGIN_RADIAL_GRADIENT:
                 case BEGIN_FILL:
                     if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
                     ax = sx;

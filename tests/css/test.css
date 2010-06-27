@@ -21,14 +21,18 @@ textarea {
 }
 
 p {
-    margin:6px 10px;
+    margin:8px 16px;
     font-size:14px;
 }
 
 #layout {
 	position:relative;
-	margin:0 12px;
+	margin:12px;
 	height:900px;
+}
+
+#layout p {
+	margin:0;
 }
 
 #code-label {
@@ -39,7 +43,7 @@ p {
 }
 #code {
 	position:absolute;
-	top:30px;
+	top:20px;
 	left:0;
 	width:460px;
 	height:480px;
@@ -53,7 +57,7 @@ p {
 }
 #canvas {
 	position:absolute;
-	top:30px;
+	top:20px;
 	left:500px;
 	border:1px solid #ccc;
 	width:420px;
@@ -62,7 +66,7 @@ p {
 
 #run {
 	position:absolute;
-	top:538px;
+	top:528px;
 	left:0;
 	padding:3px;
 }
@@ -75,7 +79,7 @@ p {
 }
 #output {
 	position:absolute;
-	top:570px;
+	top:560px;
 	left:0;
 	width:900px;
 	height:280px;

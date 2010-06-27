@@ -23,12 +23,12 @@ var ByteArray = new Class(Array, function()
         if (n <= FLOAT_NEGATIVE_INFINITY) {
             return [0xff, 0x80, 0x00, 0x00];
         }
-        if (Math.abs(n) === 0) {
+        if (n === 0) {
             return [0x00, 0x00, 0x00, 0x00];
         }
         
         var s = n < 0 ? 0x80 : 0;
-        var t = Math.log(Math.abs(n)) / Math.LN2;
+        var t = Math.log((s ? -n : n)) / 0.6931471805599453;
         var p = Math.floor(t);
         var e, m;
 
@@ -41,18 +41,19 @@ var ByteArray = new Class(Array, function()
             m = float_psgnd * (Math.pow(2, t - p) - 1);
         }
 
-        var result = [];
-        for (var i = 0; i < 3; i++)
+        var result = [0, 0, 0, 0];
+        for (var i = 3; i > 0; --i)
         {
             var x = Math.floor(m / 0x100);
-            result.push(m - x * 0x100);
+            result[i] = m - x * 0x100;
             m = x;
         }
 
-        result[0] = Math.round(result[0]);
-        result[result.length - 1] += (e & 0x01) << (8 - 1);
-        result.push((e >> 1) + s);
-        return result.reverse();
+        result[3]  = (result[3] + 0.5) | 0;
+        result[1] += (e & 0x01) << 7;
+        result[0]  = (e >> 1) + s;
+        
+        return result;
     }
     
     function doubleToBytes(n)
@@ -66,12 +67,12 @@ var ByteArray = new Class(Array, function()
         if (n <= DOUBLE_NEGATIVE_INFINITY) {
             return [0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         }
-        if (Math.abs(n) === 0) {
+        if (n === 0) {
             return [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         }
         
         var s = n < 0 ? 0x80 : 0;
-        var t = Math.log(Math.abs(n)) / Math.LN2;
+        var t = Math.log((s ? -n : n)) / 0.6931471805599453;
         var p = Math.floor(t);
         var e, m;
 
@@ -84,18 +85,19 @@ var ByteArray = new Class(Array, function()
             m = double_psgnd * (Math.pow(2, t - p) - 1);
         }
 
-        var result = [];
-        for (var i = 0; i < 7; i++)
+        var result = [0, 0, 0, 0, 0, 0, 0, 0];
+        for (var i = 7; i > 0; --i)
         {
             var x = Math.floor(m / 0x100);
-            result.push(m - x * 0x100);
+            result[i] = m - x * 0x100;
             m = x;
         }
-
-        result[0] = Math.round(result[0]);
-        result[result.length - 1] += (e & 0x0f) << (8 - 4);
-        result.push((e >> 4) + s);
-        return result.reverse();
+        
+        result[7]  = (result[7] + 0.5) | 0;
+        result[1] += (e & 0x0f) << 4;
+        result[0]  = (e >> 4) + s;
+        
+        return result;
     }
     
     function bytesToNumber(bytes, bias, pbias, psgnd)

@@ -537,7 +537,6 @@ var BitmapData = new Class(Object, function()
         
         var i;
         if (grayScale) {
-            var randomValue;
             for (i = 0; i < length;)
             {
                 randomSeed = (randomSeed * 9301 + 49297) % 233280;
