@@ -13,7 +13,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var bounds = this.__getContentBounds();
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childBounds = child.__getBounds();
@@ -27,7 +27,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var rect = this.__getContentRect();
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childRect = child.__getRect();
@@ -40,21 +40,24 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
-        for (var i = children.length - 1; i >= 0; --i)
+        for (var i = children.length - 1; i >= 0; --i) 
         {
             var child = children[i];
-            if (child.__visible) {
+            if (child.__visible) 
+            {
                 var childMatrix = child.__transform.__matrix.clone();
                 childMatrix.concat(matrix);
                 var result = child.__getObjectUnderPoint(context, childMatrix, point);
-                if (result) {
+                if (result) 
+                {
                     return result;
                 }
             }
         }
         
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-        if (this.__hitTestPoint(context, matrix, point)) {
+        if (this.__hitTestPoint(context, matrix, point)) 
+        {
             return this;
         }
         return null;
@@ -69,7 +72,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         // update children first
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
@@ -78,7 +81,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         
         // update your self
-        if (update) {
+        if (update) 
+        {
             summary.modified++;
             
             // collect redraw regions
@@ -87,7 +91,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             var lastGlobalBounds = this.__globalBounds;
             
             redrawRegions[redrawRegions.length] = globalBounds;
-            if (lastGlobalBounds) {
+            if (lastGlobalBounds) 
+            {
                 redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
@@ -103,12 +108,18 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var children = this.__children;
         var render = DisplayObject.prototype.__render;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             
-            if (child.__visible === false) { continue; }
-            if (child.__maskee !== null) { continue; }
+            if (child.__visible === false) 
+            {
+                continue;
+            }
+            if (child.__maskee !== null) 
+            {
+                continue;
+            }
             
             var childMatrix = child.__transform.__matrix;
             var childColor = child.__transform.__colorTransform.clone();
@@ -126,20 +137,24 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.__addChildAt = function(child, index)
     {
-        if (!(child instanceof DisplayObject)) {
+        if (!(child instanceof DisplayObject)) 
+        {
             throw new ArgumentError("child is not a DisplayObject");
         }
-        if (child.__parent === this) {
+        if (child.__parent === this) 
+        {
             return;
         }
-        if (child.__parent !== null) {
+        if (child.__parent !== null) 
+        {
             child.__parent.removeChild(child);
         }
         
         this.__children.splice(index, 0, child);
         child.dispatchEvent(new Event(Event.ADDED, true, false));
         child.__parent = this;
-        if (this.__stage) {
+        if (this.__stage) 
+        {
             __applyDown(child, function(stage, event)
             {
                 this.__stage = this.__root = stage;
@@ -155,12 +170,16 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         var child = this.__children[index];
         
         // add redraw regions
-        child.__update(child.__transform.__get__concatenatedMatrix(), true, {total:0, modified:0});
+        child.__update(child.__transform.__get__concatenatedMatrix(), true, {
+            total: 0,
+            modified: 0
+        });
         
         this.__children.splice(index, 1);
         child.__parent = null;
         child.dispatchEvent(new Event(Event.REMOVED, true, false));
-        if (this.__stage) {
+        if (this.__stage) 
+        {
             __applyDown(child, function(stage, event)
             {
                 this.__stage = this.__root = null;
@@ -174,13 +193,15 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.contains = function(object)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
-            if (child === object) {
+            if (child === object) 
+            {
                 return true;
             }
-            if (child instanceof DisplayObjectContainer && child.contains(object)) {
+            if (child instanceof DisplayObjectContainer && child.contains(object)) 
+            {
                 return true;
             }
         }
@@ -194,7 +215,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.addChildAt = function(child, index)
     {
-        if (index < 0 || index > this.__children.length) {
+        if (index < 0 || index > this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -203,7 +225,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.getChildAt = function(index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -213,8 +236,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.getChildByName = function(name)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i) {
-            if (children[i].name == name) {
+        for (var i = 0, l = children.length; i < l; ++i) 
+        {
+            if (children[i].name == name) 
+            {
                 return children[i];
             }
         }
@@ -224,8 +249,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.getChildIndex = function(child)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i) {
-            if (children[i] == child) {
+        for (var i = 0, l = children.length; i < l; ++i) 
+        {
+            if (children[i] == child) 
+            {
                 return i;
             }
         }
@@ -236,10 +263,12 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.removeChild = function(child)
     {
         var index;
-        try {
+        try 
+        {
             index = this.getChildIndex(child);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         return this.__removeChildAt(index);
@@ -247,7 +276,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.removeChildAt = function(index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -256,15 +286,18 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.setChildIndex = function(child, index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
         var oldIndex;
-        try {
+        try 
+        {
             oldIndex = this.getChildIndex(child);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         
@@ -276,11 +309,13 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.swapChildren = function(child1, child2)
     {
         var index1, index2;
-        try {
+        try 
+        {
             index1 = this.getChildIndex(child1);
             index2 = this.getChildIndex(child2);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         
@@ -293,8 +328,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var children = this.__children;
         var length = children.length;
-        if (index1 < 0 || index1 >= length ||
-            index2 < 0 || index2 >= length) {
+        if (index1 < 0 || index1 >= length || index2 < 0 || index2 >= length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         

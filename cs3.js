@@ -591,22 +591,27 @@ var Event = new Class(Object, function()
         this.__stopImmediatePropagation = false;
         this.__stopPropagation = false;
     };
+    
     this.clone = function()
     {
         return new Event(this.type, this.bubbles, this.cancelable);
     };
+    
     this.isDefaultPrevented = function()
     {
         return this.__preventDefault;
     };
+    
     this.preventDefault = function()
     {
         this.__preventDefault = true;
     };
+    
     this.stopImmediatePropagation = function()
     {
         this.__stopImmediatePropagation = true;
     };
+    
     this.stopPropagation = function()
     {
         this.__stopPropagation = true;
@@ -650,6 +655,7 @@ var HTTPStatusEvent = new Class(Event, function()
         Event.call(this, type, bubbles, cancelable);
         this.status = status | 0;
     };
+	
     this.clone = function()
     {
         return new HTTPStatusEvent(this.type, this.bubbles, this.cancelable, this.status);
@@ -657,8 +663,10 @@ var HTTPStatusEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[HTTPStatusEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' status=' + this.status + ']';
+        return '[HTTPStatusEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' status=' + this.status + ']';
     };
 });
 HTTPStatusEvent.HTTP_STATUS = 'httpStatus';
@@ -669,6 +677,7 @@ var IOErrorEvent = new Class(Event, function()
         Event.call(this, type, bubbles, cancelable);
         this.text = (text !== undefined) ? text : "IOError";
     };
+    
     this.clone = function()
     {
         return new IOErrorEvent(this.type, this.bubbles, this.cancelable, this.text);
@@ -676,8 +685,10 @@ var IOErrorEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[IOErrorEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' text=' + this.text + ']';
+        return '[IOErrorEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' text=' + this.text + ']';
     };
 });
 IOErrorEvent.IO_ERROR = 'ioError';
@@ -693,11 +704,12 @@ var KeyboardEvent = new Class(Event, function()
         this.keyLocation = keyLocation || 0;
         this.shiftKey = (shiftKey) ? true : false;
     };
+    
     this.clone = function()
     {
-        return new KeyboardEvent(this.type, this.bubbles, this.cancelable,
-            this.charCode, this.keyCode, this.keyLocation, this.ctrlKey, this.altKey, this.shiftKey);
+        return new KeyboardEvent(this.type, this.bubbles, this.cancelable, this.charCode, this.keyCode, this.keyLocation, this.ctrlKey, this.altKey, this.shiftKey);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -705,9 +717,15 @@ var KeyboardEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[KeyboardEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' charCode=' + this.charCode + ' keyCode=' + this.keyCode + ' keyLocation=' + this.keyLocation +
-            ' ctrlKey=' + this.ctrlKey + ' altKey=' + this.altKey + ' shiftKey=' + this.shiftKey + ']';
+        return '[KeyboardEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' charCode=' + this.charCode +
+                ' keyCode=' + this.keyCode +
+                ' keyLocation=' + this.keyLocation +
+                ' ctrlKey=' + this.ctrlKey +
+                ' altKey=' + this.altKey +
+                ' shiftKey=' + this.shiftKey + ']';
     };
 });
 KeyboardEvent.KEY_DOWN = 'keyDown';
@@ -726,11 +744,12 @@ var MouseEvent = new Class(Event, function()
         this.__localY = (localY !== undefined) ? localY : null;
         this.relatedObject = relatedObject || null;
     };
+    
     this.clone = function()
     {
-        return new MouseEvent(this.type, this.bubbles, this.cancelable,
-            this.__localX, this.__localY, this.relatedObject, this.ctrlKey, this.altKey, this.shiftKey, this.buttonDown, this.delta);
+        return new MouseEvent(this.type, this.bubbles, this.cancelable, this.__localX, this.__localY, this.relatedObject, this.ctrlKey, this.altKey, this.shiftKey, this.buttonDown, this.delta);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -738,28 +757,35 @@ var MouseEvent = new Class(Event, function()
     
     this.__get__localX = function()
     {
-        if (this.__localX !== null) {
+        if (this.__localX !== null)
+        {
             return this.__localX;
         }
         return this.currentTarget.__get__mouseX();
     };
+    
     this.__get__localY = function()
     {
-        if (this.__localY !== null) {
+        if (this.__localY !== null)
+        {
             return this.__localY;
         }
         return this.currentTarget.__get__mouseY();
     };
+    
     this.__get__stageX = function()
     {
-        if (this.__localX !== null) {
+        if (this.__localX !== null)
+        {
             return this.currentTarget.localToGlobal(new Point(this.__localX, 0)).x;
         }
         return this.target.__stage.__mouseX;
     };
+    
     this.__get__stageY = function()
     {
-        if (this.__localY !== null) {
+        if (this.__localY !== null)
+        {
             return this.currentTarget.localToGlobal(new Point(this.__localY, 0)).y;
         }
         return this.currentTarget.__stage.__mouseY;
@@ -767,7 +793,9 @@ var MouseEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+        return '[MouseEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
     };
 });
 MouseEvent.CLICK = 'click';
@@ -788,6 +816,7 @@ var ProgressEvent = new Class(Event, function()
         this.bytesLoaded = bytesLoaded | 0;
         this.bytesTotal = bytesTotal | 0;
     };
+    
     this.clone = function()
     {
         return new ProgressEvent(this.type, this.bubbles, this.cancelable, this.bytesLoaded, this.bytesTotal);
@@ -795,8 +824,11 @@ var ProgressEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[ProgressEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' bytesLoaded=' + this.bytesLoaded + ' bytesTotal=' + this.bytesTotal + ']';
+        return '[ProgressEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' bytesLoaded=' + this.bytesLoaded +
+                ' bytesTotal=' + this.bytesTotal + ']';
     };
 });
 ProgressEvent.PROGRESS = 'progress';
@@ -806,10 +838,12 @@ var TimerEvent = new Class(Event, function()
     {
         Event.call(this, type, bubbles, cancelable);
     };
+    
     this.clone = function()
     {
         return new TimerEvent(this.type, this.bubbles, this.cancelable);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -817,7 +851,9 @@ var TimerEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+        return '[TimerEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
     };
 });
 TimerEvent.TIMER = 'timer';
@@ -830,19 +866,19 @@ var TweenEvent = new Class(Event, function()
         this.time = time;
         this.position = position;
     };
+    
     this.clone = function()
     {
-        return new TweenEvent(this.type, this.time, this.position,
-                        this.bubbles, this.cancelable);
+        return new TweenEvent(this.type, this.time, this.position, this.bubbles, this.cancelable);
     };
     
     this.toString = function()
     {
         return '[TweenEvent' +
-                ' type='       + this.type +
-                ' time='       + this.time +
-                ' position='   + this.position +
-                ' bubbles='    + this.bubbles +
+                ' type=' + this.type +
+                ' time=' + this.time +
+                ' position=' + this.position +
+                ' bubbles=' + this.bubbles +
                 ' cancelable=' + this.cancelable + ']';
     };
 });
@@ -857,15 +893,25 @@ var EventDispatcher = new Class(Object, function()
     var sortByPriority = function(a, b)
     {
         var p = 'priority';
-        if (a[p] < b[p]) { return 1; }
-        else if (a[p] > b[p]){ return -1; }
-        else { return 0; }
+        if (a[p] < b[p]) 
+        {
+            return 1;
+        }
+        else if (a[p] > b[p]) 
+        {
+            return -1;
+        }
+        else 
+        {
+            return 0;
+        }
     };
     
     this.__init__ = function()
     {
         this.__events = {};
     };
+    
     /**
      * obj.addEventListener(type, listener, useCapture, priority);
      * obj.addEventListener(type, [scope, listener], useCapture, priority);
@@ -876,14 +922,17 @@ var EventDispatcher = new Class(Object, function()
         //TODO useCapture
         var events = this.__events;
         
-        if (listener instanceof Function) {
+        if (listener instanceof Function) 
+        {
             listener = new EventListener(this, listener, useCapture, priority);
         }
-        else if (listener instanceof Array) {
+        else if (listener instanceof Array) 
+        {
             listener = new EventListener(listener[0], listener[1], useCapture, priority);
         }
         
-        if (events[type] === undefined) {
+        if (events[type] === undefined) 
+        {
             events[type] = [];
         }
         
@@ -891,6 +940,7 @@ var EventDispatcher = new Class(Object, function()
         listeners.push(listener);
         listeners.sort(sortByPriority);
     };
+    
     this.dispatchEvent = function(event)
     {
         //TODO useCapture, priority
@@ -898,30 +948,36 @@ var EventDispatcher = new Class(Object, function()
         //event = event.clone()
         
         //target only gets set once
-        if (!event.target) {
+        if (!event.target) 
+        {
             event.target = this;
         }
         event.currentTarget = this;
         
         var listeners = this.__events[event.type];
-        if (listeners !== undefined) {
-            for (var i = 0, l = listeners.length; i < l; ++i) {
+        if (listeners !== undefined) 
+        {
+            for (var i = 0, l = listeners.length; i < l; ++i) 
+            {
                 //events[i].call(this, event);
                 //events[i](event);
                 listeners[i].call(event);
             }
         }
-        if (event.bubbles && this.__parent) {
+        if (event.bubbles && this.__parent) 
+        {
             //var clone = event.clone();
             //pass the same target to the next event
             //clone.target = event.target;
             //return this.__parent.dispatchEvent(clone);
             return this.__parent.dispatchEvent(event);
         }
-        else {
+        else 
+        {
             return true;
         }
     };
+    
     this.hasEventListener = function(type)
     {
         return (this.__events[type] !== undefined);
@@ -936,29 +992,37 @@ var EventDispatcher = new Class(Object, function()
     {
         //TODO useCapture
         var listeners = this.__events[type];
-        if (listeners === undefined) { return; }
+        if (listeners === undefined) 
+        {
+            return;
+        }
         
-        if (listener instanceof Function) {
+        if (listener instanceof Function) 
+        {
             listener = new EventListener(this, listener, useCapture);
         }
-        else if (listener instanceof Array) {
+        else if (listener instanceof Array) 
+        {
             listener = new EventListener(listener[0], listener[1], useCapture);
         }
         
-        for (var i = 0, l = listeners.length; i < l; ++i)
+        for (var i = 0, l = listeners.length; i < l; ++i) 
         {
-            if (listener.equals(listeners[i])) {
+            if (listener.equals(listeners[i])) 
+            {
                 listeners.splice(i, 1);
             }
         }
     };
+    
     this.willTrigger = function(type)
     {
         //TODO is this correct?
         var target = this;
-        while (target)
+        while (target) 
         {
-            if (target.hasEventListener(type)) {
+            if (target.hasEventListener(type)) 
+            {
                 return true;
             }
             target = target.__parent;
@@ -977,18 +1041,30 @@ var EventListener = new Class(Object, function()
     {
         this.scope = scope;
         this.callback = callback;
-        this.useCapture = (useCapture) ? true : false;
+        this.useCapture = useCapture ? true : false;
         this.priority = priority | 0;
     };
+    
     this.call = function()
     {
         this.callback.apply(this.scope, arguments);
     };
+    
     this.equals = function(toCompare)
     {
-        return (toCompare.scope      === this.scope &&
-                toCompare.callback   === this.callback &&
-                toCompare.useCapture === this.useCapture) ? true : false;
+        if (toCompare.scope !== this.scope)
+        {
+            return false;
+        }
+        if (toCompare.callback !== this.callback)
+        {
+            return false;
+        }
+        if (toCompare.useCapture !== this.useCapture)
+        {
+            return false;
+        }
+        return true;
     };
     
     this.toString = function()
@@ -1036,14 +1112,16 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
-        if (bounds.isEmpty()) {
+        if (bounds.isEmpty()) 
+        {
             //if bounds is empty we can't create a BitmapData.
             return null;
         }
         
         var bitmap = this.__bitmap;
         var bitmapData;
-        if (bitmap === null) {
+        if (bitmap === null) 
+        {
             bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
             bitmap.__set__x(bounds.x);
             bitmap.__set__y(bounds.y);
@@ -1052,11 +1130,13 @@ var DisplayObject = new Class(EventDispatcher, function()
         //TODO: check if the bitmap needs to be rendered
         //always true for now
         var render = false;
-        if (true) {
+        if (true) 
+        {
             render = true;
         }
         
-        if (render) {
+        if (render) 
+        {
             //update the position
             bitmap.__set__x(bounds.x);
             bitmap.__set__y(bounds.y);
@@ -1072,13 +1152,7 @@ var DisplayObject = new Class(EventDispatcher, function()
             
             //render the entire list to the bitmapdata context
             context.save();
-            context.setTransform(
-                matrix.a,
-                matrix.b,
-                matrix.c,
-                matrix.d,
-                matrix.tx,
-                matrix.ty);
+            context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
             this.__render(context, new ColorTransform());
             context.restore();
         }
@@ -1116,7 +1190,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-        if (this.__hitTestPoint(context, matrix, point)) {
+        if (this.__hitTestPoint(context, matrix, point)) 
+        {
             return this;
         }
         return null;
@@ -1138,9 +1213,10 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__applyContextFilters = function(context)
     {
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (var i = 0, l = filters.length; i < l; ++i) 
         {
-            if (filters[i] instanceof ContextFilter) {
+            if (filters[i] instanceof ContextFilter) 
+            {
                 filters[i].__filter(context, this);
             }
         }
@@ -1150,13 +1226,15 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         /*** experimental ***/
         var selfBitmap = this.__getAsBitmap();
-        if (!selfBitmap) {
+        if (!selfBitmap) 
+        {
             //child content is empty so we don't need to apply a mask
             return;
         }
         var mask = this.__mask;
         var maskBitmap = mask.__getAsBitmap();
-        if (!maskBitmap) {
+        if (!maskBitmap) 
+        {
             //mask content is empty so we don't need to render the child
             return;
         }
@@ -1165,12 +1243,14 @@ var DisplayObject = new Class(EventDispatcher, function()
         var maskBitmapData = maskBitmap.__bitmapData;
         
         //create another bitmap to apply the mask
-        if (this.__cache) {
+        if (this.__cache) 
+        {
             //if it already exists, reuse it
             this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
             this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
         }
-        else {
+        else 
+        {
             //create a new bitmap
             this.__cache = new Bitmap(selfBitmapData.clone());
         }
@@ -1196,30 +1276,29 @@ var DisplayObject = new Class(EventDispatcher, function()
         //apply the mask
         bitmapDataContext.save();
         bitmapDataContext.globalCompositeOperation = 'destination-in';
-        bitmapDataContext.setTransform(
-            maskMatrix.a,
-            maskMatrix.b,
-            maskMatrix.c,
-            maskMatrix.d,
-            maskMatrix.tx,
-            maskMatrix.ty);
+        bitmapDataContext.setTransform(maskMatrix.a, maskMatrix.b, maskMatrix.c, maskMatrix.d, maskMatrix.tx, maskMatrix.ty);
         maskBitmapData.__render(bitmapDataContext, null);
         bitmapDataContext.restore();
     };
     
     this.__render = function(context, colorTransform)
     {
-        if (this.__filters.length) {
+        if (this.__filters.length) 
+        {
             this.__applyContextFilters(context);
         }
-        if (this.__mask) {
+        
+        if (this.__mask) 
+        {
             this.__applyMask();
         }
         
-        if (this.__cache) {
+        if (this.__cache) 
+        {
             this.__cache.__render(context, colorTransform);
         }
-        else {
+        else 
+        {
             this.__render(context, colorTransform);
         }
     };
@@ -1228,7 +1307,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         summary.total++;
         
-        if (forceUpdate || this.__getModified()) {
+        if (forceUpdate || this.__getModified()) 
+        {
             summary.modified++;
             
             // collect redraw regions
@@ -1237,7 +1317,8 @@ var DisplayObject = new Class(EventDispatcher, function()
             var lastGlobalBounds = this.__globalBounds;
             
             redrawRegions[redrawRegions.length] = globalBounds;
-            if (lastGlobalBounds) {
+            if (lastGlobalBounds) 
+            {
                 redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
@@ -1253,15 +1334,18 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         var bounds = this.__getBounds();
         targetCoordinateSpace = targetCoordinateSpace || this.__root || this;
-        if (targetCoordinateSpace === this) {
+        if (targetCoordinateSpace === this) 
+        {
             return bounds;
         }
-        if (targetCoordinateSpace === this.__parent) {
+        if (targetCoordinateSpace === this.__parent) 
+        {
             return this.__transform.__matrix.transformRect(bounds);
         }
         
         var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(bounds);
-        if (targetCoordinateSpace === this.__root) {
+        if (targetCoordinateSpace === this.__root) 
+        {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
@@ -1293,12 +1377,15 @@ var DisplayObject = new Class(EventDispatcher, function()
     
     this.hitTestPoint = function(x, y, shapeFlag)
     {
-        if (shapeFlag === false) {
+        if (shapeFlag === false) 
+        {
             var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);
         }
-        else {
-            if (!this.__stage) {
+        else 
+        {
+            if (!this.__stage) 
+            {
                 //if shape flag is true and object is not addet to the stage
                 //always return false;
                 return false;
@@ -1327,7 +1414,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     /* getters and setters */
     this.__get__name = function()
     {
-        if (this.__name === null) {
+        if (this.__name === null) 
+        {
             return "instance" + this.__id;
         }
         return this.__name;
@@ -1453,11 +1541,13 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__set__mask = function(v)
     {
         //if the mask object is allready a mask of a different object remove it
-        if (v.__maskee) {
+        if (v.__maskee) 
+        {
             v.__maskee.__mask = null;
         }
         //if this allready has a mask remove it
-        if (this.__mask) {
+        if (this.__mask) 
+        {
             this.__mask.__maskee = null;
         }
         this.__mask = v;
@@ -1472,10 +1562,11 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__set__filters = function(v)
     {
         this.__cache = null;
-        for (var i = 0, l = v.length; i < l; ++i)
+        for (var i = 0, l = v.length; i < l; ++i) 
         {
             //only apply bitmapFilters
-            if (v[i] instanceof BitmapFilter) {
+            if (v[i] instanceof BitmapFilter) 
+            {
                 v[i].__apply(this);
             }
         }
@@ -1531,7 +1622,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var bounds = this.__getContentBounds();
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childBounds = child.__getBounds();
@@ -1545,7 +1636,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var rect = this.__getContentRect();
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childRect = child.__getRect();
@@ -1558,21 +1649,24 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         var children = this.__children;
-        for (var i = children.length - 1; i >= 0; --i)
+        for (var i = children.length - 1; i >= 0; --i) 
         {
             var child = children[i];
-            if (child.__visible) {
+            if (child.__visible) 
+            {
                 var childMatrix = child.__transform.__matrix.clone();
                 childMatrix.concat(matrix);
                 var result = child.__getObjectUnderPoint(context, childMatrix, point);
-                if (result) {
+                if (result) 
+                {
                     return result;
                 }
             }
         }
         
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-        if (this.__hitTestPoint(context, matrix, point)) {
+        if (this.__hitTestPoint(context, matrix, point)) 
+        {
             return this;
         }
         return null;
@@ -1587,7 +1681,7 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         
         // update children first
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
@@ -1596,7 +1690,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         }
         
         // update your self
-        if (update) {
+        if (update) 
+        {
             summary.modified++;
             
             // collect redraw regions
@@ -1605,7 +1700,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
             var lastGlobalBounds = this.__globalBounds;
             
             redrawRegions[redrawRegions.length] = globalBounds;
-            if (lastGlobalBounds) {
+            if (lastGlobalBounds) 
+            {
                 redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
@@ -1621,12 +1717,18 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var children = this.__children;
         var render = DisplayObject.prototype.__render;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             
-            if (child.__visible === false) { continue; }
-            if (child.__maskee !== null) { continue; }
+            if (child.__visible === false) 
+            {
+                continue;
+            }
+            if (child.__maskee !== null) 
+            {
+                continue;
+            }
             
             var childMatrix = child.__transform.__matrix;
             var childColor = child.__transform.__colorTransform.clone();
@@ -1644,20 +1746,24 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.__addChildAt = function(child, index)
     {
-        if (!(child instanceof DisplayObject)) {
+        if (!(child instanceof DisplayObject)) 
+        {
             throw new ArgumentError("child is not a DisplayObject");
         }
-        if (child.__parent === this) {
+        if (child.__parent === this) 
+        {
             return;
         }
-        if (child.__parent !== null) {
+        if (child.__parent !== null) 
+        {
             child.__parent.removeChild(child);
         }
         
         this.__children.splice(index, 0, child);
         child.dispatchEvent(new Event(Event.ADDED, true, false));
         child.__parent = this;
-        if (this.__stage) {
+        if (this.__stage) 
+        {
             __applyDown(child, function(stage, event)
             {
                 this.__stage = this.__root = stage;
@@ -1673,12 +1779,16 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
         var child = this.__children[index];
         
         // add redraw regions
-        child.__update(child.__transform.__get__concatenatedMatrix(), true, {total:0, modified:0});
+        child.__update(child.__transform.__get__concatenatedMatrix(), true, {
+            total: 0,
+            modified: 0
+        });
         
         this.__children.splice(index, 1);
         child.__parent = null;
         child.dispatchEvent(new Event(Event.REMOVED, true, false));
-        if (this.__stage) {
+        if (this.__stage) 
+        {
             __applyDown(child, function(stage, event)
             {
                 this.__stage = this.__root = null;
@@ -1692,13 +1802,15 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.contains = function(object)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
-            if (child === object) {
+            if (child === object) 
+            {
                 return true;
             }
-            if (child instanceof DisplayObjectContainer && child.contains(object)) {
+            if (child instanceof DisplayObjectContainer && child.contains(object)) 
+            {
                 return true;
             }
         }
@@ -1712,7 +1824,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.addChildAt = function(child, index)
     {
-        if (index < 0 || index > this.__children.length) {
+        if (index < 0 || index > this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -1721,7 +1834,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.getChildAt = function(index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -1731,8 +1845,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.getChildByName = function(name)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i) {
-            if (children[i].name == name) {
+        for (var i = 0, l = children.length; i < l; ++i) 
+        {
+            if (children[i].name == name) 
+            {
                 return children[i];
             }
         }
@@ -1742,8 +1858,10 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.getChildIndex = function(child)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i) {
-            if (children[i] == child) {
+        for (var i = 0, l = children.length; i < l; ++i) 
+        {
+            if (children[i] == child) 
+            {
                 return i;
             }
         }
@@ -1754,10 +1872,12 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.removeChild = function(child)
     {
         var index;
-        try {
+        try 
+        {
             index = this.getChildIndex(child);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         return this.__removeChildAt(index);
@@ -1765,7 +1885,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.removeChildAt = function(index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -1774,15 +1895,18 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     
     this.setChildIndex = function(child, index)
     {
-        if (index < 0 || index >= this.__children.length) {
+        if (index < 0 || index >= this.__children.length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
         var oldIndex;
-        try {
+        try 
+        {
             oldIndex = this.getChildIndex(child);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         
@@ -1794,11 +1918,13 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     this.swapChildren = function(child1, child2)
     {
         var index1, index2;
-        try {
+        try 
+        {
             index1 = this.getChildIndex(child1);
             index2 = this.getChildIndex(child2);
-        }
-        catch (e) {
+        } 
+        catch (e) 
+        {
             throw e;//ArgumentError
         }
         
@@ -1811,8 +1937,8 @@ var DisplayObjectContainer = new Class(InteractiveObject, function()
     {
         var children = this.__children;
         var length = children.length;
-        if (index1 < 0 || index1 >= length ||
-            index2 < 0 || index2 >= length) {
+        if (index1 < 0 || index1 >= length || index2 < 0 || index2 >= length) 
+        {
             throw new RangeError('The supplied index is out of bounds.');
         }
         
@@ -1846,7 +1972,8 @@ var Bitmap = new Class(DisplayObject, function()
         
         this.__bitmapData = null;
         
-        if (bitmapData) {
+        if (bitmapData) 
+        {
             this.__set__bitmapData(bitmapData);
         }
     };
@@ -1854,7 +1981,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getContentBounds = function()
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             return this.__bitmapData.__rect.clone();
         }
         return new Rectangle();
@@ -1863,7 +1991,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getAsBitmap = function()
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             return this;
         }
         return null;
@@ -1872,9 +2001,19 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getModified = function()
     {
-        return (this.__modified ||
-                this.__transform.__modified ||
-                (this.__bitmapData && this.__bitmapData.__modified));
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        if (this.__bitmapData && this.__bitmapData.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     //override
@@ -1882,7 +2021,8 @@ var Bitmap = new Class(DisplayObject, function()
     {
         this.__modified = v;
         this.__transform.__modified = v;
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             this.__bitmapData.__modified = v;
         }
     };
@@ -1890,7 +2030,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__render = function(context, colorTransform)
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             this.__bitmapData.__render(context, colorTransform);
         }
     };
@@ -1898,7 +2039,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             var bounds = this.__getContentBounds();
             
             //convert point to local coords
@@ -1906,16 +2048,22 @@ var Bitmap = new Class(DisplayObject, function()
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
             
-            if (bounds.containsPoint(localPoint)) {
+            if (bounds.containsPoint(localPoint)) 
+            {
                 //fix the points back to ints
                 localPoint.x = localPoint.x | 0;
                 localPoint.y = localPoint.y | 0;
-                try {
+                try 
+                {
                     return (this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1).data[3] !== 0);
-                }
-                catch (e) {
-                    // if the bitmap source is on a different domain and we cant call getImageData
-                    // return true as if it was a hitTest with shapeflag=false
+                } 
+                catch (e) 
+                {
+                    /**
+                     * if the bitmap source is on a different domain
+                     * we can't call getImageData so return true
+                     * as if it was a hitTest with shapeflag=false
+                     */
                     return true;
                 }
             }
@@ -1991,14 +2139,14 @@ var BitmapData = new Class(Object, function()
         var stackLength;
         var pop = [x, y];
         var spanLeft, spanRight, p;
-        while (pop)
+        while (pop) 
         {
             x = pop[0];
             y = pop[1];
             p = (y * LINESIZE) + (x * 4);
             stackLength = stack.length;
             
-            while (y >= 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3))
+            while (y >= 0 && (data[p] === T0 && data[p + 1] === T1 && data[p + 2] === T2 && data[p + 3] === T3)) 
             {
                 --y;
                 p -= LINESIZE;
@@ -2007,29 +2155,33 @@ var BitmapData = new Class(Object, function()
             p += LINESIZE;
             spanLeft = spanRight = 0;
             
-            while (y < height && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3))
+            while (y < height && (data[p] === T0 && data[p + 1] === T1 && data[p + 2] === T2 && data[p + 3] === T3)) 
             {
                 //replace node color
-                data[p]   = R0;
-                data[p+1] = R1;
-                data[p+2] = R2;
-                data[p+3] = R3;
+                data[p] = R0;
+                data[p + 1] = R1;
+                data[p + 2] = R2;
+                data[p + 3] = R3;
                 
                 p -= 4;//x - 1
-                if (!spanLeft && x > 0 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
+                if (!spanLeft && x > 0 && (data[p] === T0 && data[p + 1] === T1 && data[p + 2] === T2 && data[p + 3] === T3)) 
+                {
                     stack[stackLength++] = [x - 1, y];
                     spanLeft = 1;
                 }
-                else if (spanLeft && x > 0 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
+                else if (spanLeft && x > 0 && (data[p] !== T0 || data[p + 1] !== T1 || data[p + 2] !== T2 || data[p + 3] !== T3)) 
+                {
                     spanLeft = 0;
                 }
                 
                 p += 8;//x + 1
-                if (!spanRight && x < WIDTH_M1 && (data[p] === T0 && data[p+1] === T1 && data[p+2] === T2 && data[p+3] === T3)) {
+                if (!spanRight && x < WIDTH_M1 && (data[p] === T0 && data[p + 1] === T1 && data[p + 2] === T2 && data[p + 3] === T3)) 
+                {
                     stack[stackLength++] = [x + 1, y];
                     spanRight = 1;
                 }
-                else if (spanRight && x < WIDTH_M1 && (data[p] !== T0 || data[p+1] !== T1 || data[p+2] !== T2 || data[p+3] !== T3)) {
+                else if (spanRight && x < WIDTH_M1 && (data[p] !== T0 || data[p + 1] !== T1 || data[p + 2] !== T2 || data[p + 3] !== T3)) 
+                {
                     spanRight = 0;
                 }
                 p -= 4;
@@ -2045,9 +2197,10 @@ var BitmapData = new Class(Object, function()
     this.__init__ = function(width, height, transparent, fillColor)
     {
         //transparent=false doesn't work
-        width  = width  | 0;
+        width = width | 0;
         height = height | 0;
-        if (!width || !height || width > 2880 || height > 2880) {
+        if (!width || !height || width > 2880 || height > 2880) 
+        {
             throw new ArgumentError("Invalid BitmapData.");
         }
         
@@ -2062,13 +2215,20 @@ var BitmapData = new Class(Object, function()
         this.__modified = false;
         this.__disposed = false;
         
-        if (fillColor === null) { fillColor = 0xFFFFFFFF; }
-        if (fillColor) { this.fillRect(this.__rect, fillColor); }
+        if (fillColor === null) 
+        {
+            fillColor = 0xFFFFFFFF;
+        }
+        if (fillColor) 
+        {
+            this.fillRect(this.__rect, fillColor);
+        }
     };
     
     this.__render = function(context, colorTransform)
     {
-        if (this.__canvas) {
+        if (this.__canvas) 
+        {
             context.drawImage(this.__canvas, 0, 0);
         }
     };
@@ -2113,22 +2273,24 @@ var BitmapData = new Class(Object, function()
         var length = data.length;
         var i;
         
-        if (cs3.core.isOpera) {
+        if (cs3.core.isOpera) 
+        {
             //I think opera does something like (color & 0xFF)
-            for (i = 0; i < length;)
+            for (i = 0; i < length;) 
             {
-                var r = data[i]   * rm + ro;
-                var g = data[i+1] * gm + go;
-                var b = data[i+2] * bm + bo;
-                var a = data[i+3] * am + ao;
+                var r = data[i] * rm + ro;
+                var g = data[i + 1] * gm + go;
+                var b = data[i + 2] * bm + bo;
+                var a = data[i + 3] * am + ao;
                 data[i++] = (r < 255) ? r : 255;
                 data[i++] = (g < 255) ? g : 255;
                 data[i++] = (b < 255) ? b : 255;
                 data[i++] = (a < 255) ? a : 255;
             }
         }
-        else {
-            for (i = 0; i < length;)
+        else 
+        {
+            for (i = 0; i < length;) 
             {
                 data[i] = data[i++] * rm + ro;
                 data[i] = data[i++] * gm + go;
@@ -2149,39 +2311,43 @@ var BitmapData = new Class(Object, function()
         var otherWidth = otherBitmapData.__width;
         var otherHeight = otherBitmapData.__height;
         
-        if (width !== otherWidth) {
+        if (width !== otherWidth) 
+        {
             return -3;
         }
-        if (height !== otherHeight) {
+        if (height !== otherHeight) 
+        {
             return -4;
         }
         
-        var sourceData   = sourceBitmapData.__context.getImageData(0, 0, width, height).data;
-        var otherData    = otherBitmapData.__context.getImageData(0, 0, width, height).data;
+        var sourceData = sourceBitmapData.__context.getImageData(0, 0, width, height).data;
+        var otherData = otherBitmapData.__context.getImageData(0, 0, width, height).data;
         var newImageData = sourceBitmapData.__context.createImageData(width, height);
-        var newData      = newImageData.data;
-        var length       = newData.length;
-        var isDifferent  = false;
+        var newData = newImageData.data;
+        var length = newData.length;
+        var isDifferent = false;
         
-        for (var i = 0; i < length;)
+        for (var i = 0; i < length;) 
         {
             var sr = sourceData[i];
-            var sg = sourceData[i+1];
-            var sb = sourceData[i+2];
-            var sa = sourceData[i+3];
+            var sg = sourceData[i + 1];
+            var sb = sourceData[i + 2];
+            var sa = sourceData[i + 3];
             var or = otherData[i];
-            var og = otherData[i+1];
-            var ob = otherData[i+2];
-            var oa = otherData[i+3];
+            var og = otherData[i + 1];
+            var ob = otherData[i + 2];
+            var oa = otherData[i + 3];
             
-            if ((sr !== or) || (sg !== og) || (sb !== ob)) {
+            if ((sr !== or) || (sg !== og) || (sb !== ob)) 
+            {
                 newData[i++] = sr - or;
                 newData[i++] = sg - og;
                 newData[i++] = sb - ob;
                 newData[i++] = 0xFF;
                 isDifferent = true;
             }
-            else if (sa !== oa) {
+            else if (sa !== oa) 
+            {
                 newData[i++] = 0xFF;
                 newData[i++] = 0xFF;
                 newData[i++] = 0xFF;
@@ -2190,7 +2356,8 @@ var BitmapData = new Class(Object, function()
             }
         }
         
-        if (isDifferent === false) {
+        if (isDifferent === false) 
+        {
             return 0;
         }
         
@@ -2208,18 +2375,49 @@ var BitmapData = new Class(Object, function()
         var length = sourceData.length;
         
         var sourceChannelIndex, destChannelIndex;
-        if (sourceChannel == BitmapDataChannel.RED) { sourceChannelIndex = 0; }
-        else if (sourceChannel == BitmapDataChannel.GREEN) { sourceChannelIndex = 1; }
-        else if (sourceChannel == BitmapDataChannel.BLUE) { sourceChannelIndex = 2; }
-        else if (sourceChannel == BitmapDataChannel.ALPHA) { sourceChannelIndex = 3; }
-        else { return; }
-        if (destChannel == BitmapDataChannel.RED) { destChannelIndex = 0; }
-        else if (destChannel == BitmapDataChannel.GREEN) { destChannelIndex = 1; }
-        else if (destChannel == BitmapDataChannel.BLUE) { destChannelIndex = 2; }
-        else if (destChannel == BitmapDataChannel.ALPHA) { destChannelIndex = 3; }
-        else { return; }
+        if (sourceChannel == BitmapDataChannel.RED) 
+        {
+            sourceChannelIndex = 0;
+        }
+        else if (sourceChannel == BitmapDataChannel.GREEN) 
+        {
+            sourceChannelIndex = 1;
+        }
+        else if (sourceChannel == BitmapDataChannel.BLUE) 
+        {
+            sourceChannelIndex = 2;
+        }
+        else if (sourceChannel == BitmapDataChannel.ALPHA) 
+        {
+            sourceChannelIndex = 3;
+        }
+        else 
+        {
+            return;
+        }
+		
+        if (destChannel == BitmapDataChannel.RED) 
+        {
+            destChannelIndex = 0;
+        }
+        else if (destChannel == BitmapDataChannel.GREEN) 
+        {
+            destChannelIndex = 1;
+        }
+        else if (destChannel == BitmapDataChannel.BLUE) 
+        {
+            destChannelIndex = 2;
+        }
+        else if (destChannel == BitmapDataChannel.ALPHA) 
+        {
+            destChannelIndex = 3;
+        }
+        else 
+        {
+            return;
+        }
         
-        for (var i = 0; i < length; i += 4)
+        for (var i = 0; i < length; i += 4) 
         {
             destData[i + destChannelIndex] = sourceData[i + sourceChannelIndex];
         }
@@ -2230,14 +2428,13 @@ var BitmapData = new Class(Object, function()
     this.copyPixels = function(sourceBitmapData, sourceRect, destPoint)
     {
         /*
-        var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-        this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
-        this.__modified = true;
-        */
+         var sourceImageData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
+         this.__context.putImageData(sourceImageData, destPoint.x, destPoint.y);
+         this.__modified = true;
+         */
         //about 4 - 30 times faster
         this.__context.clearRect(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
-        this.__context.drawImage(sourceBitmapData.__canvas, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height,
-                        destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
+        this.__context.drawImage(sourceBitmapData.__canvas, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height, destPoint.x, destPoint.y, sourceRect.width, sourceRect.height);
         this.__modified = true;
     };
     
@@ -2259,9 +2456,10 @@ var BitmapData = new Class(Object, function()
         
         //disable all public methods
         //excluding toString
-        for (var p in this)
+        for (var p in this) 
         {
-            if (p !== 'toString' && p.charAt(0) !== '_' && typeof(this[p]) === 'function') {
+            if (p !== 'toString' && p.charAt(0) !== '_' && typeof(this[p]) === 'function') 
+            {
                 this[p] = invalidBitmapData;
             }
         }
@@ -2282,13 +2480,7 @@ var BitmapData = new Class(Object, function()
         
         var context = this.__context;
         context.save();
-        context.setTransform(
-            matrix.a,
-            matrix.b,
-            matrix.c,
-            matrix.d,
-            matrix.tx,
-            matrix.ty);
+        context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
         source.__render(context, new ColorTransform());
         context.restore();
         this.__modified = true;
@@ -2318,15 +2510,15 @@ var BitmapData = new Class(Object, function()
         var p = ((y * width) + x) * 4;
         
         //get the target color to overwrite(rgba array)
-        var targetColor = [data[p], data[p+1], data[p+2], data[p+3]];
+        var targetColor = [data[p], data[p + 1], data[p + 2], data[p + 3]];
         
         //replacement color to rgba array
-        var replacementColor = [color >> 16 & 0xFF, color >> 8  & 0xFF, color & 0xFF, color >> 24 & 0xFF];
+        var replacementColor = [color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF];
         
-        if (targetColor[0] === replacementColor[0] && targetColor[1] === replacementColor[1] &&
-            targetColor[2] === replacementColor[2] && targetColor[3] === replacementColor[3]) {
-                //already the same color
-                return;
+        if (targetColor[0] === replacementColor[0] && targetColor[1] === replacementColor[1] && targetColor[2] === replacementColor[2] && targetColor[3] === replacementColor[3]) 
+        {
+            //already the same color
+            return;
         }
         
         //start the search
@@ -2343,12 +2535,15 @@ var BitmapData = new Class(Object, function()
     
     this.getColorBoundsRect = function(mask, color, findColor)
     {
-        if (mask === undefined || color === undefined) { return null; }
+        if (mask === undefined || color === undefined) 
+        {
+            return null;
+        }
         findColor = (findColor) ? true : false;
         
-        var width  = this.__width;
+        var width = this.__width;
         var height = this.__height;
-        var data   = this.__context.getImageData(0, 0, width, height).data;
+        var data = this.__context.getImageData(0, 0, width, height).data;
         
         var minX = width;
         var minY = height;
@@ -2358,41 +2553,70 @@ var BitmapData = new Class(Object, function()
         
         color = color & mask;
         
-        if (findColor === true) {
-            for (x = 0; x < width; ++x)
+        if (findColor === true) 
+        {
+            for (x = 0; x < width; ++x) 
             {
-                for (y = 0; y < height; ++y)
+                for (y = 0; y < height; ++y) 
                 {
                     p = ((y * width) + x) * 4;
-                    value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
-                    if ((value & mask) === color) {
-                        if (x < minX) { minX = x; }
-                        if (x > maxX) { maxX = x; }
-                        if (y < minY) { minY = y; }
-                        if (y > maxY) { maxY = y; }
+                    value = (data[p + 3] << 24) | (data[p] << 16) | (data[p + 1] << 8) | data[p + 2];
+                    if ((value & mask) === color) 
+                    {
+                        if (x < minX) 
+                        {
+                            minX = x;
+                        }
+                        if (x > maxX) 
+                        {
+                            maxX = x;
+                        }
+                        if (y < minY) 
+                        {
+                            minY = y;
+                        }
+                        if (y > maxY) 
+                        {
+                            maxY = y;
+                        }
                     }
                 }
             }
         }
-        else {
-            for (x = 0; x < width; ++x)
+        else 
+        {
+            for (x = 0; x < width; ++x) 
             {
-                for (y = 0; y < height; ++y)
+                for (y = 0; y < height; ++y) 
                 {
                     p = ((y * width) + x) * 4;
-                    value = (data[p+3] << 24) | (data[p] << 16) | (data[p+1] << 8) | data[p+2];
-                    if ((value & mask) !== color) {
-                        if (x < minX) { minX = x; }
-                        if (x > maxX) { maxX = x; }
-                        if (y < minY) { minY = y; }
-                        if (y > maxY) { maxY = y; }
+                    value = (data[p + 3] << 24) | (data[p] << 16) | (data[p + 1] << 8) | data[p + 2];
+                    if ((value & mask) !== color) 
+                    {
+                        if (x < minX) 
+                        {
+                            minX = x;
+                        }
+                        if (x > maxX) 
+                        {
+                            maxX = x;
+                        }
+                        if (y < minY) 
+                        {
+                            minY = y;
+                        }
+                        if (y > maxY) 
+                        {
+                            maxY = y;
+                        }
                     }
                 }
             }
         }
         
         var rect = new Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);
-        if (rect.isEmpty()) {
+        if (rect.isEmpty()) 
+        {
             rect.setEmpty();
         }
         return rect;
@@ -2405,7 +2629,10 @@ var BitmapData = new Class(Object, function()
     
     this.getPixel = function(x, y)
     {
-        if (!this.__rect.contains(x, y)) { return 0; }
+        if (!this.__rect.contains(x, y)) 
+        {
+            return 0;
+        }
         
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return (data[0] << 16) | (data[1] << 8) | data[2];
@@ -2413,7 +2640,10 @@ var BitmapData = new Class(Object, function()
     
     this.getPixel32 = function(x, y)
     {
-        if (!this.__rect.contains(x, y)) { return 0; }
+        if (!this.__rect.contains(x, y)) 
+        {
+            return 0;
+        }
         
         var data = this.__context.getImageData(x, y, 1, 1).data;
         return ((data[3] << 24) | (data[0] << 16) | (data[1] << 8) | data[2]) >>> 0;
@@ -2451,11 +2681,11 @@ var BitmapData = new Class(Object, function()
         var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, destRect.width, destRect.height).data;
         var length = sourceData.length;
         
-        for (var i = 0; i < length;)
+        for (var i = 0; i < length;) 
         {
-            destData[i]   = (sourceData[i] * redMultiplier   + destData[i] * (256 - redMultiplier))   / 256;
+            destData[i] = (sourceData[i] * redMultiplier + destData[i] * (256 - redMultiplier)) / 256;
             destData[++i] = (sourceData[i] * greenMultiplier + destData[i] * (256 - greenMultiplier)) / 256;
-            destData[++i] = (sourceData[i] * blueMultiplier  + destData[i] * (256 - blueMultiplier))  / 256;
+            destData[++i] = (sourceData[i] * blueMultiplier + destData[i] * (256 - blueMultiplier)) / 256;
             destData[++i] = (sourceData[i] * alphaMultiplier + destData[i] * (256 - alphaMultiplier)) / 256;
             ++i;
         }
@@ -2470,74 +2700,88 @@ var BitmapData = new Class(Object, function()
         var data = imageData.data;
         var length = data.length;
         
-        if (randomSeed === undefined) {
+        if (randomSeed === undefined) 
+        {
             randomSeed = Math.random();
         }
-        if (low === undefined) {
+        if (low === undefined) 
+        {
             low = 0;
         }
-        if (high === undefined) {
+        if (high === undefined) 
+        {
             high = 255;
         }
-        if (high < low) {
+        if (high < low) 
+        {
             high = low;
         }
         var range = high - low + 1;
         
-        var channelRed   = BitmapDataChannel.RED;
+        var channelRed = BitmapDataChannel.RED;
         var channelGreen = BitmapDataChannel.GREEN;
-        var channelBlue  = BitmapDataChannel.BLUE;
+        var channelBlue = BitmapDataChannel.BLUE;
         var channelAlpha = BitmapDataChannel.ALPHA;
         
-        if (channelOptions === undefined) {
+        if (channelOptions === undefined) 
+        {
             channelOptions = channelRed | channelGreen | channelBlue;
         }
         
         // makes it a little faster in Firefox
-        channelRed   = (channelOptions & channelRed)   === channelRed;
+        channelRed = (channelOptions & channelRed) === channelRed;
         channelGreen = (channelOptions & channelGreen) === channelGreen;
-        channelBlue  = (channelOptions & channelBlue)  === channelBlue;
+        channelBlue = (channelOptions & channelBlue) === channelBlue;
         channelAlpha = (channelOptions & channelAlpha) === channelAlpha;
         
         var i;
-        if (grayScale) {
-            for (i = 0; i < length;)
+        if (grayScale) 
+        {
+            for (i = 0; i < length;) 
             {
                 randomSeed = (randomSeed * 9301 + 49297) % 233280;
                 data[i++] = data[i++] = data[i++] = ((randomSeed / 233280) * range + low) | 0;
                 
-                if (channelAlpha) {
+                if (channelAlpha) 
+                {
                     randomSeed = (randomSeed * 9301 + 49297) % 233280;
                     data[i++] = ((randomSeed / 233280) * range + low) | 0;
                 }
-                else {
+                else 
+                {
                     data[i++] = 255;
                 }
             }
         }
-        else {
-            for (i = 0; i < length;)
+        else 
+        {
+            for (i = 0; i < length;) 
             {
-                if (channelRed) {
+                if (channelRed) 
+                {
                     randomSeed = (randomSeed * 9301 + 49297) % 233280;
                     data[i] = ((randomSeed / 233280) * range + low) | 0;
                 }
                 ++i;
-                if (channelGreen) {
+                if (channelGreen) 
+                {
                     randomSeed = (randomSeed * 9301 + 49297) % 233280;
                     data[i] = ((randomSeed / 233280) * range + low) | 0;
                 }
                 ++i;
-                if (channelBlue) {
+                if (channelBlue) 
+                {
                     randomSeed = (randomSeed * 9301 + 49297) % 233280;
                     data[i] = ((randomSeed / 233280) * range + low) | 0;
                 }
                 ++i;
-                if (channelAlpha) {
+                if (channelAlpha) 
+                {
                     randomSeed = (randomSeed * 9301 + 49297) % 233280;
                     data[i] = ((randomSeed / 233280) * range + low) | 0;
                 }
-                else {
+                else 
+                {
                     data[i] = 255;
                 }
                 ++i;
@@ -2558,28 +2802,52 @@ var BitmapData = new Class(Object, function()
         //var destData = destImageData.data;
         var length = sourceData.length;
         
-        if (!(redArray   instanceof Array)) { redArray   = []; }
-        if (!(greenArray instanceof Array)) { greenArray = []; }
-        if (!(blueArray  instanceof Array)) { blueArray  = []; }
-        if (!(alphaArray instanceof Array)) { alphaArray = []; }
-        
-        for (var i = 0; i < 256; ++i)
+        if (!(redArray instanceof Array)) 
         {
-            if (redArray[i]   === undefined) { redArray[i]   = i << 16; }
-            if (greenArray[i] === undefined) { greenArray[i] = i << 8; }
-            if (blueArray[i]  === undefined) { blueArray[i]  = i; }
-            if (alphaArray[i] === undefined) { alphaArray[i] = i << 24; }
+            redArray = [];
+        }
+        if (!(greenArray instanceof Array)) 
+        {
+            greenArray = [];
+        }
+        if (!(blueArray instanceof Array)) 
+        {
+            blueArray = [];
+        }
+        if (!(alphaArray instanceof Array)) 
+        {
+            alphaArray = [];
+        }
+        
+        for (var i = 0; i < 256; ++i) 
+        {
+            if (redArray[i] === undefined) 
+            {
+                redArray[i] = i << 16;
+            }
+            if (greenArray[i] === undefined) 
+            {
+                greenArray[i] = i << 8;
+            }
+            if (blueArray[i] === undefined) 
+            {
+                blueArray[i] = i;
+            }
+            if (alphaArray[i] === undefined) 
+            {
+                alphaArray[i] = i << 24;
+            }
         }
         
         var newColor, newRed, newGreen, newBlue, newAlpha;
-        for (i = 0; i < length;)
+        for (i = 0; i < length;) 
         {
-            
-            newColor = redArray[sourceData[i]] | greenArray[sourceData[i+1]] | blueArray[sourceData[i+2]] | alphaArray[sourceData[i+3]];
+        
+            newColor = redArray[sourceData[i]] | greenArray[sourceData[i + 1]] | blueArray[sourceData[i + 2]] | alphaArray[sourceData[i + 3]];
             newAlpha = newColor >> 24 & 0xFF;
-            newRed   = newColor >> 16 & 0xFF;
-            newGreen = newColor >>  8 & 0xFF;
-            newBlue  = newColor       & 0xFF;
+            newRed = newColor >> 16 & 0xFF;
+            newGreen = newColor >> 8 & 0xFF;
+            newBlue = newColor & 0xFF;
             
             sourceData[i++] = newRed;
             sourceData[i++] = newGreen;
@@ -2606,44 +2874,53 @@ var BitmapData = new Class(Object, function()
         var size = width * height;
         var i, p, c;
         
-        if (!numPixels) { numPixels = (size / 30) | 0; }
-        else if (numPixels > size) { numPixels = size; }
+        if (!numPixels) 
+        {
+            numPixels = (size / 30) | 0;
+        }
+        else if (numPixels > size) 
+        {
+            numPixels = size;
+        }
         
-        if (randomSeed < 1) { randomSeed = (randomSeed * 0xFFFFFFFF) | 0; }
+        if (randomSeed < 1) 
+        {
+            randomSeed = (randomSeed * 0xFFFFFFFF) | 0;
+        }
         
         //extract the real seed and index from randomSeed
-        var seed  = randomSeed & 0xFF;//only 256 patterns
+        var seed = randomSeed & 0xFF;//only 256 patterns
         var index = randomSeed >> 8 & 0xFFFFFF;//max is 16,777,215
-        
         var coordinateShuffler = new CoordinateShuffler(width, height, seed, 3, 256);
         var coords = coordinateShuffler.getCoordinates(numPixels, index);
         
-        if (sourceBitmapData === this) {
+        if (sourceBitmapData === this) 
+        {
             fillColor = fillColor | 0;
             var fillAlpha = fillColor >> 24 & 0xFF;
-            var fillRed   = fillColor >> 16 & 0xFF;
-            var fillGreen = fillColor >> 8  & 0xFF;
-            var fillBlue  = fillColor & 0xFF;
+            var fillRed = fillColor >> 16 & 0xFF;
+            var fillGreen = fillColor >> 8 & 0xFF;
+            var fillBlue = fillColor & 0xFF;
             
-            for (i = 0; i < numPixels; ++i)
+            for (i = 0; i < numPixels; ++i) 
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destData[p]   = fillRed;
+                destData[p] = fillRed;
                 destData[++p] = fillGreen;
                 destData[++p] = fillBlue;
                 destData[++p] = fillAlpha;
             }
         }
-        else {
+        else 
+        {
             //TODO: make sure the sourceRect and destRect are the same size
-            var sourceData = sourceBitmapData.__context.getImageData(
-                                sourceRect.x,sourceRect.y, width, height).data;
-            for (i = 0; i < numPixels; ++i)
+            var sourceData = sourceBitmapData.__context.getImageData(sourceRect.x, sourceRect.y, width, height).data;
+            for (i = 0; i < numPixels; ++i) 
             {
                 c = coords[i];
                 p = (c[1] * width + c[0]) * 4;
-                destData[p]   = sourceData[p];
+                destData[p] = sourceData[p];
                 destData[++p] = sourceData[p];
                 destData[++p] = sourceData[p];
                 destData[++p] = sourceData[p];
@@ -2666,20 +2943,24 @@ var BitmapData = new Class(Object, function()
     {
         var sourceX, sourceY, sourceWidth, sourceHeight;
         
-        if (x < 0) {
+        if (x < 0) 
+        {
             sourceX = -x;
             sourceWidth = this.__width + x;
         }
-        else {
+        else 
+        {
             sourceX = 0;
             sourceWidth = this.__width - x;
         }
         
-        if (y < 0) {
+        if (y < 0) 
+        {
             sourceY = -y;
             sourceHeight = this.__height + y;
         }
-        else {
+        else 
+        {
             sourceY = 0;
             sourceHeight = this.__height - y;
         }
@@ -2693,7 +2974,7 @@ var BitmapData = new Class(Object, function()
     {
         var a = 255;
         var r = color >> 16 & 0xFF;
-        var g = color >> 8  & 0xFF;
+        var g = color >> 8 & 0xFF;
         var b = color & 0xFF;
         
         var pixel = this.__pixel;
@@ -2710,7 +2991,7 @@ var BitmapData = new Class(Object, function()
     {
         var a = color >> 24 & 0xFF;
         var r = color >> 16 & 0xFF;
-        var g = color >> 8  & 0xFF;
+        var g = color >> 8 & 0xFF;
         var b = color & 0xFF;
         
         var pixel = this.__pixel;
@@ -2731,7 +3012,7 @@ var BitmapData = new Class(Object, function()
         
         var imageData = this.__context.createImageData(rect.width, rect.height);
         var data = imageData.data;
-        for (var i = 0; i < length; ++i)
+        for (var i = 0; i < length; ++i) 
         {
             data[i] = inputArray[i];
         }
@@ -2741,9 +3022,18 @@ var BitmapData = new Class(Object, function()
     
     this.threshold = function(sourceBitmapData, sourceRect, destPoint, operation, threshold, color, mask, copySource)
     {
-        if (color === undefined) { color = 0x00000000; }
-        if (mask === undefined) { mask = 0xFFFFFFFF; }
-        if (copySource === undefined) { copySource = false; }
+        if (color === undefined) 
+        {
+            color = 0x00000000;
+        }
+        if (mask === undefined) 
+        {
+            mask = 0xFFFFFFFF;
+        }
+        if (copySource === undefined) 
+        {
+            copySource = false;
+        }
         
         var destRect = this.__rect.intersection(new Rectangle(destPoint.x, destPoint.y, sourceRect.width, sourceRect.height));
         var destImageData = this.__context.getImageData(destRect.x, destRect.y, destRect.width, destRect.height);
@@ -2758,75 +3048,135 @@ var BitmapData = new Class(Object, function()
         var i;
         var cnt = 0;
         
-        if (operation == '<') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) < threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        if (operation == '<') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) < threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
-        else if (operation == '<=') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) <= threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        else if (operation == '<=') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) <= threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
-        else if (operation == '>') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) > threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        else if (operation == '>') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) > threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
-        else if (operation == '>=') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) >= threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        else if (operation == '>=') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) >= threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
-        else if (operation == '==') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) == threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        else if (operation == '==') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) == threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
-        else if (operation == '!=') {
-            for (i = 0; i < length; i += 4) {
-                testColor = (sourceData[i+3] << 24) | (sourceData[i] << 16) | (sourceData[i+1] << 8) | sourceData[i+2];
-                if ((testColor & mask) != threshold) {
-                    destData[i] = colors[0]; destData[i+1] = colors[1]; destData[i+2] = colors[2]; destData[i+3] = colors[3];
+        else if (operation == '!=') 
+        {
+            for (i = 0; i < length; i += 4) 
+            {
+                testColor = (sourceData[i + 3] << 24) | (sourceData[i] << 16) | (sourceData[i + 1] << 8) | sourceData[i + 2];
+                if ((testColor & mask) != threshold) 
+                {
+                    destData[i] = colors[0];
+                    destData[i + 1] = colors[1];
+                    destData[i + 2] = colors[2];
+                    destData[i + 3] = colors[3];
                     ++cnt;
                 }
-                else if (copySource) {
-                    destData[i] = sourceData[i]; destData[i+1] = sourceData[i+1]; destData[i+2] = sourceData[i+2]; destData[i+3] = sourceData[i+3];
+                else if (copySource) 
+                {
+                    destData[i] = sourceData[i];
+                    destData[i + 1] = sourceData[i + 1];
+                    destData[i + 2] = sourceData[i + 2];
+                    destData[i + 3] = sourceData[i + 3];
                 }
             }
         }
@@ -2911,7 +3261,10 @@ var Graphics = new Class(Object, function()
     //this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     this.beginBitmapFill = function(bitmap, repeat)
     {
-        if (!repeat) { repeat = "repeat"; }
+        if (!repeat) 
+        {
+            repeat = "repeat";
+        }
         
         // chrome (5.0.375.70) crashes when repeat is 'no-repeat' or 'repeat-y'
         // so for know force repeat='repeat'
@@ -2922,61 +3275,63 @@ var Graphics = new Class(Object, function()
     
     this.beginFill = function(color, alpha)
     {
-        if (alpha === undefined) { alpha = 1; }
+        if (alpha === undefined) 
+        {
+            alpha = 1;
+        }
         this.__commands.push([BEGIN_FILL, color, alpha]);
     };
     
-    this.beginGradientFill = function(type, colors, alphas, ratios, matrix,
-            spreadMethod, interpolationMethod, focalPointRatio)
+    this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         throw new Error('Graphics.beginGradientFill is not implemented. use beginLinearGradientFill and beginRadialGradientFill instead.');
         /*
-        var length = colors.length;
-        var newColors = colors.splice(0);
-        var newRatios = ratios.splice(0);
-        
-        // convert colors and alphas to argb
-        // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
-        {
-            newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
-            newRatios[i] /= 255;
-        }
-        
-        // convert matrix back to createGradientBox parameters
-        // width, height, rotation, tx, ty
-        var a  = matrix.a;
-        var b  = matrix.b;
-        var c  = matrix.c;
-        var d  = matrix.d;
-        var tx = matrix.tx;
-        var ty = matrix.ty;
-        var ac = a * c;
-        var bd = b * d;
-        var amb = (a - b);
-        var cpd = (c + d);
-        
-        var sin = (ac + bd) / (amb * amb + cpd * cpd);
-        var width = Math.sqrt(ac / sin) * 1638.4;
-        var height = Math.sqrt(bd / sin) * 1638.4;
-        var rotation = Math.asin(sin);
-        tx = tx - width / 2.0;
-        ty = ty - height / 2.0;
-        
-        var x0, y0, r0, x1, y1, r1;
-        if (type == GradientType.RADIAL) {
-            // calculate x0, y0, r0, x1, y1, r1
-        }
-        else {
-            // calculate x0, y0, x1, y1
-            x0 = tx;
-            y0 = ty;
-            x1 = height * Math.cos(rotation) + tx;
-            y1 = width  * Math.sin(rotation) + ty;
-        }
-        
-        this.__commands.push([BEGIN_GRADIENT_FILL, type, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
-        */
+         var length = colors.length;
+         var newColors = colors.splice(0);
+         var newRatios = ratios.splice(0);
+         
+         // convert colors and alphas to argb
+         // convert ratios range to 0-1
+         for (var i = 0; i < length; ++i)
+         {
+         newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
+         newRatios[i] /= 255;
+         }
+         
+         // convert matrix back to createGradientBox parameters
+         // width, height, rotation, tx, ty
+         var a  = matrix.a;
+         var b  = matrix.b;
+         var c  = matrix.c;
+         var d  = matrix.d;
+         var tx = matrix.tx;
+         var ty = matrix.ty;
+         var ac = a * c;
+         var bd = b * d;
+         var amb = (a - b);
+         var cpd = (c + d);
+         
+         var sin = (ac + bd) / (amb * amb + cpd * cpd);
+         var width = Math.sqrt(ac / sin) * 1638.4;
+         var height = Math.sqrt(bd / sin) * 1638.4;
+         var rotation = Math.asin(sin);
+         tx = tx - width / 2.0;
+         ty = ty - height / 2.0;
+         
+         var x0, y0, r0, x1, y1, r1;
+         if (type == GradientType.RADIAL) {
+         // calculate x0, y0, r0, x1, y1, r1
+         }
+         else {
+         // calculate x0, y0, x1, y1
+         x0 = tx;
+         y0 = ty;
+         x1 = height * Math.cos(rotation) + tx;
+         y1 = width  * Math.sin(rotation) + ty;
+         }
+         
+         this.__commands.push([BEGIN_GRADIENT_FILL, type, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
+         */
     };
     
     this.beginLinearGradientFill = function(colors, alphas, ratios, x0, y0, x1, y1)
@@ -2987,7 +3342,7 @@ var Graphics = new Class(Object, function()
         
         // convert colors and alphas to argb
         // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
+        for (var i = 0; i < length; ++i) 
         {
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
@@ -3003,7 +3358,7 @@ var Graphics = new Class(Object, function()
         
         // convert colors and alphas to argb
         // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
+        for (var i = 0; i < length; ++i) 
         {
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
@@ -3025,9 +3380,9 @@ var Graphics = new Class(Object, function()
     {
         var startX = x + Math.cos(startAngle * 6.283185307179586) * radius;
         var startY = y + Math.sin(startAngle * 6.283185307179586) * radius;
-        var endX   = x + Math.cos(endAngle   * 6.283185307179586) * radius;
-        var endY   = y + Math.sin(endAngle   * 6.283185307179586) * radius;
-
+        var endX = x + Math.cos(endAngle * 6.283185307179586) * radius;
+        var endY = y + Math.sin(endAngle * 6.283185307179586) * radius;
+        
         this.__updateRect(startX, startY, startX + endX, startY + endY);
         this.__x = endX;
         this.__y = endY;
@@ -3064,7 +3419,10 @@ var Graphics = new Class(Object, function()
     
     this.drawRoundRect = function(x, y, width, height, ellipseWidth, ellipseHeight)
     {
-        if (ellipseHeight === undefined) { ellipseHeight = ellipseWidth; }
+        if (ellipseHeight === undefined) 
+        {
+            ellipseHeight = ellipseWidth;
+        }
         this.__updateRect(x, y, width, height);
         this.__x = x + width;
         this.__y = y + height - ellipseHeight / 2;
@@ -3080,18 +3438,39 @@ var Graphics = new Class(Object, function()
     
     this.lineGradientStyle = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
-        
+    
     };
     
     this.lineStyle = function(thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit)
     {
-        if (color === undefined) { color = 0; }
-        if (alpha === undefined) { alpha = 1; }
-        if (pixelHinting == undefined) { pixelHinting = true; }
-        if (scaleMode === undefined) { scaleMode = 'normal'; }
-        if (caps === undefined) { caps = CapsStyle.ROUND; }
-        if (joints === undefined) { joints = JointStyle.ROUND; }
-        if (miterLimit === undefined) { miterLimit = 3; }
+        if (color === undefined) 
+        {
+            color = 0;
+        }
+        if (alpha === undefined) 
+        {
+            alpha = 1;
+        }
+        if (pixelHinting == undefined) 
+        {
+            pixelHinting = true;
+        }
+        if (scaleMode === undefined) 
+        {
+            scaleMode = 'normal';
+        }
+        if (caps === undefined) 
+        {
+            caps = CapsStyle.ROUND;
+        }
+        if (joints === undefined) 
+        {
+            joints = JointStyle.ROUND;
+        }
+        if (miterLimit === undefined) 
+        {
+            miterLimit = 3;
+        }
         this.__lineWidth = thickness;
         this.__commands.push([LINE_STYLE, thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
     };
@@ -3122,11 +3501,13 @@ var Graphics = new Class(Object, function()
     this.__fill = function(context, fillAlpha)
     {
         context.closePath();
-
-        if (fillAlpha === 1) {
+        
+        if (fillAlpha === 1) 
+        {
             context.fill();
         }
-        else if (fillAlpha !== 0) {
+        else if (fillAlpha !== 0) 
+        {
             var alpha = context.globalAlpha;
             context.globalAlpha *= fillAlpha;
             context.fill();
@@ -3136,10 +3517,12 @@ var Graphics = new Class(Object, function()
     
     this.__stroke = function(context, strokeAlpha)
     {
-        if (strokeAlpha === 1) {
+        if (strokeAlpha === 1) 
+        {
             context.stroke();
         }
-        else if (strokeAlpha !== 0) {
+        else if (strokeAlpha !== 0) 
+        {
             var alpha = context.globalAlpha;
             context.globalAlpha *= strokeAlpha;
             context.stroke();
@@ -3149,7 +3532,8 @@ var Graphics = new Class(Object, function()
     
     this.__closeStroke = function(context, sx, sy, ax, ay)
     {
-        if (sx !== ax || sy !== ay) {
+        if (sx !== ax || sy !== ay) 
+        {
             context.lineTo(sx, sy);
         }
     };
@@ -3180,12 +3564,13 @@ var Graphics = new Class(Object, function()
         var widht, height;
         var ellipseWidth, ellipseHeight;
         var xRadius, yRadius, centerX, centerY, angleDelta, xCtrlDist, yCtrlDist, rx, ry, angle;
+        var length, colors, ratios, gradient;
         var right, bottom;
         
         //fill phase
         //context.beginPath();
         //context.moveTo(0, 0);
-        for (i = 0, l = commandLength; i < l; ++i)
+        for (i = 0, l = commandLength; i < l; ++i) 
         {
             cmd = commands[i];
             type = cmd[0];
@@ -3194,24 +3579,31 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = cmd[2];
                     context.beginPath();
                     context.moveTo(ax, ay);
-                    context.fillStyle = (colorTransform) ?
-                            __toRGB(colorTransform.transformColor(cmd[1])) :
-                            __toRGB(cmd[1]);
+                    context.fillStyle = (colorTransform) ? __toRGB(colorTransform.transformColor(cmd[1])) : __toRGB(cmd[1]);
                     break;
                 case LINE_STYLE:
                     hasStroke = true;
@@ -3219,18 +3611,27 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = false;
                     break;
                 case DRAW_RECT:
                     //anchor at the top left
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     //context.moveTo(ax, ay);
                     break;
@@ -3240,12 +3641,18 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     ax = x + radius;
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
                 case BEGIN_BITMAP_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     var pattern = context.createPattern(cmd[1].__canvas, cmd[2]);
                     doFill = true;
                     fillAlpha = 1;
@@ -3254,17 +3661,18 @@ var Graphics = new Class(Object, function()
                     context.fillStyle = pattern;
                     break;
                 case BEGIN_LINEAR_GRADIENT_FILL:
-                    var length = cmd[1];
-                    var colors = cmd[2];
-                    var ratios = cmd[3];
-                    var gradient = context.createLinearGradient(cmd[4], cmd[5], cmd[6], cmd[7]);
-                    for (ii = 0; ii < length; ++ii)
+                    length = cmd[1];
+                    colors = cmd[2];
+                    ratios = cmd[3];
+                    gradient = context.createLinearGradient(cmd[4], cmd[5], cmd[6], cmd[7]);
+                    for (ii = 0; ii < length; ++ii) 
                     {
-                        gradient.addColorStop(ratios[ii], (colorTransform) ?
-                            __toRGBA(colorTransform.transformColor(colors[ii])) :
-                            __toRGBA(colors[ii]));
+                        gradient.addColorStop(ratios[ii], (colorTransform) ? __toRGBA(colorTransform.transformColor(colors[ii])) : __toRGBA(colors[ii]));
                     }
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = 1;
                     context.beginPath();
@@ -3272,17 +3680,18 @@ var Graphics = new Class(Object, function()
                     context.fillStyle = gradient;
                     break;
                 case BEGIN_RADIAL_GRADIENT_FILL:
-                    var length = cmd[1];
-                    var colors = cmd[2];
-                    var ratios = cmd[3];
-                    var gradient = context.createRadialGradient(cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
-                    for (ii = 0; ii < length; ++ii)
+                    length = cmd[1];
+                    colors = cmd[2];
+                    ratios = cmd[3];
+                    gradient = context.createRadialGradient(cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
+                    for (ii = 0; ii < length; ++ii) 
                     {
-                        gradient.addColorStop(ratios[ii], (colorTransform) ?
-                            __toRGBA(colorTransform.transformColor(colors[ii])) :
-                            __toRGBA(colors[ii]));
+                        gradient.addColorStop(ratios[ii], (colorTransform) ? __toRGBA(colorTransform.transformColor(colors[ii])) : __toRGBA(colors[ii]));
                     }
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = 1;
                     context.beginPath();
@@ -3292,24 +3701,30 @@ var Graphics = new Class(Object, function()
                 case DRAW_ARC:
                     ax = cmd[9];
                     ay = cmd[10];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(cmd[7], cmd[8]);
                     context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
-                    //context.moveTo(ax, ay);
+                //context.moveTo(ax, ay);
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
-                    width  = cmd[3];
+                    width = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5] / 2;
+                    ellipseWidth = cmd[5] / 2;
                     ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
                     ax = right;
                     ay = bottom - ellipseHeight;
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -3330,7 +3745,10 @@ var Graphics = new Class(Object, function()
                     yRadius = height / 2;
                     ax = x + width;
                     ay = y + yRadius;
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -3338,7 +3756,7 @@ var Graphics = new Class(Object, function()
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
                     context.moveTo(ax, ay);
-                    for (ii = 0; ii < 8; ii++)
+                    for (ii = 0; ii < 8; ii++) 
                     {
                         angle += angleDelta;
                         rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
@@ -3352,14 +3770,20 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        if (doFill) { this.__fill(context, fillAlpha); }
+        if (doFill) 
+        {
+            this.__fill(context, fillAlpha);
+        }
         
         //stroke phase
-        if (!hasStroke) { return; }
+        if (!hasStroke) 
+        {
+            return;
+        }
         sx = sy = ax = ay = 0;
         //context.beginPath();
         //context.moveTo(0, 0);
-        for (i = 0, l = commandLength; i < l; ++i)
+        for (i = 0, l = commandLength; i < l; ++i) 
         {
             cmd = commands[i];
             type = cmd[0];
@@ -3368,27 +3792,39 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_BITMAP_FILL:
                 case BEGIN_LINEAR_GRADIENT_FILL:
                 case BEGIN_RADIAL_GRADIENT_FILL:
                 case BEGIN_FILL:
-                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+                    if (doFill) 
+                    {
+                        this.__closeStroke(context, sx, sy, ax, ay);
+                    }
                     ax = sx;
                     ay = sy;
                     doFill = true;
                     break;
                 case LINE_STYLE:
-                    if (doStroke) { this.__stroke(context, strokeAlpha); }
-                    thickness    = cmd[1];
+                    if (doStroke) 
+                    {
+                        this.__stroke(context, strokeAlpha);
+                    }
+                    thickness = cmd[1];
                     //pixelHinting = cmd[4];
                     //scaleMode    = cmd[5];
                     doStroke = (thickness) ? true : false;
@@ -3396,9 +3832,7 @@ var Graphics = new Class(Object, function()
                     context.beginPath();
                     context.moveTo(ax, ay);
                     context.lineWidth = thickness;
-                    context.strokeStyle = (colorTransform) ?
-                            __toRGB(colorTransform.transformColor(cmd[2])) :
-                            __toRGB(cmd[2]);
+                    context.strokeStyle = (colorTransform) ? __toRGB(colorTransform.transformColor(cmd[2])) : __toRGB(cmd[2]);
                     context.lineCap = cmd[6];
                     context.lineJoin = cmd[7];
                     context.miterLimit = cmd[8];
@@ -3406,11 +3840,17 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
-                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+                    if (doFill) 
+                    {
+                        this.__closeStroke(context, sx, sy, ax, ay);
+                    }
                     ax = sx;
                     ay = sy;
                     doFill = false;
@@ -3419,7 +3859,10 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     context.moveTo(ax, ay);
                     break;
@@ -3429,7 +3872,10 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     sx = ax = x + radius;
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
@@ -3438,7 +3884,10 @@ var Graphics = new Class(Object, function()
                     sy = cmd[8];
                     ax = cmd[9];
                     ay = cmd[10];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(sx, sy);
                     context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
@@ -3446,15 +3895,18 @@ var Graphics = new Class(Object, function()
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
-                    width  = cmd[3];
+                    width = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5] / 2;
+                    ellipseWidth = cmd[5] / 2;
                     ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
                     sx = ax = right;
                     sy = ay = bottom - ellipseHeight;
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -3475,7 +3927,10 @@ var Graphics = new Class(Object, function()
                     yRadius = height / 2;
                     sx = ax = x + width;
                     sy = ay = y + yRadius;
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -3483,7 +3938,7 @@ var Graphics = new Class(Object, function()
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
                     context.moveTo(x + width, y + yRadius);
-                    for (ii = 0; ii < 8; ii++)
+                    for (ii = 0; ii < 8; ii++) 
                     {
                         angle += angleDelta;
                         rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
@@ -3497,8 +3952,14 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
-        if (doStroke) { this.__stroke(context, strokeAlpha); }
+        if (doFill) 
+        {
+            this.__closeStroke(context, sx, sy, ax, ay);
+        }
+        if (doStroke) 
+        {
+            this.__stroke(context, strokeAlpha);
+        }
     };
     
     this.toString = function()
@@ -3525,27 +3986,39 @@ var Loader = new Class(DisplayObjectContainer, function()
     /* @override DisplayObject */
     this.__getAsBitmap = function()
     {
-        if (this.__content) {
+        if (this.__content) 
+        {
             return this.__content.__getAsBitmap();
         }
+        return null;
     };
     
     /* @override DisplayObject */
     this.__getModified = function()
     {
-        return this.__transform.__modified || this.__modified;
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     /* @override DisplayObject */
     this.__setModified = function(v)
     {
-        this.__transform.__modified = this.__modified = v;
+        this.__modified = v;
+        this.__transform.__modified = v;
     };
     
     /* @override DisplayObject */
     this.__render = function(context, colorTransform)
     {
-        if (!this.__content) {
+        if (!this.__content) 
+        {
             return;
         }
         
@@ -3554,11 +4027,13 @@ var Loader = new Class(DisplayObjectContainer, function()
     
     this.load = function(request)
     {
-        if (typeof request == 'string') {
+        if (typeof request == 'string') 
+        {
             request = new URLRequest(request);
         }
         
-        if (this.__content) {
+        if (this.__content) 
+        {
             this.unload();
         }
         
@@ -3597,7 +4072,8 @@ var Loader = new Class(DisplayObjectContainer, function()
     
     this.unload = function()
     {
-        if (this.__content) {
+        if (this.__content) 
+        {
             this.__removeChildAt(0);
             this.__content = null;
             var contentLoaderInfo = this.__contentLoaderInfo;
@@ -3679,7 +4155,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__getContentBounds = function()
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             return this.__graphics.__rect.clone();
         }
         return new Rectangle();
@@ -3688,9 +4165,19 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__getModified = function()
     {
-        return (this.__modified ||
-                this.__transform.__modified ||
-                (this.__graphics && this.__graphics.__modified));
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        if (this.__graphics && this.__graphics.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     //override
@@ -3698,7 +4185,8 @@ var Shape = new Class(DisplayObject, function()
     {
         this.__modified = v;
         this.__transform.__modified = v;
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__modified = v;
         }
     };
@@ -3706,7 +4194,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__render = function(context, colorTransform)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__render(context, colorTransform);
         }
     };
@@ -3714,7 +4203,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             var bounds = this.__getContentBounds();
             
             //convert point to local coords
@@ -3722,7 +4212,8 @@ var Shape = new Class(DisplayObject, function()
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
             
-            if (bounds.containsPoint(localPoint)) {
+            if (bounds.containsPoint(localPoint)) 
+            {
                 this.__graphics.__render(context, null);
                 return (context.getImageData(point.x, point.y, 1, 1).data[3] !== 0);
             }
@@ -3733,7 +4224,8 @@ var Shape = new Class(DisplayObject, function()
     /* getters and setters */
     this.__get__graphics = function()
     {
-        if (this.__graphics === null) {
+        if (this.__graphics === null) 
+        {
             this.__graphics = new Graphics();
         }
         return this.__graphics;
@@ -3769,7 +4261,8 @@ var Sprite = new Class(DisplayObjectContainer, function()
     /* @override DisplayObject */
     this.__render = function(context, colorTransform)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__render(context, colorTransform);
         }
         
@@ -3803,14 +4296,14 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         DisplayObjectContainer.call(this);
         
-        canvas    = canvas || null;
-        width     = width || 640;
-        height    = height || 480;
+        canvas = canvas || null;
+        width = width || 640;
+        height = height || 480;
         frameRate = frameRate || 30;
         
         this.__initialized = false;
         this.__rect = new Rectangle(0, 0, width, height);
-        this.__stageWidth  = width;
+        this.__stageWidth = width;
         this.__stageHeight = height;
         this.__offsetX = 0;
         this.__offsetY = 0;
@@ -3851,14 +4344,16 @@ var Stage = new Class(DisplayObjectContainer, function()
         //TODO start preloading
         
         //setup
-        if (!window.document.body) {
+        if (!window.document.body) 
+        {
             var stage = this;
             cs3.utils.addOnload(function()
             {
                 stage.__setup(canvas, width, height, frameRate);
             });
         }
-        else {
+        else 
+        {
             this.__setup(canvas, width, height, frameRate);
         }
     };
@@ -3867,19 +4362,23 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         // document.body should now be loaded
         // setup stage
-        if (canvas instanceof HTMLCanvasElement) {
+        if (canvas instanceof HTMLCanvasElement) 
+        {
             this.canvas = canvas;
         }
-        else if (typeof canvas == 'string') {
+        else if (typeof canvas == 'string') 
+        {
             this.canvas = document.getElementById(canvas);
         }
         
-        if (!this.canvas) {
+        if (!this.canvas) 
+        {
             this.canvas = cs3.utils.createCanvas(0, 0);
             document.body.appendChild(this.canvas);
         }
         
-        if (this.canvas.__stage) {
+        if (this.canvas.__stage) 
+        {
             //stage already exists
             this.canvas.__stage.__destroy();
         }
@@ -3893,7 +4392,6 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.canvas.style.cursor = 'default';
         this.canvas.tabIndex = 1;// enable focus events
         this.canvas.style.outline = "none";// remove focus rects
-        
         //register stage for document events
         cs3.core.registerStage(this);
         
@@ -3943,8 +4441,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         clearTimeout(stage.__keyPressTimer);
         stage.__isKeyDown = true;
         
-        if (cs3.core.isOpera) {
-            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 500);
+        if (cs3.core.isOpera) 
+        {
+            stage.__keyPressTimer = setTimeout(function()
+            {
+                stage.__keyPressHandler(e);
+            }, 500);
         }
         
         var keyCode = e.keyCode;
@@ -3952,9 +4454,13 @@ var Stage = new Class(DisplayObjectContainer, function()
         var keyLocation = 0;//not supported
         stage.dispatchEvent(new KeyboardEvent(KeyboardEvent.KEY_DOWN, true, false, charCode, keyCode, keyLocation, e.ctrlKey, e.altKey, e.shiftKey));
         
-        if (stage.__preventTabKey && keyCode === 9) {
+        if (stage.__preventTabKey && keyCode === 9) 
+        {
             //disable tab focusing
-            if (e.preventDefault) { e.preventDefault(); }
+            if (e.preventDefault) 
+            {
+                e.preventDefault();
+            }
             e.returnValue = false;
         }
     };
@@ -3964,12 +4470,19 @@ var Stage = new Class(DisplayObjectContainer, function()
         var stage = this;
         
         clearTimeout(stage.__keyPressTimer);
-        if (!stage.__isKeyDown) { return; }
+        if (!stage.__isKeyDown) 
+        {
+            return;
+        }
         
         stage.__keyDownHandler(e);
         
-        if (cs3.core.isOpera) {
-            stage.__keyPressTimer = setTimeout(function(){ stage.__keyPressHandler(e); }, 33);
+        if (cs3.core.isOpera) 
+        {
+            stage.__keyPressTimer = setTimeout(function()
+            {
+                stage.__keyPressHandler(e);
+            }, 33);
         }
     };
     
@@ -3994,11 +4507,11 @@ var Stage = new Class(DisplayObjectContainer, function()
         //get the absolute position of the canvas
         var element = canvas;
         var offsetLeft = 0;
-        var offsetTop  = 0;
-        while (element)
+        var offsetTop = 0;
+        while (element) 
         {
             offsetLeft += element.offsetLeft;
-            offsetTop  += element.offsetTop;
+            offsetTop += element.offsetTop;
             element = element.offsetParent;
         }
         
@@ -4006,13 +4519,13 @@ var Stage = new Class(DisplayObjectContainer, function()
         var y = e.pageY - offsetTop;
         
         /*
-        if (this.__scaleX || this.__scaleY) {
-            x = Math.round(x / this.__scaleX);
-            y = Math.round(y / this.__scaleY);
-        }
-        */
-        
-        if (x === stage.__mouseX && y === stage.__mouseY) {
+         if (this.__scaleX || this.__scaleY) {
+         x = Math.round(x / this.__scaleX);
+         y = Math.round(y / this.__scaleY);
+         }
+         */
+        if (x === stage.__mouseX && y === stage.__mouseY) 
+        {
             return;
         }
         
@@ -4020,22 +4533,26 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         // mouse move events
         stage.__mouseOverStage = false;
-        if (stage.__rect.contains(x, y) === true) {
+        if (stage.__rect.contains(x, y) === true) 
+        {
             stage.__mouseX = x;
             stage.__mouseY = y;
             stage.__mouseOverStage = true;
             stage.__updateObjectUnderMouse();
             
-            if (stage.__objectUnderMouse) {
+            if (stage.__objectUnderMouse) 
+            {
                 stage.__objectUnderMouse.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
-            else {
+            else 
+            {
                 //if there is no abject under the mouse point,
                 //stage's mousemove event gets called
                 stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
             }
         }
-        else if (stage.__mouseDownObject) {
+        else if (stage.__mouseDownObject) 
+        {
             //if the mouse is out of the stage but the mouse is down
             //stage's mousemove event gets called
             stage.__mouseX = x;
@@ -4043,7 +4560,8 @@ var Stage = new Class(DisplayObjectContainer, function()
             stage.__objectUnderMouse = null;
             stage.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_MOVE, true, false));
         }
-        else {
+        else 
+        {
             //mouse is out of the stage and mouse is not down
             stage.__objectUnderMouse = null;
             return;
@@ -4052,22 +4570,28 @@ var Stage = new Class(DisplayObjectContainer, function()
         
         //handle startDrag
         var target = stage.__dragTarget;
-        if (target) {
+        if (target) 
+        {
             var newX = x - stage.__dragOffsetX;
             var newY = y - stage.__dragOffsetY;
             var bounds = stage.__dragBounds;
             
-            if (bounds) {
-                if (newX < bounds.x) {
+            if (bounds) 
+            {
+                if (newX < bounds.x) 
+                {
                     newX = bounds.x;
                 }
-                if (newY < bounds.y) {
+                if (newY < bounds.y) 
+                {
                     newY = bounds.y;
                 }
-                if (newX > bounds.x + bounds.width) {
+                if (newX > bounds.x + bounds.width) 
+                {
                     newX = bounds.x + bounds.width;
                 }
-                if (newY > bounds.y + bounds.height) {
+                if (newY > bounds.y + bounds.height) 
+                {
                     newY = bounds.y + bounds.height;
                 }
             }
@@ -4086,19 +4610,25 @@ var Stage = new Class(DisplayObjectContainer, function()
         stage.__mouseMoveHandler(e);
         
         var target = stage.__objectUnderMouse;
-        if (!target) { return; }
+        if (!target) 
+        {
+            return;
+        }
         
-        if (e.which === 1) {
+        if (e.which === 1) 
+        {
             //left click
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
             stage.__mouseDownObject = target;
         }
-        else if (e.which === 2) {
+        else if (e.which === 2) 
+        {
             //middle click
             return;
         }
-        else if (e.which === 3) {
+        else if (e.which === 3) 
+        {
             //right click
             return;
         }
@@ -4111,39 +4641,51 @@ var Stage = new Class(DisplayObjectContainer, function()
         stage.__mouseMoveHandler(e);
         
         var target = stage.__objectUnderMouse;
-        if (!target) {
-            if (stage.__mouseDownObject) {
+        if (!target) 
+        {
+            if (stage.__mouseDownObject) 
+            {
                 target = stage;
             }
-            else {
+            else 
+            {
                 return;
             }
         }
         
-        if (e.which === 1) {
+        if (e.which === 1) 
+        {
             //function(type, bubbles, cancelable, localX, localY, relatedObject, ctrlKey, altKey, shiftKey, buttonDown, delta)
             target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_UP, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
-            if (stage.__mouseDownObject === target) {
+            if (stage.__mouseDownObject === target) 
+            {
                 target.dispatchEvent(new MouseEvent(MouseEvent.CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                 
                 //double click
                 clearTimeout(stage.__doubleClickTimer);
-                if (stage.__mouseClickObject === target) {
+                if (stage.__mouseClickObject === target) 
+                {
                     target.dispatchEvent(new MouseEvent(MouseEvent.DOUBLE_CLICK, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, 0));
                     stage.__mouseClickObject = null;
                 }
-                else {
+                else 
+                {
                     stage.__mouseClickObject = target;
-                    stage.__doubleClickTimer = setTimeout(function(){ stage.__mouseClickObject = null; }, 500);
+                    stage.__doubleClickTimer = setTimeout(function()
+                    {
+                        stage.__mouseClickObject = null;
+                    }, 500);
                 }
             }
             stage.__mouseDownObject = null;
         }
-        else if (e.which === 2) {
+        else if (e.which === 2) 
+        {
             //middle click
             return;
         }
-        else if (e.which === 3) {
+        else if (e.which === 3) 
+        {
             //right click
             return;
         }
@@ -4155,29 +4697,41 @@ var Stage = new Class(DisplayObjectContainer, function()
         var target = stage.__objectUnderMouse;
         
         var delta = 0;
-        if (e.wheelDelta) { /* IE/Opera. */
-                delta = e.wheelDelta/120;
-                //if (cs3.core.isOpera) { delta = -delta; }
+        if (e.wheelDelta) 
+        { /* IE/Opera. */
+            delta = e.wheelDelta / 120;
+            //if (cs3.core.isOpera) { delta = -delta; }
         }
-        else if (e.detail) { /** Mozilla case. */
-                delta = -e.detail/3;
+        else if (e.detail) 
+        { /** Mozilla case. */
+            delta = -e.detail / 3;
         }
         
-        if (delta) {
-            target.dispatchEvent(new MouseEvent(
-                MouseEvent.MOUSE_WHEEL, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, delta));
+        if (delta) 
+        {
+            target.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_WHEEL, true, false, null, null, null, e.ctrlKey, e.altKey, e.shiftKey, false, delta));
         }
-        if (stage.__preventMouseWheel) {
+        if (stage.__preventMouseWheel) 
+        {
             //disable browser scrolling
-            if (e.preventDefault) { e.preventDefault(); }
+            if (e.preventDefault) 
+            {
+                e.preventDefault();
+            }
             e.returnValue = false;
         }
     };
     
     this.__getObjectUnderPoint = function(point)
     {
-        if (this.__rect.containsPoint(point) === false) { return null; }
-        if (this.mouseChildren === false) { return this; }
+        if (this.__rect.containsPoint(point) === false) 
+        {
+            return null;
+        }
+        if (this.mouseChildren === false) 
+        {
+            return this;
+        }
         
         var context = this.__hiddenContext;
         context.clearRect(point.x, point.y, 1, 1);
@@ -4195,7 +4749,10 @@ var Stage = new Class(DisplayObjectContainer, function()
         // reserve next frame
         var self = this;
         clearTimeout(this.__timer);
-        this.__timer = setTimeout(function(){ self.__enterFrame(); }, 1000 / this.__frameRate);
+        this.__timer = setTimeout(function()
+        {
+            self.__enterFrame();
+        }, 1000 / this.__frameRate);
         
         // run user ENTER_FRAME event code
         __applyDown(this, this.dispatchEvent, [new Event(Event.ENTER_FRAME, false, false)]);
@@ -4215,12 +4772,18 @@ var Stage = new Class(DisplayObjectContainer, function()
         // render children
         var children = this.__children;
         var render = DisplayObject.prototype.__render;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             
-            if (child.__visible === false) { continue; }
-            if (child.__maskee !== null) { continue; }
+            if (child.__visible === false) 
+            {
+                continue;
+            }
+            if (child.__maskee !== null) 
+            {
+                continue;
+            }
             
             var childMatrix = child.__transform.__matrix;
             var childColor = child.__transform.__colorTransform;
@@ -4236,7 +4799,7 @@ var Stage = new Class(DisplayObjectContainer, function()
     this.__update = function(matrix, forceUpdate, summary)
     {
         var children = this.__children;
-        for (var i = 0, l = children.length; i < l; ++i)
+        for (var i = 0, l = children.length; i < l; ++i) 
         {
             var child = children[i];
             var childMatrix = child.__transform.__matrix.clone();
@@ -4246,48 +4809,63 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.__updateStage = function()
     {
-        if (!this.__initialized) { return; }
+        if (!this.__initialized) 
+        {
+            return;
+        }
         var context = this.__context;
         
         // update the display list
-        var summary = {total:0, modified:0};
+        var summary = {
+            total: 0,
+            modified: 0
+        };
         this.__update(new Matrix(), false, summary);
         var redrawRegions = this.__redrawRegions;
         var redrawRegionsLength = redrawRegions.length;
         var renderAll = this.__renderAll;
         var renderMode = this.__renderMode;
         
-        if (redrawRegionsLength) {
+        if (redrawRegionsLength) 
+        {
             // render required
             var stageRect = this.__rect;
             var i;
             
             // render mode
-            if (!renderAll && renderMode == StageRenderMode.AUTO) {
+            if (!renderAll && renderMode == StageRenderMode.AUTO) 
+            {
                 // TODO: better algorithm to detect the appropriate render mode
                 renderAll = (redrawRegionsLength > 50 || (summary.modified / summary.total) > 0.7);
             }
             
-            if (renderAll || renderMode == StageRenderMode.ALL) {
+            if (renderAll || renderMode == StageRenderMode.ALL) 
+            {
                 // render the entire stage
                 context.save();
                 context.clearRect(stageRect.x, stageRect.y, stageRect.width, stageRect.height);
                 this.__render(context);
                 context.restore();
             }
-            else {
+            else 
+            {
                 // optimize the redraw regions
                 var temp = [];
                 var tempLength = 0;
                 
-                for (i = 0; i < redrawRegionsLength; ++i)
+                for (i = 0; i < redrawRegionsLength; ++i) 
                 {
                     var rect = redrawRegions[i].clone();
-                    if (rect.width <= 0 || rect.height <= 0) { continue; }
+                    if (rect.width <= 0 || rect.height <= 0) 
+                    {
+                        continue;
+                    }
                     
                     //only add parts inside of the stage rect
-                    if (!stageRect.containsRect(rect)) {
-                        if (!stageRect.intersects(rect)) {
+                    if (!stageRect.containsRect(rect)) 
+                    {
+                        if (!stageRect.intersects(rect)) 
+                        {
                             continue;
                         }
                         
@@ -4305,20 +4883,24 @@ var Stage = new Class(DisplayObjectContainer, function()
                     // union to existing rect if necessary
                     var ti = tempLength;
                     var addRect = true;
-                    while (ti--)
+                    while (ti--) 
                     {
                         var rect2 = temp[ti];
-                        if (rect2.intersects(rect)) {
+                        if (rect2.intersects(rect)) 
+                        {
                             //var intersection = region.intersection(rect);
                             //if (intersection.width * intersection.height > rect.width * rect.height / 5) {
-                                temp[ti] = rect2.union(rect);
-                                addRect = false;
-                                break;
+                            temp[ti] = rect2.union(rect);
+                            addRect = false;
+                            break;
                             //}
                         }
                     }
                     
-                    if (addRect) { temp[tempLength++] = rect; }
+                    if (addRect) 
+                    {
+                        temp[tempLength++] = rect;
+                    }
                 }
                 
                 redrawRegions = temp;
@@ -4328,7 +4910,7 @@ var Stage = new Class(DisplayObjectContainer, function()
                 context.save();
                 context.beginPath();
                 
-                for (i = 0; i < redrawRegionsLength; ++i)
+                for (i = 0; i < redrawRegionsLength; ++i) 
                 {
                     rect = redrawRegions[i];
                     context.clearRect(rect.x, rect.y, rect.width, rect.height);
@@ -4340,12 +4922,13 @@ var Stage = new Class(DisplayObjectContainer, function()
                 context.restore();
                 
                 // debug
-                if (this.showRedrawRegions) {
+                if (this.showRedrawRegions) 
+                {
                     context.save();
                     context.strokeStyle = "#FF0000";
                     context.lineWidth = 1;
                     context.beginPath();
-                    for (i = 0; i < redrawRegionsLength; ++i)
+                    for (i = 0; i < redrawRegionsLength; ++i) 
                     {
                         rect = redrawRegions[i];
                         context.rect(rect.x, rect.y, rect.width, rect.height);
@@ -4368,7 +4951,10 @@ var Stage = new Class(DisplayObjectContainer, function()
     {
         //NOTE: do not call these events against the stage.
         //TODO: Add mouse event arguments
-        if (this.__mouseOverStage === false) { return; }
+        if (this.__mouseOverStage === false) 
+        {
+            return;
+        }
         
         var stage = this;
         var last = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
@@ -4376,44 +4962,59 @@ var Stage = new Class(DisplayObjectContainer, function()
         this.__objectUnderMouse = this.__getObjectUnderPoint(new Point(this.__mouseX, this.__mouseY));
         var current = (this.__objectUnderMouse !== stage) ? this.__objectUnderMouse : null;
         
-        if (current !== last) {
-            if (last) {
+        if (current !== last) 
+        {
+            if (last) 
+            {
                 //mouse out
                 last.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_OUT, true, false));
                 
                 //roll out
                 var rollOutEvent = new MouseEvent(MouseEvent.ROLL_OUT, false, false);
-                if (current) {
+                if (current) 
+                {
                     //parents of "current" don't fire event
                     __applyUp(last, function(current, event)
                     {
-                        if (this === current) { return; }
-                        if (!(this instanceof DisplayObjectContainer) || !this.contains(current)) {
+                        if (this === current) 
+                        {
+                            return;
+                        }
+                        if (!(this instanceof DisplayObjectContainer) || !this.contains(current)) 
+                        {
                             this.dispatchEvent(event);
                         }
                     }, [current, rollOutEvent]);
                 }
-                else {
+                else 
+                {
                     last.dispatchEvent(rollOutEvent);
                 }
             }
-            if (current) {
+            if (current) 
+            {
                 //mouse over
                 current.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_OVER, true, false));
                 
                 //roll over
                 var rollOverEvent = new MouseEvent(MouseEvent.ROLL_OVER, false, false);
-                if (last) {
+                if (last) 
+                {
                     //parents of "last" don't fire event
                     __applyUp(current, function(last, event)
                     {
-                        if (this === last) { return; }
-                        if (!(this instanceof DisplayObjectContainer) || !this.contains(last)) {
+                        if (this === last) 
+                        {
+                            return;
+                        }
+                        if (!(this instanceof DisplayObjectContainer) || !this.contains(last)) 
+                        {
                             this.dispatchEvent(event);
                         }
                     }, [last, rollOverEvent]);
                 }
-                else {
+                else 
+                {
                     current.dispatchEvent(rollOverEvent);
                 }
             }
@@ -4422,10 +5023,12 @@ var Stage = new Class(DisplayObjectContainer, function()
         //button mode
         //TODO buttonMode should effect children to
         var target = this.__objectUnderMouse;
-        if (target && target.buttonMode && target.useHandCursor) {
+        if (target && target.buttonMode && target.useHandCursor) 
+        {
             this.canvas.style.cursor = 'pointer';
         }
-        else {
+        else 
+        {
             this.canvas.style.cursor = 'default';
         }
     };
@@ -4436,15 +5039,16 @@ var Stage = new Class(DisplayObjectContainer, function()
         var clientWidth = canvas.clientWidth;
         var clientHeight = canvas.clientHeight;
         
-        if (this.__canvasWidth === clientWidth &&
-            this.__canvasHeight === clientHeight) {
+        if (this.__canvasWidth === clientWidth && this.__canvasHeight === clientHeight) 
+        {
             return;
         }
         
         this.__canvasWidth = clientWidth;
         this.__canvasHeight = clientHeight;
         
-        if (this.__scaleMode === StageScaleMode.NO_SCALE) {
+        if (this.__scaleMode === StageScaleMode.NO_SCALE) 
+        {
             this.canvas.width = this.__canvasWidth;
             this.canvas.height = this.__canvasHeight;
             this.__hiddenCanvas.width = this.__canvasWidth;
@@ -4454,7 +5058,8 @@ var Stage = new Class(DisplayObjectContainer, function()
             this.__rect = new Rectangle(0, 0, this.__canvasWidth, this.__canvasHeight);
             this.dispatchEvent(new Event(Event.RESIZE, false, false));
         }
-        else if (this.__scaleMode === StageScaleMode.EXACT_FIT) {
+        else if (this.__scaleMode === StageScaleMode.EXACT_FIT) 
+        {
             this.canvas.width = this.__stageWidth;
             this.canvas.height = this.__stageHeight;
             this.__hiddenCanvas.width = this.__stageWidth;
@@ -4477,7 +5082,8 @@ var Stage = new Class(DisplayObjectContainer, function()
     
     this.startDrag = function(target, lockCenter, bounds)
     {
-        if (lockCenter) {
+        if (lockCenter) 
+        {
             var localPoint = target.globalToLocal(new Point(this.__mouseX, this.__mouseY));
             target.__set__x(target.__get__x() + localPoint.x);
             target.__set__y(target.__get__y() + localPoint.y);
@@ -4592,12 +5198,15 @@ var BitmapFilter = new Class(Object, function()
     this.__filter = function(displayObject)
     {
     };
+    
     this.__filterBitmapData = function(sourceBitmapData, sourceRect, distBitmapData, distPoint)
     {
     };
+    
     this.__generateRect = function(sourceRect)
     {
     };
+    
     this.clone = function()
     {
         return new BitmapFilter();
@@ -4613,9 +5222,11 @@ var ContextFilter = new Class(Object, function()
     this.__filter = function(context, target)
     {
     };
+    
     this.__generateRect = function(sourceRect)
     {
     };
+    
     this.clone = function()
     {
         return new ContextFilter();
@@ -4630,8 +5241,8 @@ var BlurFilter = new Class(BitmapFilter, function()
 {
     this.__init__ = function(blurX, blurY, quality)
     {
-        this.blurX   = blurX   || 4;
-        this.blurY   = blurY   || 4;
+        this.blurX = blurX || 4;
+        this.blurY = blurY || 4;
         this.quality = quality || 1;
     };
     
@@ -4726,11 +5337,13 @@ var BlurFilter = new Class(BitmapFilter, function()
                 dst[++p] = divide[ta];
 
                 var i1 = x + radius + 1;
-                if (i1 > widthMinus1) {
+                if (i1 > widthMinus1)
+                {
                     i1 = widthMinus1;
                 }
                 var i2 = x - radius;
-                if (i2 < 0) {
+                if (i2 < 0)
+                {
                     i2 = 0;
                 }
                 
@@ -4747,10 +5360,7 @@ var BlurFilter = new Class(BitmapFilter, function()
             srcIndex += width;
         }
     };
-    this.__clamp = function(x, a, b)
-    {
-        return (x < a) ? a : (x > b) ? b : x;
-    };
+    
     //override
     this.clone = function()
     {
@@ -4818,12 +5428,13 @@ var DropShadowFilter = new Class(ContextFilter, function()
 {
     this.__init__ = function(distance, angle, color, alpha, blur)
     {
-        this.alpha    = alpha    || 1;
-        this.blur     = blur     || 4;
-        this.color    = color     | 0;
+        this.alpha = alpha || 1;
+        this.blur = blur || 4;
+        this.color = color | 0;
         this.distance = distance || 4;
-        this.angle    = angle    || 45;
+        this.angle = angle || 45;
     };
+    
     //override
     this.__filter = function(context, target)
     {
@@ -4833,28 +5444,36 @@ var DropShadowFilter = new Class(ContextFilter, function()
         context.shadowOffsetX = this.distance * Math.cos(radian);
         context.shadowOffsetY = this.distance * Math.sin(radian);
     };
+    
     //override
     this.__generateRect = function(sourceRect)
     {
         //TODO figure out how blur effects the size
         var newRect = sourceRect.clone();
         var point = Point.polar(this.distance, this.angle * 0.017453292519943295);
-        if (point.x > 0) {
+        if (point.x > 0)
+        {
             newRect.width += point.x;
         }
-        else if (point.x < 0) {
+        else if (point.x < 0)
+        {
             newRect.x += point.x;
             newRect.width -= point.x;
         }
-        if (point.y > 0) {
+        
+        if (point.y > 0)
+        {
             newRect.height += point.y;
         }
-        else if (point.y < 0) {
+        else if (point.y < 0)
+        {
             newRect.y += point.y;
             newRect.height -= point.y;
         }
+        
         return newRect;
     };
+    
     //override
     this.clone = function()
     {
@@ -4879,37 +5498,54 @@ var ColorTransform = new Class(Object, function()
         this.blueOffset      = (blueOffset)  ? blueOffset  : 0;
         this.alphaOffset     = (alphaOffset) ? alphaOffset : 0;
     };
+    
     this.clone = function()
     {
         return new ColorTransform(this.redMultiplier, this.greenMultiplier, this.blueMultiplier, this.alphaMultiplier, this.redOffset, this.greenOffset, this.blueOffset, this.alphaOffset);
     };
+    
     this.concat = function(second)
     {
-        this.redOffset   += second.redOffset   * this.redMultiplier;
+        this.redOffset += second.redOffset * this.redMultiplier;
         this.greenOffset += second.greenOffset * this.greenMultiplier;
-        this.blueOffset  += second.blueOffset  * this.blueMultiplier;
+        this.blueOffset += second.blueOffset * this.blueMultiplier;
         this.alphaOffset += second.alphaOffset * this.alphaMultiplier;
-        this.redMultiplier   *= second.redMultiplier;
+        this.redMultiplier *= second.redMultiplier;
         this.greenMultiplier *= second.greenMultiplier;
-        this.blueMultiplier  *= second.blueMultiplier;
+        this.blueMultiplier *= second.blueMultiplier;
         this.alphaMultiplier *= second.alphaMultiplier;
     };
+    
     this.transformColor = function(color)
     {
         var a = (color >> 24 & 0xFF) * this.alphaMultiplier + this.alphaOffset;
         var r = (color >> 16 & 0xFF) * this.redMultiplier + this.redOffset;
         var g = (color >>  8 & 0xFF) * this.greenMultiplier + this.greenOffset;
         var b = (color       & 0xFF) * this.blueMultiplier + this.blueOffset;
-        if (a > 255) { a = 255; }
-        if (r > 255) { r = 255; }
-        if (g > 255) { g = 255; }
-        if (b > 255) { b = 255; }
+        if (a > 255)
+        {
+            a = 255;
+        }
+        if (r > 255)
+        {
+            r = 255;
+        }
+        if (g > 255)
+        {
+            g = 255;
+        }
+        if (b > 255)
+        {
+            b = 255;
+        }
         return ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
     };
+    
     this.__get__color = function()
     {
         return ((this.alphaOffset << 24) | (this.redOffset << 16) | (this.greenOffset << 8) | this.blueOffset) >>> 0;
     };
+    
     this.__set__color = function(v)
     {
         this.alphaMultiplier = 0;
@@ -4924,23 +5560,28 @@ var ColorTransform = new Class(Object, function()
     
     this.toString = function()
     {
-        return '(redMultiplier=' + this.redMultiplier + ', greenMultiplier=' + this.greenMultiplier +
-            ', blueMultiplier=' + this.blueMultiplier + ', alphaMultiplier=' + this.alphaMultiplier +
-            ', redOffset=' + this.redOffset + ', greenOffset=' + this.greenOffset +
-            ', blueOffset=' + this.blueOffset + ', alphaOffset=' + this.alphaOffset + ')';
+        return '(redMultiplier=' + this.redMultiplier +
+                ', greenMultiplier=' + this.greenMultiplier +
+                ', blueMultiplier=' + this.blueMultiplier +
+                ', alphaMultiplier=' + this.alphaMultiplier +
+                ', redOffset=' + this.redOffset +
+                ', greenOffset=' + this.greenOffset +
+                ', blueOffset=' + this.blueOffset +
+                ', alphaOffset=' + this.alphaOffset + ')';
     };
 });
 var Matrix = new Class(Object, function()
 {
     this.__init__ = function(a, b, c, d, tx, ty)
     {
-        this.a  = (a !== undefined) ? a : 1;
-        this.b  = (b) ? b : 0;
-        this.c  = (c) ? c : 0;
-        this.d  = (d !== undefined) ? d : 1;
-        this.tx = (tx) ? tx : 0;
-        this.ty = (ty) ? ty : 0;
+        this.a  = a !== undefined ? a : 1;
+        this.b  = b ? b : 0;
+        this.c  = c ? c : 0;
+        this.d  = d !== undefined ? d : 1;
+        this.tx = tx ? tx : 0;
+        this.ty = ty ? ty : 0;
     };
+    
     this.concat = function(m)
     {
         var a1  = this.a;
@@ -4963,15 +5604,26 @@ var Matrix = new Class(Object, function()
         this.tx = tx1 * a2 + ty1 * c2 + tx2;
         this.ty = tx1 * b2 + ty1 * d2 + ty2;
     };
+    
     this.clone = function()
     {
         return new Matrix(this.a, this.b, this.c, this.d, this.tx, this.ty);
     };
+    
     this.createBox = function(scaleX, scaleY, rotation, tx, ty)
     {
-        if (rotation === undefined) { rotation = 0; }
-        if (tx === undefined) { tx = 0; }
-        if (ty === undefined) { ty = 0; }
+        if (rotation === undefined)
+        {
+            rotation = 0;
+        }
+        if (tx === undefined)
+        {
+            tx = 0;
+        }
+        if (ty === undefined)
+        {
+            ty = 0;
+        }
         
         var cos = Math.cos(rotation);
         var sin = Math.sin(rotation);
@@ -4983,11 +5635,21 @@ var Matrix = new Class(Object, function()
         this.tx = tx;
         this.ty = ty;
     };
+    
     this.createGradientBox = function(width, height, rotation, tx, ty)
     {
-        if (rotation === undefined) { rotation = 0; }
-        if (tx === undefined) { tx = 0; }
-        if (ty === undefined) { ty = 0; }
+        if (rotation === undefined)
+        {
+            rotation = 0;
+        }
+        if (tx === undefined)
+        {
+            tx = 0;
+        }
+        if (ty === undefined)
+        {
+            ty = 0;
+        }
         
         //this.createBox((width / 1638.4) , (height / 1638.4) , rotation, tx + width / 2, ty + height / 2);
         var scaleX = width / 1638.4;
@@ -5003,11 +5665,13 @@ var Matrix = new Class(Object, function()
         this.tx = tx + width / 2;
         this.ty = ty + height / 2;
     };
+    
     this.identity = function()
     {
         this.a = this.d = 1;
         this.b = this.c = this.tx = this.ty = 0;
     };
+    
     this.invert = function()
     {
         var a  = this.a;
@@ -5025,6 +5689,7 @@ var Matrix = new Class(Object, function()
         this.tx =  (c * ty - d * tx) / det;
         this.ty = -(a * ty - b * tx) / det;
     };
+    
     this.rotate = function(angle)
     {
         var cos = Math.cos(angle);
@@ -5043,6 +5708,7 @@ var Matrix = new Class(Object, function()
         this.tx = tx * cos - ty * sin;
         this.ty = ty * cos + tx * sin;
     };
+    
     this.scale = function(sx, sy)
     {
         this.a  *= sx;
@@ -5052,22 +5718,23 @@ var Matrix = new Class(Object, function()
         this.tx *= sx;
         this.ty *= sy;
     };
+    
     this.deltaTransformPoint = function(point)
     {
         var x = point.x;
         var y = point.y;
-        return new Point(
-            x * this.a + y * this.c,
-            x * this.b + y * this.d);
+        return new Point(x * this.a + y * this.c,
+                x * this.b + y * this.d);
     };
+    
     this.transformPoint = function(point)
     {
         var x = point.x;
         var y = point.y;
-        return new Point(
-            x * this.a + y * this.c + this.tx,
-            x * this.b + y * this.d + this.ty);
+        return new Point(x * this.a + y * this.c + this.tx,
+                x * this.b + y * this.d + this.ty);
     };
+    
     this.transformRect = function(rect)
     {
         var a  = this.a;
@@ -5092,27 +5759,64 @@ var Matrix = new Class(Object, function()
         var ny4 = rx * b + rb * d + ty;
         
         var left = nx1;
-        if (left > nx2) { left = nx2; }
-        if (left > nx3) { left = nx3; }
-        if (left > nx4) { left = nx4; }
+        if (left > nx2)
+        {
+            left = nx2;
+        }
+        if (left > nx3)
+        {
+            left = nx3;
+        }
+        if (left > nx4)
+        {
+            left = nx4;
+        }
         
         var top = ny1;
-        if (top > ny2) { top = ny2; }
-        if (top > ny3) { top = ny3; }
-        if (top > ny4) { top = ny4; }
+        if (top > ny2)
+        {
+            top = ny2;
+        }
+        if (top > ny3)
+        {
+            top = ny3;
+        }
+        if (top > ny4)
+        {
+            top = ny4;
+        }
         
         var right = nx1;
-        if (right < nx2) { right = nx2; }
-        if (right < nx3) { right = nx3; }
-        if (right < nx4) { right = nx4; }
+        if (right < nx2)
+        {
+            right = nx2;
+        }
+        if (right < nx3)
+        {
+            right = nx3;
+        }
+        if (right < nx4)
+        {
+            right = nx4;
+        }
         
         var bottom = ny1;
-        if (bottom < ny2) { bottom = ny2; }
-        if (bottom < ny3) { bottom = ny3; }
-        if (bottom < ny4) { bottom = ny4; }
+        if (bottom < ny2)
+        {
+            bottom = ny2;
+        }
+        if (bottom < ny3)
+        {
+            bottom = ny3;
+        }
+        if (bottom < ny4)
+        {
+            bottom = ny4;
+        }
         
         return new Rectangle(left, top, right - left, bottom - top);
     };
+    
     this.translate = function(dx, dy)
     {
         this.tx += dx;
@@ -5121,7 +5825,12 @@ var Matrix = new Class(Object, function()
     
     this.toString = function()
     {
-        return '(a=' + this.a + ', b=' + this.b + ', c=' + this.c + ', d=' + this.d + ', tx=' + this.tx + ', ty=' + this.ty + ')';
+        return '(a=' + this.a +
+                ', b=' + this.b +
+                ', c=' + this.c +
+                ', d=' + this.d +
+                ', tx=' + this.tx +
+                ', ty=' + this.ty + ')';
     };
 });
 /*
@@ -6239,7 +6948,7 @@ var TextField;
         this.__init__ = function()
         {
             InteractiveObject.call(this);
-            this.__buffer = [];
+            this.__buffer = "";
             this.__lines = [];
             this.__formats = [];
             this.__textWidth = 0;
@@ -6359,7 +7068,7 @@ var TextField;
                     for (var ii = 0, ll = blocks.length; ii < ll; ++ii)
                     {
                         var block = blocks[ii];
-                        var str = buffer.slice(block.start, block.end + 1).join("");
+                        var str = buffer.slice(block.start, block.end + 1);
                         var format = block.format;
                         context.font = formatToFont(format);
                         context.fillStyle = (colorTransform) ?
@@ -6382,12 +7091,7 @@ var TextField;
             var invertedMatrix = matrix.clone();
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
-            
-            if (bounds.containsPoint(localPoint)) {
-                return true;
-            }
-            
-            return false;
+            return bounds.containsPoint(localPoint);
         };
         
         
@@ -6398,6 +7102,7 @@ var TextField;
             {
                 formats[i] = format;
             }
+            trace(formats);
         };
         /**
          * update the visual lines and blocks.
@@ -6442,8 +7147,12 @@ var TextField;
                     
                     //start the new format
                     format = formats[i];
+                    trace(1);
+                    trace(i);
+                    trace(format);
+                    trace(2);
                     context.font = formatToFont(format);
-                    
+                    trace(3);
                     //start a new block
                     block = new Block(format, i, 0, line.width, line.y, 0, format.size);
                     
@@ -6496,8 +7205,8 @@ var TextField;
         
         this.appendText = function(newText)
         {
-            var buffer = this.__buffer;
-            this.replaceText(buffer.length, buffer.length, newText);
+            var length = this.__buffer.length;
+            this.replaceText(length, length, newText);
         };
         this.replaceText = function(beginIndex, endIndex, newText)
         {
@@ -6505,13 +7214,20 @@ var TextField;
             newText = newText.replace(/\r/gim, "\n");
             
             var buffer = this.__buffer;
-            Array.prototype.splice.apply(buffer, [beginIndex, endIndex - beginIndex].concat(newText.split("")));
+            this.__buffer = buffer.substring(0, beginIndex) + newText + buffer.substring(endIndex);
             
             this.__setTextFormat(this.__defaultTextFormat, beginIndex, beginIndex + newText.length);
             this.__updateBlocks();
         };
         this.setTextFormat = function(format, beginIndex, endIndex)
         {
+            if (beginIndex == -1) {
+                beginIndex = 0;
+            }
+            if (endIndex == -1) {
+                endIndex = this.__buffer.length;
+            }
+            
             this.__setTextFormat(format, beginIndex, endIndex);
             this.__updateBlocks();
         };
@@ -6527,11 +7243,11 @@ var TextField;
         };
         this.__get__text = function()
         {
-            return this.__buffer.join("");
+            return this.__buffer;
         };
         this.__set__text = function(v)
         {
-            this.__buffer = [];
+            this.__buffer = "";
             this.__formats = [];
             this.appendText(v);
         };

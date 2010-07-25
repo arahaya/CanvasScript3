@@ -4,10 +4,12 @@ var TimerEvent = new Class(Event, function()
     {
         Event.call(this, type, bubbles, cancelable);
     };
+    
     this.clone = function()
     {
         return new TimerEvent(this.type, this.bubbles, this.cancelable);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -15,7 +17,9 @@ var TimerEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[TimerEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+        return '[TimerEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
     };
 });
 TimerEvent.TIMER = 'timer';

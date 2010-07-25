@@ -9,7 +9,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__getContentBounds = function()
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             return this.__graphics.__rect.clone();
         }
         return new Rectangle();
@@ -18,9 +19,19 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__getModified = function()
     {
-        return (this.__modified ||
-                this.__transform.__modified ||
-                (this.__graphics && this.__graphics.__modified));
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        if (this.__graphics && this.__graphics.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     //override
@@ -28,7 +39,8 @@ var Shape = new Class(DisplayObject, function()
     {
         this.__modified = v;
         this.__transform.__modified = v;
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__modified = v;
         }
     };
@@ -36,7 +48,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__render = function(context, colorTransform)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__render(context, colorTransform);
         }
     };
@@ -44,7 +57,8 @@ var Shape = new Class(DisplayObject, function()
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             var bounds = this.__getContentBounds();
             
             //convert point to local coords
@@ -52,7 +66,8 @@ var Shape = new Class(DisplayObject, function()
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
             
-            if (bounds.containsPoint(localPoint)) {
+            if (bounds.containsPoint(localPoint)) 
+            {
                 this.__graphics.__render(context, null);
                 return (context.getImageData(point.x, point.y, 1, 1).data[3] !== 0);
             }
@@ -63,7 +78,8 @@ var Shape = new Class(DisplayObject, function()
     /* getters and setters */
     this.__get__graphics = function()
     {
-        if (this.__graphics === null) {
+        if (this.__graphics === null) 
+        {
             this.__graphics = new Graphics();
         }
         return this.__graphics;

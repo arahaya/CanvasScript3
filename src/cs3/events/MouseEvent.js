@@ -12,11 +12,12 @@ var MouseEvent = new Class(Event, function()
         this.__localY = (localY !== undefined) ? localY : null;
         this.relatedObject = relatedObject || null;
     };
+    
     this.clone = function()
     {
-        return new MouseEvent(this.type, this.bubbles, this.cancelable,
-            this.__localX, this.__localY, this.relatedObject, this.ctrlKey, this.altKey, this.shiftKey, this.buttonDown, this.delta);
+        return new MouseEvent(this.type, this.bubbles, this.cancelable, this.__localX, this.__localY, this.relatedObject, this.ctrlKey, this.altKey, this.shiftKey, this.buttonDown, this.delta);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -24,28 +25,35 @@ var MouseEvent = new Class(Event, function()
     
     this.__get__localX = function()
     {
-        if (this.__localX !== null) {
+        if (this.__localX !== null)
+        {
             return this.__localX;
         }
         return this.currentTarget.__get__mouseX();
     };
+    
     this.__get__localY = function()
     {
-        if (this.__localY !== null) {
+        if (this.__localY !== null)
+        {
             return this.__localY;
         }
         return this.currentTarget.__get__mouseY();
     };
+    
     this.__get__stageX = function()
     {
-        if (this.__localX !== null) {
+        if (this.__localX !== null)
+        {
             return this.currentTarget.localToGlobal(new Point(this.__localX, 0)).x;
         }
         return this.target.__stage.__mouseX;
     };
+    
     this.__get__stageY = function()
     {
-        if (this.__localY !== null) {
+        if (this.__localY !== null)
+        {
             return this.currentTarget.localToGlobal(new Point(this.__localY, 0)).y;
         }
         return this.currentTarget.__stage.__mouseY;
@@ -53,7 +61,9 @@ var MouseEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[MouseEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable + ']';
+        return '[MouseEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable + ']';
     };
 });
 MouseEvent.CLICK = 'click';

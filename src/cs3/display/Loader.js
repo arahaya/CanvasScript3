@@ -17,27 +17,39 @@ var Loader = new Class(DisplayObjectContainer, function()
     /* @override DisplayObject */
     this.__getAsBitmap = function()
     {
-        if (this.__content) {
+        if (this.__content) 
+        {
             return this.__content.__getAsBitmap();
         }
+        return null;
     };
     
     /* @override DisplayObject */
     this.__getModified = function()
     {
-        return this.__transform.__modified || this.__modified;
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     /* @override DisplayObject */
     this.__setModified = function(v)
     {
-        this.__transform.__modified = this.__modified = v;
+        this.__modified = v;
+        this.__transform.__modified = v;
     };
     
     /* @override DisplayObject */
     this.__render = function(context, colorTransform)
     {
-        if (!this.__content) {
+        if (!this.__content) 
+        {
             return;
         }
         
@@ -46,11 +58,13 @@ var Loader = new Class(DisplayObjectContainer, function()
     
     this.load = function(request)
     {
-        if (typeof request == 'string') {
+        if (typeof request == 'string') 
+        {
             request = new URLRequest(request);
         }
         
-        if (this.__content) {
+        if (this.__content) 
+        {
             this.unload();
         }
         
@@ -89,7 +103,8 @@ var Loader = new Class(DisplayObjectContainer, function()
     
     this.unload = function()
     {
-        if (this.__content) {
+        if (this.__content) 
+        {
             this.__removeChildAt(0);
             this.__content = null;
             var contentLoaderInfo = this.__contentLoaderInfo;

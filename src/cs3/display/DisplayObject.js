@@ -28,14 +28,16 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__getAsBitmap = function()
     {
         var bounds = this.__getBounds();
-        if (bounds.isEmpty()) {
+        if (bounds.isEmpty()) 
+        {
             //if bounds is empty we can't create a BitmapData.
             return null;
         }
         
         var bitmap = this.__bitmap;
         var bitmapData;
-        if (bitmap === null) {
+        if (bitmap === null) 
+        {
             bitmap = new Bitmap(new BitmapData(bounds.width, bounds.height, true, 0));
             bitmap.__set__x(bounds.x);
             bitmap.__set__y(bounds.y);
@@ -44,11 +46,13 @@ var DisplayObject = new Class(EventDispatcher, function()
         //TODO: check if the bitmap needs to be rendered
         //always true for now
         var render = false;
-        if (true) {
+        if (true) 
+        {
             render = true;
         }
         
-        if (render) {
+        if (render) 
+        {
             //update the position
             bitmap.__set__x(bounds.x);
             bitmap.__set__y(bounds.y);
@@ -64,13 +68,7 @@ var DisplayObject = new Class(EventDispatcher, function()
             
             //render the entire list to the bitmapdata context
             context.save();
-            context.setTransform(
-                matrix.a,
-                matrix.b,
-                matrix.c,
-                matrix.d,
-                matrix.tx,
-                matrix.ty);
+            context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
             this.__render(context, new ColorTransform());
             context.restore();
         }
@@ -108,7 +106,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__getObjectUnderPoint = function(context, matrix, point)
     {
         context.setTransform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.tx, matrix.ty);
-        if (this.__hitTestPoint(context, matrix, point)) {
+        if (this.__hitTestPoint(context, matrix, point)) 
+        {
             return this;
         }
         return null;
@@ -130,9 +129,10 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__applyContextFilters = function(context)
     {
         var filters = this.__filters;
-        for (var i = 0, l = filters.length; i < l; ++i)
+        for (var i = 0, l = filters.length; i < l; ++i) 
         {
-            if (filters[i] instanceof ContextFilter) {
+            if (filters[i] instanceof ContextFilter) 
+            {
                 filters[i].__filter(context, this);
             }
         }
@@ -142,13 +142,15 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         /*** experimental ***/
         var selfBitmap = this.__getAsBitmap();
-        if (!selfBitmap) {
+        if (!selfBitmap) 
+        {
             //child content is empty so we don't need to apply a mask
             return;
         }
         var mask = this.__mask;
         var maskBitmap = mask.__getAsBitmap();
-        if (!maskBitmap) {
+        if (!maskBitmap) 
+        {
             //mask content is empty so we don't need to render the child
             return;
         }
@@ -157,12 +159,14 @@ var DisplayObject = new Class(EventDispatcher, function()
         var maskBitmapData = maskBitmap.__bitmapData;
         
         //create another bitmap to apply the mask
-        if (this.__cache) {
+        if (this.__cache) 
+        {
             //if it already exists, reuse it
             this.__cache.__bitmapData.__resize(selfBitmapData.__width, selfBitmapData.__height);
             this.__cache.__bitmapData.__context.drawImage(selfBitmapData.__canvas, 0, 0);
         }
-        else {
+        else 
+        {
             //create a new bitmap
             this.__cache = new Bitmap(selfBitmapData.clone());
         }
@@ -188,30 +192,29 @@ var DisplayObject = new Class(EventDispatcher, function()
         //apply the mask
         bitmapDataContext.save();
         bitmapDataContext.globalCompositeOperation = 'destination-in';
-        bitmapDataContext.setTransform(
-            maskMatrix.a,
-            maskMatrix.b,
-            maskMatrix.c,
-            maskMatrix.d,
-            maskMatrix.tx,
-            maskMatrix.ty);
+        bitmapDataContext.setTransform(maskMatrix.a, maskMatrix.b, maskMatrix.c, maskMatrix.d, maskMatrix.tx, maskMatrix.ty);
         maskBitmapData.__render(bitmapDataContext, null);
         bitmapDataContext.restore();
     };
     
     this.__render = function(context, colorTransform)
     {
-        if (this.__filters.length) {
+        if (this.__filters.length) 
+        {
             this.__applyContextFilters(context);
         }
-        if (this.__mask) {
+        
+        if (this.__mask) 
+        {
             this.__applyMask();
         }
         
-        if (this.__cache) {
+        if (this.__cache) 
+        {
             this.__cache.__render(context, colorTransform);
         }
-        else {
+        else 
+        {
             this.__render(context, colorTransform);
         }
     };
@@ -220,7 +223,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         summary.total++;
         
-        if (forceUpdate || this.__getModified()) {
+        if (forceUpdate || this.__getModified()) 
+        {
             summary.modified++;
             
             // collect redraw regions
@@ -229,7 +233,8 @@ var DisplayObject = new Class(EventDispatcher, function()
             var lastGlobalBounds = this.__globalBounds;
             
             redrawRegions[redrawRegions.length] = globalBounds;
-            if (lastGlobalBounds) {
+            if (lastGlobalBounds) 
+            {
                 redrawRegions[redrawRegions.length] = lastGlobalBounds;
             }
             
@@ -245,15 +250,18 @@ var DisplayObject = new Class(EventDispatcher, function()
     {
         var bounds = this.__getBounds();
         targetCoordinateSpace = targetCoordinateSpace || this.__root || this;
-        if (targetCoordinateSpace === this) {
+        if (targetCoordinateSpace === this) 
+        {
             return bounds;
         }
-        if (targetCoordinateSpace === this.__parent) {
+        if (targetCoordinateSpace === this.__parent) 
+        {
             return this.__transform.__matrix.transformRect(bounds);
         }
         
         var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(bounds);
-        if (targetCoordinateSpace === this.__root) {
+        if (targetCoordinateSpace === this.__root) 
+        {
             //if the target is your root, global coords is wat you want
             return globalBounds;
         }
@@ -285,12 +293,15 @@ var DisplayObject = new Class(EventDispatcher, function()
     
     this.hitTestPoint = function(x, y, shapeFlag)
     {
-        if (shapeFlag === false) {
+        if (shapeFlag === false) 
+        {
             var globalBounds = this.__transform.__get__concatenatedMatrix().transformRect(this.__getBounds());
             return globalBounds.contains(x, y);
         }
-        else {
-            if (!this.__stage) {
+        else 
+        {
+            if (!this.__stage) 
+            {
                 //if shape flag is true and object is not addet to the stage
                 //always return false;
                 return false;
@@ -319,7 +330,8 @@ var DisplayObject = new Class(EventDispatcher, function()
     /* getters and setters */
     this.__get__name = function()
     {
-        if (this.__name === null) {
+        if (this.__name === null) 
+        {
             return "instance" + this.__id;
         }
         return this.__name;
@@ -445,11 +457,13 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__set__mask = function(v)
     {
         //if the mask object is allready a mask of a different object remove it
-        if (v.__maskee) {
+        if (v.__maskee) 
+        {
             v.__maskee.__mask = null;
         }
         //if this allready has a mask remove it
-        if (this.__mask) {
+        if (this.__mask) 
+        {
             this.__mask.__maskee = null;
         }
         this.__mask = v;
@@ -464,10 +478,11 @@ var DisplayObject = new Class(EventDispatcher, function()
     this.__set__filters = function(v)
     {
         this.__cache = null;
-        for (var i = 0, l = v.length; i < l; ++i)
+        for (var i = 0, l = v.length; i < l; ++i) 
         {
             //only apply bitmapFilters
-            if (v[i] instanceof BitmapFilter) {
+            if (v[i] instanceof BitmapFilter) 
+            {
                 v[i].__apply(this);
             }
         }

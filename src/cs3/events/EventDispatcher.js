@@ -3,15 +3,25 @@ var EventDispatcher = new Class(Object, function()
     var sortByPriority = function(a, b)
     {
         var p = 'priority';
-        if (a[p] < b[p]) { return 1; }
-        else if (a[p] > b[p]){ return -1; }
-        else { return 0; }
+        if (a[p] < b[p]) 
+        {
+            return 1;
+        }
+        else if (a[p] > b[p]) 
+        {
+            return -1;
+        }
+        else 
+        {
+            return 0;
+        }
     };
     
     this.__init__ = function()
     {
         this.__events = {};
     };
+    
     /**
      * obj.addEventListener(type, listener, useCapture, priority);
      * obj.addEventListener(type, [scope, listener], useCapture, priority);
@@ -22,14 +32,17 @@ var EventDispatcher = new Class(Object, function()
         //TODO useCapture
         var events = this.__events;
         
-        if (listener instanceof Function) {
+        if (listener instanceof Function) 
+        {
             listener = new EventListener(this, listener, useCapture, priority);
         }
-        else if (listener instanceof Array) {
+        else if (listener instanceof Array) 
+        {
             listener = new EventListener(listener[0], listener[1], useCapture, priority);
         }
         
-        if (events[type] === undefined) {
+        if (events[type] === undefined) 
+        {
             events[type] = [];
         }
         
@@ -37,6 +50,7 @@ var EventDispatcher = new Class(Object, function()
         listeners.push(listener);
         listeners.sort(sortByPriority);
     };
+    
     this.dispatchEvent = function(event)
     {
         //TODO useCapture, priority
@@ -44,30 +58,36 @@ var EventDispatcher = new Class(Object, function()
         //event = event.clone()
         
         //target only gets set once
-        if (!event.target) {
+        if (!event.target) 
+        {
             event.target = this;
         }
         event.currentTarget = this;
         
         var listeners = this.__events[event.type];
-        if (listeners !== undefined) {
-            for (var i = 0, l = listeners.length; i < l; ++i) {
+        if (listeners !== undefined) 
+        {
+            for (var i = 0, l = listeners.length; i < l; ++i) 
+            {
                 //events[i].call(this, event);
                 //events[i](event);
                 listeners[i].call(event);
             }
         }
-        if (event.bubbles && this.__parent) {
+        if (event.bubbles && this.__parent) 
+        {
             //var clone = event.clone();
             //pass the same target to the next event
             //clone.target = event.target;
             //return this.__parent.dispatchEvent(clone);
             return this.__parent.dispatchEvent(event);
         }
-        else {
+        else 
+        {
             return true;
         }
     };
+    
     this.hasEventListener = function(type)
     {
         return (this.__events[type] !== undefined);
@@ -82,29 +102,37 @@ var EventDispatcher = new Class(Object, function()
     {
         //TODO useCapture
         var listeners = this.__events[type];
-        if (listeners === undefined) { return; }
+        if (listeners === undefined) 
+        {
+            return;
+        }
         
-        if (listener instanceof Function) {
+        if (listener instanceof Function) 
+        {
             listener = new EventListener(this, listener, useCapture);
         }
-        else if (listener instanceof Array) {
+        else if (listener instanceof Array) 
+        {
             listener = new EventListener(listener[0], listener[1], useCapture);
         }
         
-        for (var i = 0, l = listeners.length; i < l; ++i)
+        for (var i = 0, l = listeners.length; i < l; ++i) 
         {
-            if (listener.equals(listeners[i])) {
+            if (listener.equals(listeners[i])) 
+            {
                 listeners.splice(i, 1);
             }
         }
     };
+    
     this.willTrigger = function(type)
     {
         //TODO is this correct?
         var target = this;
-        while (target)
+        while (target) 
         {
-            if (target.hasEventListener(type)) {
+            if (target.hasEventListener(type)) 
+            {
                 return true;
             }
             target = target.__parent;

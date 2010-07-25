@@ -5,6 +5,7 @@ var IOErrorEvent = new Class(Event, function()
         Event.call(this, type, bubbles, cancelable);
         this.text = (text !== undefined) ? text : "IOError";
     };
+    
     this.clone = function()
     {
         return new IOErrorEvent(this.type, this.bubbles, this.cancelable, this.text);
@@ -12,8 +13,10 @@ var IOErrorEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[IOErrorEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' text=' + this.text + ']';
+        return '[IOErrorEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' text=' + this.text + ']';
     };
 });
 IOErrorEvent.IO_ERROR = 'ioError';

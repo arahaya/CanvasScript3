@@ -40,7 +40,10 @@ var Graphics = new Class(Object, function()
     //this.beginBitmapFill = function(bitmap, matrix, repeat, smooth)
     this.beginBitmapFill = function(bitmap, repeat)
     {
-        if (!repeat) { repeat = "repeat"; }
+        if (!repeat) 
+        {
+            repeat = "repeat";
+        }
         
         // chrome (5.0.375.70) crashes when repeat is 'no-repeat' or 'repeat-y'
         // so for know force repeat='repeat'
@@ -51,61 +54,63 @@ var Graphics = new Class(Object, function()
     
     this.beginFill = function(color, alpha)
     {
-        if (alpha === undefined) { alpha = 1; }
+        if (alpha === undefined) 
+        {
+            alpha = 1;
+        }
         this.__commands.push([BEGIN_FILL, color, alpha]);
     };
     
-    this.beginGradientFill = function(type, colors, alphas, ratios, matrix,
-            spreadMethod, interpolationMethod, focalPointRatio)
+    this.beginGradientFill = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
         throw new Error('Graphics.beginGradientFill is not implemented. use beginLinearGradientFill and beginRadialGradientFill instead.');
         /*
-        var length = colors.length;
-        var newColors = colors.splice(0);
-        var newRatios = ratios.splice(0);
-        
-        // convert colors and alphas to argb
-        // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
-        {
-            newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
-            newRatios[i] /= 255;
-        }
-        
-        // convert matrix back to createGradientBox parameters
-        // width, height, rotation, tx, ty
-        var a  = matrix.a;
-        var b  = matrix.b;
-        var c  = matrix.c;
-        var d  = matrix.d;
-        var tx = matrix.tx;
-        var ty = matrix.ty;
-        var ac = a * c;
-        var bd = b * d;
-        var amb = (a - b);
-        var cpd = (c + d);
-        
-        var sin = (ac + bd) / (amb * amb + cpd * cpd);
-        var width = Math.sqrt(ac / sin) * 1638.4;
-        var height = Math.sqrt(bd / sin) * 1638.4;
-        var rotation = Math.asin(sin);
-        tx = tx - width / 2.0;
-        ty = ty - height / 2.0;
-        
-        var x0, y0, r0, x1, y1, r1;
-        if (type == GradientType.RADIAL) {
-            // calculate x0, y0, r0, x1, y1, r1
-        }
-        else {
-            // calculate x0, y0, x1, y1
-            x0 = tx;
-            y0 = ty;
-            x1 = height * Math.cos(rotation) + tx;
-            y1 = width  * Math.sin(rotation) + ty;
-        }
-        
-        this.__commands.push([BEGIN_GRADIENT_FILL, type, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
-        */
+         var length = colors.length;
+         var newColors = colors.splice(0);
+         var newRatios = ratios.splice(0);
+         
+         // convert colors and alphas to argb
+         // convert ratios range to 0-1
+         for (var i = 0; i < length; ++i)
+         {
+         newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
+         newRatios[i] /= 255;
+         }
+         
+         // convert matrix back to createGradientBox parameters
+         // width, height, rotation, tx, ty
+         var a  = matrix.a;
+         var b  = matrix.b;
+         var c  = matrix.c;
+         var d  = matrix.d;
+         var tx = matrix.tx;
+         var ty = matrix.ty;
+         var ac = a * c;
+         var bd = b * d;
+         var amb = (a - b);
+         var cpd = (c + d);
+         
+         var sin = (ac + bd) / (amb * amb + cpd * cpd);
+         var width = Math.sqrt(ac / sin) * 1638.4;
+         var height = Math.sqrt(bd / sin) * 1638.4;
+         var rotation = Math.asin(sin);
+         tx = tx - width / 2.0;
+         ty = ty - height / 2.0;
+         
+         var x0, y0, r0, x1, y1, r1;
+         if (type == GradientType.RADIAL) {
+         // calculate x0, y0, r0, x1, y1, r1
+         }
+         else {
+         // calculate x0, y0, x1, y1
+         x0 = tx;
+         y0 = ty;
+         x1 = height * Math.cos(rotation) + tx;
+         y1 = width  * Math.sin(rotation) + ty;
+         }
+         
+         this.__commands.push([BEGIN_GRADIENT_FILL, type, length, newColors, newRatios, x0, y0, r0, x1, y1, r1]);
+         */
     };
     
     this.beginLinearGradientFill = function(colors, alphas, ratios, x0, y0, x1, y1)
@@ -116,7 +121,7 @@ var Graphics = new Class(Object, function()
         
         // convert colors and alphas to argb
         // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
+        for (var i = 0; i < length; ++i) 
         {
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
@@ -132,7 +137,7 @@ var Graphics = new Class(Object, function()
         
         // convert colors and alphas to argb
         // convert ratios range to 0-1
-        for (var i = 0; i < length; ++i)
+        for (var i = 0; i < length; ++i) 
         {
             newColors[i] = ((alphas[i] * 255) << 24 | newColors[i]) >>> 0;
             newRatios[i] /= 255;
@@ -154,9 +159,9 @@ var Graphics = new Class(Object, function()
     {
         var startX = x + Math.cos(startAngle * 6.283185307179586) * radius;
         var startY = y + Math.sin(startAngle * 6.283185307179586) * radius;
-        var endX   = x + Math.cos(endAngle   * 6.283185307179586) * radius;
-        var endY   = y + Math.sin(endAngle   * 6.283185307179586) * radius;
-
+        var endX = x + Math.cos(endAngle * 6.283185307179586) * radius;
+        var endY = y + Math.sin(endAngle * 6.283185307179586) * radius;
+        
         this.__updateRect(startX, startY, startX + endX, startY + endY);
         this.__x = endX;
         this.__y = endY;
@@ -193,7 +198,10 @@ var Graphics = new Class(Object, function()
     
     this.drawRoundRect = function(x, y, width, height, ellipseWidth, ellipseHeight)
     {
-        if (ellipseHeight === undefined) { ellipseHeight = ellipseWidth; }
+        if (ellipseHeight === undefined) 
+        {
+            ellipseHeight = ellipseWidth;
+        }
         this.__updateRect(x, y, width, height);
         this.__x = x + width;
         this.__y = y + height - ellipseHeight / 2;
@@ -209,18 +217,39 @@ var Graphics = new Class(Object, function()
     
     this.lineGradientStyle = function(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio)
     {
-        
+    
     };
     
     this.lineStyle = function(thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit)
     {
-        if (color === undefined) { color = 0; }
-        if (alpha === undefined) { alpha = 1; }
-        if (pixelHinting == undefined) { pixelHinting = true; }
-        if (scaleMode === undefined) { scaleMode = 'normal'; }
-        if (caps === undefined) { caps = CapsStyle.ROUND; }
-        if (joints === undefined) { joints = JointStyle.ROUND; }
-        if (miterLimit === undefined) { miterLimit = 3; }
+        if (color === undefined) 
+        {
+            color = 0;
+        }
+        if (alpha === undefined) 
+        {
+            alpha = 1;
+        }
+        if (pixelHinting == undefined) 
+        {
+            pixelHinting = true;
+        }
+        if (scaleMode === undefined) 
+        {
+            scaleMode = 'normal';
+        }
+        if (caps === undefined) 
+        {
+            caps = CapsStyle.ROUND;
+        }
+        if (joints === undefined) 
+        {
+            joints = JointStyle.ROUND;
+        }
+        if (miterLimit === undefined) 
+        {
+            miterLimit = 3;
+        }
         this.__lineWidth = thickness;
         this.__commands.push([LINE_STYLE, thickness, color, alpha, pixelHinting, scaleMode, caps, joints, miterLimit]);
     };
@@ -251,11 +280,13 @@ var Graphics = new Class(Object, function()
     this.__fill = function(context, fillAlpha)
     {
         context.closePath();
-
-        if (fillAlpha === 1) {
+        
+        if (fillAlpha === 1) 
+        {
             context.fill();
         }
-        else if (fillAlpha !== 0) {
+        else if (fillAlpha !== 0) 
+        {
             var alpha = context.globalAlpha;
             context.globalAlpha *= fillAlpha;
             context.fill();
@@ -265,10 +296,12 @@ var Graphics = new Class(Object, function()
     
     this.__stroke = function(context, strokeAlpha)
     {
-        if (strokeAlpha === 1) {
+        if (strokeAlpha === 1) 
+        {
             context.stroke();
         }
-        else if (strokeAlpha !== 0) {
+        else if (strokeAlpha !== 0) 
+        {
             var alpha = context.globalAlpha;
             context.globalAlpha *= strokeAlpha;
             context.stroke();
@@ -278,7 +311,8 @@ var Graphics = new Class(Object, function()
     
     this.__closeStroke = function(context, sx, sy, ax, ay)
     {
-        if (sx !== ax || sy !== ay) {
+        if (sx !== ax || sy !== ay) 
+        {
             context.lineTo(sx, sy);
         }
     };
@@ -309,12 +343,13 @@ var Graphics = new Class(Object, function()
         var widht, height;
         var ellipseWidth, ellipseHeight;
         var xRadius, yRadius, centerX, centerY, angleDelta, xCtrlDist, yCtrlDist, rx, ry, angle;
+        var length, colors, ratios, gradient;
         var right, bottom;
         
         //fill phase
         //context.beginPath();
         //context.moveTo(0, 0);
-        for (i = 0, l = commandLength; i < l; ++i)
+        for (i = 0, l = commandLength; i < l; ++i) 
         {
             cmd = commands[i];
             type = cmd[0];
@@ -323,24 +358,31 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = cmd[2];
                     context.beginPath();
                     context.moveTo(ax, ay);
-                    context.fillStyle = (colorTransform) ?
-                            __toRGB(colorTransform.transformColor(cmd[1])) :
-                            __toRGB(cmd[1]);
+                    context.fillStyle = (colorTransform) ? __toRGB(colorTransform.transformColor(cmd[1])) : __toRGB(cmd[1]);
                     break;
                 case LINE_STYLE:
                     hasStroke = true;
@@ -348,18 +390,27 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = false;
                     break;
                 case DRAW_RECT:
                     //anchor at the top left
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     //context.moveTo(ax, ay);
                     break;
@@ -369,12 +420,18 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     ax = x + radius;
                     ay = cmd[2];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
                 case BEGIN_BITMAP_FILL:
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     var pattern = context.createPattern(cmd[1].__canvas, cmd[2]);
                     doFill = true;
                     fillAlpha = 1;
@@ -383,17 +440,18 @@ var Graphics = new Class(Object, function()
                     context.fillStyle = pattern;
                     break;
                 case BEGIN_LINEAR_GRADIENT_FILL:
-                    var length = cmd[1];
-                    var colors = cmd[2];
-                    var ratios = cmd[3];
-                    var gradient = context.createLinearGradient(cmd[4], cmd[5], cmd[6], cmd[7]);
-                    for (ii = 0; ii < length; ++ii)
+                    length = cmd[1];
+                    colors = cmd[2];
+                    ratios = cmd[3];
+                    gradient = context.createLinearGradient(cmd[4], cmd[5], cmd[6], cmd[7]);
+                    for (ii = 0; ii < length; ++ii) 
                     {
-                        gradient.addColorStop(ratios[ii], (colorTransform) ?
-                            __toRGBA(colorTransform.transformColor(colors[ii])) :
-                            __toRGBA(colors[ii]));
+                        gradient.addColorStop(ratios[ii], (colorTransform) ? __toRGBA(colorTransform.transformColor(colors[ii])) : __toRGBA(colors[ii]));
                     }
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = 1;
                     context.beginPath();
@@ -401,17 +459,18 @@ var Graphics = new Class(Object, function()
                     context.fillStyle = gradient;
                     break;
                 case BEGIN_RADIAL_GRADIENT_FILL:
-                    var length = cmd[1];
-                    var colors = cmd[2];
-                    var ratios = cmd[3];
-                    var gradient = context.createRadialGradient(cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
-                    for (ii = 0; ii < length; ++ii)
+                    length = cmd[1];
+                    colors = cmd[2];
+                    ratios = cmd[3];
+                    gradient = context.createRadialGradient(cmd[4], cmd[5], cmd[6], cmd[7], cmd[8], cmd[9]);
+                    for (ii = 0; ii < length; ++ii) 
                     {
-                        gradient.addColorStop(ratios[ii], (colorTransform) ?
-                            __toRGBA(colorTransform.transformColor(colors[ii])) :
-                            __toRGBA(colors[ii]));
+                        gradient.addColorStop(ratios[ii], (colorTransform) ? __toRGBA(colorTransform.transformColor(colors[ii])) : __toRGBA(colors[ii]));
                     }
-                    if (doFill) { this.__fill(context, fillAlpha); }
+                    if (doFill) 
+                    {
+                        this.__fill(context, fillAlpha);
+                    }
                     doFill = true;
                     fillAlpha = 1;
                     context.beginPath();
@@ -421,24 +480,30 @@ var Graphics = new Class(Object, function()
                 case DRAW_ARC:
                     ax = cmd[9];
                     ay = cmd[10];
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(cmd[7], cmd[8]);
                     context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
-                    //context.moveTo(ax, ay);
+                //context.moveTo(ax, ay);
                 case DRAW_ROUND_RECT:
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
-                    width  = cmd[3];
+                    width = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5] / 2;
+                    ellipseWidth = cmd[5] / 2;
                     ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
                     ax = right;
                     ay = bottom - ellipseHeight;
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -459,7 +524,10 @@ var Graphics = new Class(Object, function()
                     yRadius = height / 2;
                     ax = x + width;
                     ay = y + yRadius;
-                    if (!doFill) { continue; }
+                    if (!doFill) 
+                    {
+                        continue;
+                    }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -467,7 +535,7 @@ var Graphics = new Class(Object, function()
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
                     context.moveTo(ax, ay);
-                    for (ii = 0; ii < 8; ii++)
+                    for (ii = 0; ii < 8; ii++) 
                     {
                         angle += angleDelta;
                         rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
@@ -481,14 +549,20 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        if (doFill) { this.__fill(context, fillAlpha); }
+        if (doFill) 
+        {
+            this.__fill(context, fillAlpha);
+        }
         
         //stroke phase
-        if (!hasStroke) { return; }
+        if (!hasStroke) 
+        {
+            return;
+        }
         sx = sy = ax = ay = 0;
         //context.beginPath();
         //context.moveTo(0, 0);
-        for (i = 0, l = commandLength; i < l; ++i)
+        for (i = 0, l = commandLength; i < l; ++i) 
         {
             cmd = commands[i];
             type = cmd[0];
@@ -497,27 +571,39 @@ var Graphics = new Class(Object, function()
                 case LINE_TO:
                     ax = cmd[1];
                     ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.lineTo(ax, ay);
                     break;
                 case MOVE_TO:
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     break;
                 case BEGIN_BITMAP_FILL:
                 case BEGIN_LINEAR_GRADIENT_FILL:
                 case BEGIN_RADIAL_GRADIENT_FILL:
                 case BEGIN_FILL:
-                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+                    if (doFill) 
+                    {
+                        this.__closeStroke(context, sx, sy, ax, ay);
+                    }
                     ax = sx;
                     ay = sy;
                     doFill = true;
                     break;
                 case LINE_STYLE:
-                    if (doStroke) { this.__stroke(context, strokeAlpha); }
-                    thickness    = cmd[1];
+                    if (doStroke) 
+                    {
+                        this.__stroke(context, strokeAlpha);
+                    }
+                    thickness = cmd[1];
                     //pixelHinting = cmd[4];
                     //scaleMode    = cmd[5];
                     doStroke = (thickness) ? true : false;
@@ -525,9 +611,7 @@ var Graphics = new Class(Object, function()
                     context.beginPath();
                     context.moveTo(ax, ay);
                     context.lineWidth = thickness;
-                    context.strokeStyle = (colorTransform) ?
-                            __toRGB(colorTransform.transformColor(cmd[2])) :
-                            __toRGB(cmd[2]);
+                    context.strokeStyle = (colorTransform) ? __toRGB(colorTransform.transformColor(cmd[2])) : __toRGB(cmd[2]);
                     context.lineCap = cmd[6];
                     context.lineJoin = cmd[7];
                     context.miterLimit = cmd[8];
@@ -535,11 +619,17 @@ var Graphics = new Class(Object, function()
                 case CURVE_TO:
                     ax = cmd[3];
                     ay = cmd[4];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.quadraticCurveTo(cmd[1], cmd[2], ax, ay);
                     break;
                 case END_FILL:
-                    if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
+                    if (doFill) 
+                    {
+                        this.__closeStroke(context, sx, sy, ax, ay);
+                    }
                     ax = sx;
                     ay = sy;
                     doFill = false;
@@ -548,7 +638,10 @@ var Graphics = new Class(Object, function()
                     //anchor at the top left
                     sx = ax = cmd[1];
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.rect(ax, ay, cmd[3], cmd[4]);
                     context.moveTo(ax, ay);
                     break;
@@ -558,7 +651,10 @@ var Graphics = new Class(Object, function()
                     radius = cmd[3];
                     sx = ax = x + radius;
                     sy = ay = cmd[2];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.arc(x, ay, radius, 0, 6.283185307179586/*Math.PI*2*/, false);
                     break;
@@ -567,7 +663,10 @@ var Graphics = new Class(Object, function()
                     sy = cmd[8];
                     ax = cmd[9];
                     ay = cmd[10];
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(sx, sy);
                     context.arc(cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6]);
                     break;
@@ -575,15 +674,18 @@ var Graphics = new Class(Object, function()
                     //anchor at the right bottom corner
                     x = cmd[1];
                     y = cmd[2];
-                    width  = cmd[3];
+                    width = cmd[3];
                     height = cmd[4];
-                    ellipseWidth  = cmd[5] / 2;
+                    ellipseWidth = cmd[5] / 2;
                     ellipseHeight = cmd[6] / 2;
                     right = x + width;
                     bottom = y + height;
                     sx = ax = right;
                     sy = ay = bottom - ellipseHeight;
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     context.moveTo(ax, ay);
                     context.quadraticCurveTo(right, bottom, right - ellipseWidth, bottom);
                     context.lineTo(x + ellipseWidth, bottom);
@@ -604,7 +706,10 @@ var Graphics = new Class(Object, function()
                     yRadius = height / 2;
                     sx = ax = x + width;
                     sy = ay = y + yRadius;
-                    if (!doStroke) { continue; }
+                    if (!doStroke) 
+                    {
+                        continue;
+                    }
                     centerX = x + xRadius;
                     centerY = y + yRadius;
                     angleDelta = 0.7853981633974483;/*Math.PI / 4*/
@@ -612,7 +717,7 @@ var Graphics = new Class(Object, function()
                     yCtrlDist = yRadius / 0.9238795325112867;
                     angle = 0;
                     context.moveTo(x + width, y + yRadius);
-                    for (ii = 0; ii < 8; ii++)
+                    for (ii = 0; ii < 8; ii++) 
                     {
                         angle += angleDelta;
                         rx = centerX + Math.cos(angle - 0.39269908169872414) * xCtrlDist;
@@ -626,8 +731,14 @@ var Graphics = new Class(Object, function()
                     break;
             }
         }
-        if (doFill) { this.__closeStroke(context, sx, sy, ax, ay); }
-        if (doStroke) { this.__stroke(context, strokeAlpha); }
+        if (doFill) 
+        {
+            this.__closeStroke(context, sx, sy, ax, ay);
+        }
+        if (doStroke) 
+        {
+            this.__stroke(context, strokeAlpha);
+        }
     };
     
     this.toString = function()

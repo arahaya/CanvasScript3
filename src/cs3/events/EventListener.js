@@ -4,18 +4,30 @@ var EventListener = new Class(Object, function()
     {
         this.scope = scope;
         this.callback = callback;
-        this.useCapture = (useCapture) ? true : false;
+        this.useCapture = useCapture ? true : false;
         this.priority = priority | 0;
     };
+    
     this.call = function()
     {
         this.callback.apply(this.scope, arguments);
     };
+    
     this.equals = function(toCompare)
     {
-        return (toCompare.scope      === this.scope &&
-                toCompare.callback   === this.callback &&
-                toCompare.useCapture === this.useCapture) ? true : false;
+        if (toCompare.scope !== this.scope)
+        {
+            return false;
+        }
+        if (toCompare.callback !== this.callback)
+        {
+            return false;
+        }
+        if (toCompare.useCapture !== this.useCapture)
+        {
+            return false;
+        }
+        return true;
     };
     
     this.toString = function()

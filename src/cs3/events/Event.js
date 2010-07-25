@@ -9,22 +9,27 @@ var Event = new Class(Object, function()
         this.__stopImmediatePropagation = false;
         this.__stopPropagation = false;
     };
+    
     this.clone = function()
     {
         return new Event(this.type, this.bubbles, this.cancelable);
     };
+    
     this.isDefaultPrevented = function()
     {
         return this.__preventDefault;
     };
+    
     this.preventDefault = function()
     {
         this.__preventDefault = true;
     };
+    
     this.stopImmediatePropagation = function()
     {
         this.__stopImmediatePropagation = true;
     };
+    
     this.stopPropagation = function()
     {
         this.__stopPropagation = true;

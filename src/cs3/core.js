@@ -499,10 +499,10 @@ function Class(superClass, object)
             continue;
         }
         
-        preffix = property.substr(0, 7);
+        preffix = property.substring(0, 7);
         if (preffix == '__get__') {
             //define getters
-            name = property.substr(7);
+            name = property.substring(7);
             subClass.prototype.__defineGetter__(name, object[property]);
             
             //also copy as a public method for IE
@@ -515,7 +515,7 @@ function Class(superClass, object)
         }
         else if (preffix == '__set__') {
             //define setters
-            name = property.substr(7);
+            name = property.substring(7);
             subClass.prototype.__defineSetter__(name, object[property]);
             
             //also copy as a public method for IE

@@ -6,7 +6,8 @@ var Bitmap = new Class(DisplayObject, function()
         
         this.__bitmapData = null;
         
-        if (bitmapData) {
+        if (bitmapData) 
+        {
             this.__set__bitmapData(bitmapData);
         }
     };
@@ -14,7 +15,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getContentBounds = function()
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             return this.__bitmapData.__rect.clone();
         }
         return new Rectangle();
@@ -23,7 +25,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getAsBitmap = function()
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             return this;
         }
         return null;
@@ -32,9 +35,19 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__getModified = function()
     {
-        return (this.__modified ||
-                this.__transform.__modified ||
-                (this.__bitmapData && this.__bitmapData.__modified));
+        if (this.__modified)
+        {
+            return true;
+        }
+        if (this.__transform.__modified)
+        {
+            return true;
+        }
+        if (this.__bitmapData && this.__bitmapData.__modified)
+        {
+            return true;
+        }
+        return false;
     };
     
     //override
@@ -42,7 +55,8 @@ var Bitmap = new Class(DisplayObject, function()
     {
         this.__modified = v;
         this.__transform.__modified = v;
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             this.__bitmapData.__modified = v;
         }
     };
@@ -50,7 +64,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__render = function(context, colorTransform)
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             this.__bitmapData.__render(context, colorTransform);
         }
     };
@@ -58,7 +73,8 @@ var Bitmap = new Class(DisplayObject, function()
     //override
     this.__hitTestPoint = function(context, matrix, point)
     {
-        if (this.__bitmapData) {
+        if (this.__bitmapData) 
+        {
             var bounds = this.__getContentBounds();
             
             //convert point to local coords
@@ -66,16 +82,22 @@ var Bitmap = new Class(DisplayObject, function()
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
             
-            if (bounds.containsPoint(localPoint)) {
+            if (bounds.containsPoint(localPoint)) 
+            {
                 //fix the points back to ints
                 localPoint.x = localPoint.x | 0;
                 localPoint.y = localPoint.y | 0;
-                try {
+                try 
+                {
                     return (this.__bitmapData.getImageData(localPoint.x, localPoint.y, 1, 1).data[3] !== 0);
-                }
-                catch (e) {
-                    // if the bitmap source is on a different domain and we cant call getImageData
-                    // return true as if it was a hitTest with shapeflag=false
+                } 
+                catch (e) 
+                {
+                    /**
+                     * if the bitmap source is on a different domain
+                     * we can't call getImageData so return true
+                     * as if it was a hitTest with shapeflag=false
+                     */
                     return true;
                 }
             }

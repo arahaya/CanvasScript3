@@ -10,11 +10,12 @@ var KeyboardEvent = new Class(Event, function()
         this.keyLocation = keyLocation || 0;
         this.shiftKey = (shiftKey) ? true : false;
     };
+    
     this.clone = function()
     {
-        return new KeyboardEvent(this.type, this.bubbles, this.cancelable,
-            this.charCode, this.keyCode, this.keyLocation, this.ctrlKey, this.altKey, this.shiftKey);
+        return new KeyboardEvent(this.type, this.bubbles, this.cancelable, this.charCode, this.keyCode, this.keyLocation, this.ctrlKey, this.altKey, this.shiftKey);
     };
+    
     this.updateAfterEvent = function()
     {
         //todo
@@ -22,9 +23,15 @@ var KeyboardEvent = new Class(Event, function()
     
     this.toString = function()
     {
-        return '[KeyboardEvent type=' + this.type + ' bubbles=' + this.bubbles + ' cancelable=' + this.cancelable +
-            ' charCode=' + this.charCode + ' keyCode=' + this.keyCode + ' keyLocation=' + this.keyLocation +
-            ' ctrlKey=' + this.ctrlKey + ' altKey=' + this.altKey + ' shiftKey=' + this.shiftKey + ']';
+        return '[KeyboardEvent type=' + this.type +
+                ' bubbles=' + this.bubbles +
+                ' cancelable=' + this.cancelable +
+                ' charCode=' + this.charCode +
+                ' keyCode=' + this.keyCode +
+                ' keyLocation=' + this.keyLocation +
+                ' ctrlKey=' + this.ctrlKey +
+                ' altKey=' + this.altKey +
+                ' shiftKey=' + this.shiftKey + ']';
     };
 });
 KeyboardEvent.KEY_DOWN = 'keyDown';

@@ -23,7 +23,8 @@ var Sprite = new Class(DisplayObjectContainer, function()
     /* @override DisplayObject */
     this.__render = function(context, colorTransform)
     {
-        if (this.__graphics) {
+        if (this.__graphics) 
+        {
             this.__graphics.__render(context, colorTransform);
         }
         

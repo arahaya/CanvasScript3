@@ -2,8 +2,8 @@ var BlurFilter = new Class(BitmapFilter, function()
 {
     this.__init__ = function(blurX, blurY, quality)
     {
-        this.blurX   = blurX   || 4;
-        this.blurY   = blurY   || 4;
+        this.blurX = blurX || 4;
+        this.blurY = blurY || 4;
         this.quality = quality || 1;
     };
     
@@ -98,11 +98,13 @@ var BlurFilter = new Class(BitmapFilter, function()
                 dst[++p] = divide[ta];
 
                 var i1 = x + radius + 1;
-                if (i1 > widthMinus1) {
+                if (i1 > widthMinus1)
+                {
                     i1 = widthMinus1;
                 }
                 var i2 = x - radius;
-                if (i2 < 0) {
+                if (i2 < 0)
+                {
                     i2 = 0;
                 }
                 
@@ -119,10 +121,7 @@ var BlurFilter = new Class(BitmapFilter, function()
             srcIndex += width;
         }
     };
-    this.__clamp = function(x, a, b)
-    {
-        return (x < a) ? a : (x > b) ? b : x;
-    };
+    
     //override
     this.clone = function()
     {

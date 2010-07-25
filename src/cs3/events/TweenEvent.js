@@ -6,19 +6,19 @@ var TweenEvent = new Class(Event, function()
         this.time = time;
         this.position = position;
     };
+    
     this.clone = function()
     {
-        return new TweenEvent(this.type, this.time, this.position,
-                        this.bubbles, this.cancelable);
+        return new TweenEvent(this.type, this.time, this.position, this.bubbles, this.cancelable);
     };
     
     this.toString = function()
     {
         return '[TweenEvent' +
-                ' type='       + this.type +
-                ' time='       + this.time +
-                ' position='   + this.position +
-                ' bubbles='    + this.bubbles +
+                ' type=' + this.type +
+                ' time=' + this.time +
+                ' position=' + this.position +
+                ' bubbles=' + this.bubbles +
                 ' cancelable=' + this.cancelable + ']';
     };
 });

@@ -18,7 +18,7 @@ var TextField;
         this.__init__ = function()
         {
             InteractiveObject.call(this);
-            this.__buffer = [];
+            this.__buffer = "";
             this.__lines = [];
             this.__formats = [];
             this.__textWidth = 0;
@@ -138,7 +138,7 @@ var TextField;
                     for (var ii = 0, ll = blocks.length; ii < ll; ++ii)
                     {
                         var block = blocks[ii];
-                        var str = buffer.slice(block.start, block.end + 1).join("");
+                        var str = buffer.slice(block.start, block.end + 1);
                         var format = block.format;
                         context.font = formatToFont(format);
                         context.fillStyle = (colorTransform) ?
@@ -161,12 +161,7 @@ var TextField;
             var invertedMatrix = matrix.clone();
             invertedMatrix.invert();
             var localPoint = invertedMatrix.transformPoint(point);
-            
-            if (bounds.containsPoint(localPoint)) {
-                return true;
-            }
-            
-            return false;
+            return bounds.containsPoint(localPoint);
         };
         
         
@@ -177,6 +172,7 @@ var TextField;
             {
                 formats[i] = format;
             }
+            trace(formats);
         };
         /**
          * update the visual lines and blocks.
@@ -221,8 +217,12 @@ var TextField;
                     
                     //start the new format
                     format = formats[i];
+                    trace(1);
+                    trace(i);
+                    trace(format);
+                    trace(2);
                     context.font = formatToFont(format);
-                    
+                    trace(3);
                     //start a new block
                     block = new Block(format, i, 0, line.width, line.y, 0, format.size);
                     
@@ -275,8 +275,8 @@ var TextField;
         
         this.appendText = function(newText)
         {
-            var buffer = this.__buffer;
-            this.replaceText(buffer.length, buffer.length, newText);
+            var length = this.__buffer.length;
+            this.replaceText(length, length, newText);
         };
         this.replaceText = function(beginIndex, endIndex, newText)
         {
@@ -284,13 +284,20 @@ var TextField;
             newText = newText.replace(/\r/gim, "\n");
             
             var buffer = this.__buffer;
-            Array.prototype.splice.apply(buffer, [beginIndex, endIndex - beginIndex].concat(newText.split("")));
+            this.__buffer = buffer.substring(0, beginIndex) + newText + buffer.substring(endIndex);
             
             this.__setTextFormat(this.__defaultTextFormat, beginIndex, beginIndex + newText.length);
             this.__updateBlocks();
         };
         this.setTextFormat = function(format, beginIndex, endIndex)
         {
+            if (beginIndex == -1) {
+                beginIndex = 0;
+            }
+            if (endIndex == -1) {
+                endIndex = this.__buffer.length;
+            }
+            
             this.__setTextFormat(format, beginIndex, endIndex);
             this.__updateBlocks();
         };
@@ -306,11 +313,11 @@ var TextField;
         };
         this.__get__text = function()
         {
-            return this.__buffer.join("");
+            return this.__buffer;
         };
         this.__set__text = function(v)
         {
-            this.__buffer = [];
+            this.__buffer = "";
             this.__formats = [];
             this.appendText(v);
         };
