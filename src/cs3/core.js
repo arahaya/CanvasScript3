@@ -32,10 +32,28 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.creat
 }
 
 //IE Fix
-if (Object.prototype.__defineGetter__ == undefined) {
-    Object.prototype.__defineGetter__ = function(){};
-    Object.prototype.__defineSetter__ = function(){};
-}
+//if (Object.prototype.__defineGetter__ == undefined) {
+//    Object.prototype.__defineGetter__ = function(){};
+//    Object.prototype.__defineSetter__ = function(){};
+//}
+//emulate legacy getter/setter API using ES5 APIs
+try {
+   if (!Object.prototype.__defineGetter__ &&
+        Object.defineProperty({},"x",{get: function(){return true}}).x) {
+      Object.defineProperty(Object.prototype, "__defineGetter__",
+         {enumerable: false, configurable: true,
+          value: function(name,func)
+             {Object.defineProperty(this,name,
+                 {get:func,enumerable: true,configurable: true});
+      }});
+      Object.defineProperty(Object.prototype, "__defineSetter__",
+         {enumerable: false, configurable: true,
+          value: function(name,func)
+             {Object.defineProperty(this,name,
+                 {set:func,enumerable: true,configurable: true});
+      }});
+   }
+} catch(defPropException) {/*Do nothing if an exception occurs*/};
 
 var cs3 = {
     core: {

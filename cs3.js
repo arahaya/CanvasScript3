@@ -32,10 +32,28 @@ if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.creat
 }
 
 //IE Fix
-if (Object.prototype.__defineGetter__ == undefined) {
-    Object.prototype.__defineGetter__ = function(){};
-    Object.prototype.__defineSetter__ = function(){};
-}
+//if (Object.prototype.__defineGetter__ == undefined) {
+//    Object.prototype.__defineGetter__ = function(){};
+//    Object.prototype.__defineSetter__ = function(){};
+//}
+//emulate legacy getter/setter API using ES5 APIs
+try {
+   if (!Object.prototype.__defineGetter__ &&
+        Object.defineProperty({},"x",{get: function(){return true}}).x) {
+      Object.defineProperty(Object.prototype, "__defineGetter__",
+         {enumerable: false, configurable: true,
+          value: function(name,func)
+             {Object.defineProperty(this,name,
+                 {get:func,enumerable: true,configurable: true});
+      }});
+      Object.defineProperty(Object.prototype, "__defineSetter__",
+         {enumerable: false, configurable: true,
+          value: function(name,func)
+             {Object.defineProperty(this,name,
+                 {set:func,enumerable: true,configurable: true});
+      }});
+   }
+} catch(defPropException) {/*Do nothing if an exception occurs*/};
 
 var cs3 = {
     core: {
@@ -499,10 +517,10 @@ function Class(superClass, object)
             continue;
         }
         
-        preffix = property.substr(0, 7);
+        preffix = property.substring(0, 7);
         if (preffix == '__get__') {
             //define getters
-            name = property.substr(7);
+            name = property.substring(7);
             subClass.prototype.__defineGetter__(name, object[property]);
             
             //also copy as a public method for IE
@@ -515,7 +533,7 @@ function Class(superClass, object)
         }
         else if (preffix == '__set__') {
             //define setters
-            name = property.substr(7);
+            name = property.substring(7);
             subClass.prototype.__defineSetter__(name, object[property]);
             
             //also copy as a public method for IE
@@ -2271,32 +2289,13 @@ var BitmapData = new Class(Object, function()
         var imageData = this.__context.getImageData(rect.x, rect.y, rect.width, rect.height);
         var data = imageData.data;
         var length = data.length;
-        var i;
+        var i, v;
         
-        if (cs3.core.isOpera) 
-        {
-            //I think opera does something like (color & 0xFF)
-            for (i = 0; i < length;) 
-            {
-                var r = data[i] * rm + ro;
-                var g = data[i + 1] * gm + go;
-                var b = data[i + 2] * bm + bo;
-                var a = data[i + 3] * am + ao;
-                data[i++] = (r < 255) ? r : 255;
-                data[i++] = (g < 255) ? g : 255;
-                data[i++] = (b < 255) ? b : 255;
-                data[i++] = (a < 255) ? a : 255;
-            }
-        }
-        else 
-        {
-            for (i = 0; i < length;) 
-            {
-                data[i] = data[i++] * rm + ro;
-                data[i] = data[i++] * gm + go;
-                data[i] = data[i++] * bm + bo;
-                data[i] = data[i++] * am + ao;
-            }
+        for (i = 0; i < length;)  {
+            data[i] = (v = data[i++] * rm + ro) > 255 ? 255 : v < 0 ? 0 : v;
+            data[i] = (v = data[i++] * gm + go) > 255 ? 255 : v < 0 ? 0 : v;
+            data[i] = (v = data[i++] * bm + bo) > 255 ? 255 : v < 0 ? 0 : v;
+            data[i] = (v = data[i++] * am + ao) > 255 ? 255 : v < 0 ? 0 : v;
         }
         
         this.__context.putImageData(imageData, rect.x, rect.y);
@@ -5395,7 +5394,7 @@ var ColorMatrixFilter = new Class(BitmapFilter, function()
         
         var m = this.matrix;
         
-        for (var i = 0; i < length; i += 4)
+        for (var i = 0; i < length;)
         {
             var srcR = sourcePixels[i];
             var srcG = sourcePixels[i+1];
@@ -5758,61 +5757,25 @@ var Matrix = new Class(Object, function()
         var nx4 = rx * a + rb * c + tx;
         var ny4 = rx * b + rb * d + ty;
         
-        var left = nx1;
-        if (left > nx2)
-        {
-            left = nx2;
-        }
-        if (left > nx3)
-        {
-            left = nx3;
-        }
-        if (left > nx4)
-        {
-            left = nx4;
-        }
+        //min x
+        var left = nx1 < nx2 ? nx1 : nx2;
+        left = nx3 < left ? nx3 : left;
+        left = nx4 < left ? nx4 : left;
         
-        var top = ny1;
-        if (top > ny2)
-        {
-            top = ny2;
-        }
-        if (top > ny3)
-        {
-            top = ny3;
-        }
-        if (top > ny4)
-        {
-            top = ny4;
-        }
+        //min y
+        var top = ny1 < ny2 ? ny1 : ny2;
+        top = ny3 < top ? ny3 : top;
+        top = ny4 < top ? ny4 : top;
         
-        var right = nx1;
-        if (right < nx2)
-        {
-            right = nx2;
-        }
-        if (right < nx3)
-        {
-            right = nx3;
-        }
-        if (right < nx4)
-        {
-            right = nx4;
-        }
+        //max x
+        var right = nx1 > nx2 ? nx1 : nx2;
+        right = nx3 > right ? nx3 : right;
+        right = nx4 > right ? nx4 : right;
         
-        var bottom = ny1;
-        if (bottom < ny2)
-        {
-            bottom = ny2;
-        }
-        if (bottom < ny3)
-        {
-            bottom = ny3;
-        }
-        if (bottom < ny4)
-        {
-            bottom = ny4;
-        }
+        //max Y
+        var bottom = ny1 > ny2 ? ny1 : ny2;
+        bottom = ny3 > bottom ? ny3 : bottom;
+        bottom = ny4 > bottom ? ny4 : bottom;
         
         return new Rectangle(left, top, right - left, bottom - top);
     };
